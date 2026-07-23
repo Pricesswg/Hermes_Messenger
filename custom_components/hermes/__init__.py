@@ -19,6 +19,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.loader import async_get_integration
 
 from .const import (
     CARD_FILENAME,
@@ -113,12 +114,18 @@ async def _async_register_frontend_card(hass: HomeAssistant) -> None:
     except OSError:
         _LOGGER.warning("Hermes: could not copy the card to /config/www", exc_info=True)
 
+    # Version query string for cache busting: without it browsers keep serving
+    # the previously cached bundle after an update. Read from the manifest so
+    # there is no second place to keep the version in sync.
+    integration = await async_get_integration(hass, DOMAIN)
+    card_url = f"{CARD_URL}?v={integration.version or '0'}"
+
     try:
         await hass.http.async_register_static_paths(
             [StaticPathConfig(CARD_URL, str(src), False)]
         )
-        add_extra_js_url(hass, CARD_URL)
-        _LOGGER.info("Hermes: Lovelace card registered at %s", CARD_URL)
+        add_extra_js_url(hass, card_url)
+        _LOGGER.info("Hermes: Lovelace card registered at %s", card_url)
     except (RuntimeError, ValueError):
         _LOGGER.warning("Hermes: could not register the card static path", exc_info=True)
 
