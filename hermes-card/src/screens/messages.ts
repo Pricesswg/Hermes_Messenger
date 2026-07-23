@@ -6,6 +6,8 @@ export interface MessagesCtx {
   entries: HermesEntry[];
   selectedEntry: string | null;
   editing: HermesCommand | null;
+  /** Entity ids offered as autocomplete for the target field. */
+  entityIds: string[];
   onSelectEntry: (entryId: string) => void;
   onNew: () => void;
   onEdit: (command: HermesCommand) => void;
@@ -126,6 +128,24 @@ function renderForm(
           placeholder="light.turn_off"
           @input=${bind("service")}
         />
+        <span class="hint">${t("messages.serviceHint")}</span>
+      </div>
+
+      <div class="field">
+        <label>${t("messages.target")}</label>
+        <input
+          list="hermes-entities"
+          .value=${draft.target?.entity_id ?? ""}
+          placeholder="light.kitchen"
+          @input=${(e: Event) => {
+            const value = (e.target as HTMLInputElement).value.trim();
+            ctx.onDraftInput("target", value ? { entity_id: value } : undefined);
+          }}
+        />
+        <datalist id="hermes-entities">
+          ${ctx.entityIds.map((id) => html`<option value=${id}></option>`)}
+        </datalist>
+        <span class="hint">${t("messages.targetHint")}</span>
       </div>
 
       <div class="field">
@@ -135,6 +155,7 @@ function renderForm(
           placeholder="{state:sensor.living_room_temp}"
           @input=${bind("reply_template")}
         ></textarea>
+        <span class="hint">${t("messages.replyHint")}</span>
       </div>
 
       <div class="field">

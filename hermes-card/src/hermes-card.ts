@@ -188,7 +188,11 @@ export class HermesCard extends LitElement {
   private _onSaveCommand = async (): Promise<void> => {
     const entryId = this._selectedEntry;
     if (!this.hass || !entryId || !this._editing) return;
-    if (!this._editing.keyword || !this._editing.service) return;
+    // A command needs a keyword, plus at least one of: a service to run or a
+    // reply to send. A reply-only command (for example "status") is valid.
+    const hasAction =
+      Boolean(this._editing.service) || Boolean(this._editing.reply_template);
+    if (!this._editing.keyword || !hasAction) return;
     await saveCommand(this.hass, entryId, this._editing);
     this._editing = null;
     this._flagSaved();
@@ -224,6 +228,7 @@ export class HermesCard extends LitElement {
             entries: this._entries,
             selectedEntry: this._selectedEntry,
             editing: this._editing,
+            entityIds: Object.keys(hass.states).sort(),
             onSelectEntry: this._onSelectEntry,
             onNew: this._onNew,
             onEdit: this._onEdit,
