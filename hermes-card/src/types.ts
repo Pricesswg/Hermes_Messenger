@@ -53,6 +53,46 @@ export type TabId =
   | "homeassistant"
   | "settings";
 
+/** Global settings, stored by the integration outside any config entry. */
+export interface HermesSettings {
+  openweather_api_key: string;
+  map_nodes: number[];
+  map_zoom: number;
+}
+
+/** One configured command, as stored in the config entry options. */
+export interface HermesCommand {
+  id?: string;
+  keyword: string;
+  match_type: "exact" | "startswith";
+  service: string;
+  target?: Record<string, any>;
+  service_data?: Record<string, any>;
+  reply_template?: string;
+  reply_to: "channel" | "sender_dm";
+  authorized_nodes_override?: number[];
+}
+
+/** One configured Hermes gateway (a config entry). */
+export interface HermesEntry {
+  entry_id: string;
+  title: string;
+  gateway_node_id: number | null;
+  mode: string;
+  channel_index: number | null;
+  authorized_nodes: number[];
+  commands: HermesCommand[];
+  initial_delay: number;
+  part_delay: number;
+}
+
+/** A Meshtastic node as reported by the backend. */
+export interface NodeInfo {
+  device_id: string;
+  node_num: number;
+  name: string;
+}
+
 /** A Meshtastic node as seen through the Home Assistant device registry. */
 export interface MeshNode {
   deviceId: string;

@@ -21,15 +21,18 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.loader import async_get_integration
 
+from . import websocket as hermes_websocket
 from .const import (
     CARD_FILENAME,
     CARD_URL,
     DATA_CARD_REGISTERED,
+    DATA_STORE,
     DOMAIN,
     EVENT_TEXT_MESSAGE,
     PLATFORMS,
 )
 from .coordinator import HermesCoordinator
+from .store import HermesStore
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,6 +76,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Reload the entry when options change (command/whitelist CRUD): this way UI
     # changes take effect without restarting the integration.
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+
+    # Global settings store and websocket API, both shared by every entry.
+    if DATA_STORE not in hass.data:
+        store = HermesStore(hass)
+        await store.async_load()
+        hass.data[DATA_STORE] = store
+    hermes_websocket.async_register(hass)
 
     _async_register_services(hass)
     await _async_register_frontend_card(hass)

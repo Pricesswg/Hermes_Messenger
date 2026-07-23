@@ -46,6 +46,26 @@ REPLY_CHANNEL = "channel"
 REPLY_SENDER_DM = "sender_dm"
 REPLY_TARGETS = [REPLY_CHANNEL, REPLY_SENDER_DM]
 
+# --- Global settings store -------------------------------------------------
+# Only what does not belong to a config entry. Per gateway settings (mode,
+# channel, whitelist, timing, commands) stay in the entry options.
+STORAGE_VERSION = 1
+STORAGE_KEY = f"{DOMAIN}.settings"
+
+SETTING_OPENWEATHER_KEY = "openweather_api_key"
+SETTING_MAP_NODES = "map_nodes"
+SETTING_MAP_ZOOM = "map_zoom"
+
+DEFAULT_SETTINGS = {
+    SETTING_OPENWEATHER_KEY: "",
+    # Node numbers to draw on the map. Empty means "none selected yet".
+    SETTING_MAP_NODES: [],
+    SETTING_MAP_ZOOM: 10,
+}
+
+DATA_STORE = f"{DOMAIN}_store"
+DATA_WS_REGISTERED = f"{DOMAIN}_ws_registered"
+
 # --- Lovelace card ---------------------------------------------------------
 # The bundle is built from `hermes-card/` (rollup) into this integration's
 # `www/` folder and registered with the frontend at setup time, so the user

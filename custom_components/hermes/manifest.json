@@ -1,14 +1,14 @@
 {
   "domain": "hermes",
   "name": "Hermes",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "documentation": "https://github.com/Pricesswg/Hermes_Messenger",
   "issue_tracker": "https://github.com/Pricesswg/Hermes_Messenger/issues",
   "codeowners": ["@Pricesswg"],
   "config_flow": true,
   "iot_class": "local_push",
   "integration_type": "service",
-  "dependencies": ["http", "frontend"],
+  "dependencies": ["http", "frontend", "websocket_api"],
   "after_dependencies": ["meshtastic"],
   "requirements": []
 }

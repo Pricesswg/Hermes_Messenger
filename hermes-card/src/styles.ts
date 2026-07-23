@@ -256,4 +256,137 @@ export const hermesLayout = css`
     background: var(--accent-soft);
     color: var(--accent-ink);
   }
+
+  .section {
+    margin-bottom: 18px;
+  }
+
+  .section-title {
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 12px;
+  }
+
+  .field > label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-soft);
+  }
+
+  .hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+    font-size: 0.86rem;
+    color: var(--text);
+    background: var(--bg-sunken);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 8px 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+  }
+
+  select[multiple] {
+    min-height: 110px;
+  }
+
+  textarea {
+    min-height: 70px;
+    resize: vertical;
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  button.btn {
+    appearance: none;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  button.btn:hover {
+    background: var(--bg-soft);
+  }
+
+  button.btn.primary {
+    background: var(--accent);
+    border-color: var(--accent-strong);
+    color: oklch(0.25 0.05 90);
+  }
+
+  button.btn.danger {
+    color: var(--danger);
+  }
+
+  .list-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    margin-bottom: 8px;
+  }
+
+  .list-row .meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .list-row .kw {
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .list-row .sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .toast {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ok);
+  }
 `;
