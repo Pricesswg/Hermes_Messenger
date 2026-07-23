@@ -11,6 +11,36 @@ integration: it does not manage the node connection (TCP/serial/BLE), it listens
 to its events and uses its services. All configuration happens from the UI — no
 hand-written YAML, no raw Jinja2, no custom Lovelace cards.
 
+## Why the name "Hermes"?
+
+**Hermes** (Greek Ἑρμῆς; the Roman **Mercury**) is the Greek god of **messengers,
+travelers, boundaries and communication** — the herald of the gods, the one who
+carries messages between worlds and moves swiftly across every border. His
+attributes say it all: the **winged helmet** and **winged sandals** (speed) and
+the **caduceus**, the herald's staff, mark of the messenger.
+
+The name fits the integration literally. Hermes is a **herald that carries text
+across a boundary**: it relays commands coming *in* from the Meshtastic LoRa mesh
+and turns them into Home Assistant actions, and it carries Home Assistant's
+notifications back *out* onto the mesh. Fast, lightweight, crossing between the
+radio network and the smart home — exactly the messenger's job.
+
+(The name also sits alongside the sibling project *Chronos* — same Greek-deity
+naming line.)
+
+## What it does
+
+- **Commands → actions with a reply.** An authorized node sends a keyword on the
+  channel/DM; Hermes runs the mapped Home Assistant service and sends a reply
+  back over the mesh (e.g. `status` → home state, node/sensor readings).
+- **Home Assistant → mesh notifications.** The `hermes.broadcast` /
+  `hermes.send_direct` services let any automation (including scheduled ones)
+  push messages onto the mesh — alarms, events, reminders.
+- **Byte-safe by design.** Every outgoing message is split to fit the 200-byte
+  Meshtastic payload, never cutting a multi-byte character.
+- **Secure-by-default posture.** A node whitelist gates commands; unauthorized
+  senders are dropped silently (see *Security*).
+
 ## Requirements
 
 - A recent Home Assistant (config flow, modern options flow, `TargetSelector`).
