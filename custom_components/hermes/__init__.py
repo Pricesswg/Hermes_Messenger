@@ -8,15 +8,22 @@ over the mesh; it also exposes broadcast/DM services callable from automations.
 from __future__ import annotations
 
 import logging
+import shutil
+from pathlib import Path
 
 import voluptuous as vol
 
+from homeassistant.components.frontend import add_extra_js_url
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
+    CARD_FILENAME,
+    CARD_URL,
+    DATA_CARD_REGISTERED,
     DOMAIN,
     EVENT_TEXT_MESSAGE,
     PLATFORMS,
@@ -67,9 +74,53 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     _async_register_services(hass)
+    await _async_register_frontend_card(hass)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
+
+async def _async_register_frontend_card(hass: HomeAssistant) -> None:
+    """Make the Hermes Lovelace card available without manual setup.
+
+    Two complementary steps, mirroring what Chronos Scheduler does:
+      1. copy the bundle to /config/www so it is reachable at /local/,
+         which is what a user would otherwise add as a resource by hand;
+      2. serve it from /hermes_static/ and inject it with add_extra_js_url,
+         which registers the custom element at the frontend level.
+    Failures here must never break the integration setup, so everything is
+    guarded and only logged.
+    """
+    if hass.data.get(DATA_CARD_REGISTERED):
+        return
+    hass.data[DATA_CARD_REGISTERED] = True
+
+    src = Path(__file__).parent / "www" / CARD_FILENAME
+    if not await hass.async_add_executor_job(src.is_file):
+        _LOGGER.warning(
+            "Hermes: card bundle %s is missing, the Lovelace card will not load",
+            src,
+        )
+        return
+
+    def _copy_to_www() -> None:
+        dst_dir = Path(hass.config.path("www"))
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, dst_dir / CARD_FILENAME)
+
+    try:
+        await hass.async_add_executor_job(_copy_to_www)
+    except OSError:
+        _LOGGER.warning("Hermes: could not copy the card to /config/www", exc_info=True)
+
+    try:
+        await hass.http.async_register_static_paths(
+            [StaticPathConfig(CARD_URL, str(src), False)]
+        )
+        add_extra_js_url(hass, CARD_URL)
+        _LOGGER.info("Hermes: Lovelace card registered at %s", CARD_URL)
+    except (RuntimeError, ValueError):
+        _LOGGER.warning("Hermes: could not register the card static path", exc_info=True)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

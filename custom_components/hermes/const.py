@@ -46,6 +46,14 @@ REPLY_CHANNEL = "channel"
 REPLY_SENDER_DM = "sender_dm"
 REPLY_TARGETS = [REPLY_CHANNEL, REPLY_SENDER_DM]
 
+# --- Lovelace card ---------------------------------------------------------
+# The bundle is built from `hermes-card/` (rollup) into this integration's
+# `www/` folder and registered with the frontend at setup time, so the user
+# never has to add a Lovelace resource by hand.
+CARD_FILENAME = "hermes-card.js"
+CARD_URL = f"/{DOMAIN}_static/{CARD_FILENAME}"
+DATA_CARD_REGISTERED = f"{DOMAIN}_card_registered"
+
 # --- Defaults --------------------------------------------------------------
 # 200 bytes is the documented Meshtastic limit; reconfirm against the firmware.
 DEFAULT_BYTE_LIMIT = 200

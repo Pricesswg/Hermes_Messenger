@@ -12,5 +12,9 @@ __pycache__/
 # Impostazioni locali dell'editor/agent
 .claude/
 
+# Frontend card build (il bundle in custom_components/hermes/www/ e' versionato)
+hermes-card/node_modules/
+
+
 # Immagini sorgente pesanti (i derivati brand/ e assets/cover.jpg sono versionati)
 assets/*-source.png
