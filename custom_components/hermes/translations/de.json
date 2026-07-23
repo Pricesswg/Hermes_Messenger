@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Hermes — Gateway und Kanal",
+        "title": "Hermes: Gateway und Kanal",
         "description": "Konfiguriere das Meshtastic-Gateway, das Hermes abhört und über das es antwortet. Erfordert, dass die offizielle Meshtastic-Integration bereits eingerichtet ist.",
         "data": {
           "gateway_node_id": "Gateway-Node-ID",

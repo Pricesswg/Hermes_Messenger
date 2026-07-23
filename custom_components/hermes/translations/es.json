@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Hermes — puerta de enlace y canal",
+        "title": "Hermes: puerta de enlace y canal",
         "description": "Configura la puerta de enlace Meshtastic que Hermes escucha y a través de la cual responde. Requiere que la integración oficial de Meshtastic ya esté configurada.",
         "data": {
           "gateway_node_id": "ID de nodo de la puerta de enlace",

@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Hermes — gateway and channel",
+        "title": "Hermes: gateway and channel",
         "description": "Configure the Meshtastic gateway Hermes listens to and replies through. Requires the official Meshtastic integration to be already set up.",
         "data": {
           "gateway_node_id": "Gateway node ID",

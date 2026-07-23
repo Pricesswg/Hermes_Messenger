@@ -11,3 +11,6 @@ __pycache__/
 
 # Impostazioni locali dell'editor/agent
 .claude/
+
+# Immagini sorgente pesanti (i derivati brand/ e assets/cover.jpg sono versionati)
+assets/*-source.png

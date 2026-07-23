@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Hermes — passerelle et canal",
+        "title": "Hermes: passerelle et canal",
         "description": "Configurez la passerelle Meshtastic que Hermes écoute et via laquelle il répond. Nécessite que l'intégration Meshtastic officielle soit déjà configurée.",
         "data": {
           "gateway_node_id": "ID de nœud de la passerelle",

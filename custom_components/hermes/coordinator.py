@@ -160,7 +160,7 @@ class HermesCoordinator:
             # is alive and listening.
             self._record_error("authorization rejected", sender, text)
             _LOGGER.debug(
-                "Hermes: node %s NOT authorized for '%s' — dropping", sender, text
+                "Hermes: node %s NOT authorized for '%s', dropping", sender, text
             )
             self._notify_sensors()
             return

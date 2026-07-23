@@ -20,7 +20,7 @@ from __future__ import annotations
 DEFAULT_BYTE_LIMIT = 200
 
 # Safety valve: cap on fixed-point iterations. In practice it converges in 2-3
-# rounds; exceeding it means a logic bug, not a "hard" input — better to blow up
+# rounds; exceeding it means a logic bug, not a "hard" input, better to blow up
 # than to spin in an infinite loop.
 _MAX_ITERATIONS = 12
 
