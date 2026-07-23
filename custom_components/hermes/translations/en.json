@@ -3,18 +3,20 @@
     "step": {
       "user": {
         "title": "Hermes: gateway and channel",
-        "description": "Configure the Meshtastic gateway Hermes listens to and replies through. Requires the official Meshtastic integration to be already set up.",
+        "description": "Pick the Meshtastic gateway node Hermes listens to and replies through, then the mode. Requires the official Meshtastic integration to be already set up.",
         "data": {
-          "gateway_node_id": "Gateway node ID",
+          "gateway_device": "Gateway node (Meshtastic device)",
           "mode": "Mode",
           "channel_index": "Channel index (0-7, channel mode only)",
-          "authorized_nodes": "Authorized node IDs (comma-separated)"
+          "authorized_devices": "Authorized nodes (Meshtastic devices)",
+          "authorized_extra": "Additional node IDs (comma-separated, optional)"
         }
       }
     },
     "error": {
       "invalid_node_list": "Invalid node ID list. Use comma-separated integers.",
-      "empty_whitelist": "Enter at least one authorized node ID."
+      "empty_whitelist": "Select at least one authorized node.",
+      "gateway_not_meshtastic": "The selected device is not a Meshtastic node."
     },
     "abort": {
       "already_configured": "This gateway/channel combination is already configured."
@@ -43,7 +45,8 @@
           "reply_template": "Reply template",
           "reply_to": "Reply routing (channel mode)",
           "service_data": "Service data (advanced, optional)",
-          "authorized_nodes_override": "Authorized nodes override (comma-separated, optional)"
+          "authorized_devices": "Authorized nodes override (Meshtastic devices, optional)",
+          "authorized_extra": "Additional override node IDs (comma-separated, optional)"
         }
       },
       "edit_command": {
@@ -57,7 +60,8 @@
           "reply_template": "Reply template",
           "reply_to": "Reply routing (channel mode)",
           "service_data": "Service data (advanced, optional)",
-          "authorized_nodes_override": "Authorized nodes override (comma-separated, optional)"
+          "authorized_devices": "Authorized nodes override (Meshtastic devices, optional)",
+          "authorized_extra": "Additional override node IDs (comma-separated, optional)"
         }
       },
       "select_command": {
@@ -75,7 +79,8 @@
       "whitelist": {
         "title": "Default authorized nodes",
         "data": {
-          "authorized_nodes": "Authorized node IDs (comma-separated)"
+          "authorized_devices": "Authorized nodes (Meshtastic devices)",
+          "authorized_extra": "Additional node IDs (comma-separated, optional)"
         }
       },
       "timing": {
@@ -89,7 +94,7 @@
     },
     "error": {
       "invalid_node_list": "Invalid node ID list. Use comma-separated integers.",
-      "empty_whitelist": "Enter at least one authorized node ID."
+      "empty_whitelist": "Select at least one authorized node."
     }
   },
   "selector": {

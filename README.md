@@ -85,10 +85,13 @@ Access Token.
 
 | Field | Description |
 |-------|-------------|
-| **Gateway node ID** | Node id of the Meshtastic gateway to operate from/to. |
+| **Gateway node** | Pick your gateway from the list of Meshtastic devices. No numeric id to look up. |
 | **Mode** | `Channel (broadcast)` or `Direct message (DM)`. |
 | **Channel index** | 0-7, used only in channel mode. |
-| **Authorized node IDs** | Default whitelist, comma-separated (at least one). |
+| **Authorized nodes** | Pick the allowed nodes from the Meshtastic device list. An optional field lets you add node ids for nodes HA has not seen yet. At least one required. |
+
+Node picking works because the base Meshtastic integration exposes each node as a
+device; Hermes resolves the picked device to its node number for you.
 
 To manage **multiple channels**: add the integration multiple times (one config
 entry per gateway + channel/DM combination). This is native multi-instance, no
@@ -107,7 +110,7 @@ ad-hoc configuration needed.
 | **Reply template** | Simple placeholders (below). |
 | **Reply routing** | On channel (broadcast) or DM to the sender. |
 | **Service data** | Optional, advanced (dict). |
-| **Authorized nodes override** | Optional: whitelist specific to this command. |
+| **Authorized nodes override** | Optional: pick devices for a whitelist specific to this command. |
 
 Commands are **editable without restarting** the integration.
 

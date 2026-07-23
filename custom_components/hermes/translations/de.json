@@ -3,18 +3,20 @@
     "step": {
       "user": {
         "title": "Hermes: Gateway und Kanal",
-        "description": "Konfiguriere das Meshtastic-Gateway, das Hermes abhört und über das es antwortet. Erfordert, dass die offizielle Meshtastic-Integration bereits eingerichtet ist.",
+        "description": "Wähle den Meshtastic-Gateway-Node, den Hermes abhört und über den es antwortet, dann den Modus. Erfordert, dass die offizielle Meshtastic-Integration bereits eingerichtet ist.",
         "data": {
-          "gateway_node_id": "Gateway-Node-ID",
+          "gateway_device": "Gateway-Node (Meshtastic-Gerät)",
           "mode": "Modus",
           "channel_index": "Kanalindex (0-7, nur im Kanalmodus)",
-          "authorized_nodes": "Autorisierte Node-IDs (durch Kommas getrennt)"
+          "authorized_devices": "Autorisierte Nodes (Meshtastic-Geräte)",
+          "authorized_extra": "Zusätzliche Node-IDs (durch Kommas getrennt, optional)"
         }
       }
     },
     "error": {
       "invalid_node_list": "Ungültige Node-ID-Liste. Verwende durch Kommas getrennte Ganzzahlen.",
-      "empty_whitelist": "Gib mindestens eine autorisierte Node-ID ein."
+      "empty_whitelist": "Wähle mindestens einen autorisierten Node aus.",
+      "gateway_not_meshtastic": "Das ausgewählte Gerät ist kein Meshtastic-Node."
     },
     "abort": {
       "already_configured": "Diese Gateway-/Kanal-Kombination ist bereits konfiguriert."
@@ -43,7 +45,8 @@
           "reply_template": "Antwortvorlage",
           "reply_to": "Antwort-Routing (Kanalmodus)",
           "service_data": "Dienstdaten (erweitert, optional)",
-          "authorized_nodes_override": "Autorisierte Nodes überschreiben (durch Kommas getrennt, optional)"
+          "authorized_devices": "Autorisierte Nodes überschreiben (Meshtastic-Geräte, optional)",
+          "authorized_extra": "Zusätzliche Override-Node-IDs (durch Kommas getrennt, optional)"
         }
       },
       "edit_command": {
@@ -57,7 +60,8 @@
           "reply_template": "Antwortvorlage",
           "reply_to": "Antwort-Routing (Kanalmodus)",
           "service_data": "Dienstdaten (erweitert, optional)",
-          "authorized_nodes_override": "Autorisierte Nodes überschreiben (durch Kommas getrennt, optional)"
+          "authorized_devices": "Autorisierte Nodes überschreiben (Meshtastic-Geräte, optional)",
+          "authorized_extra": "Zusätzliche Override-Node-IDs (durch Kommas getrennt, optional)"
         }
       },
       "select_command": {
@@ -75,7 +79,8 @@
       "whitelist": {
         "title": "Standardmäßig autorisierte Nodes",
         "data": {
-          "authorized_nodes": "Autorisierte Node-IDs (durch Kommas getrennt)"
+          "authorized_devices": "Autorisierte Nodes (Meshtastic-Geräte)",
+          "authorized_extra": "Zusätzliche Node-IDs (durch Kommas getrennt, optional)"
         }
       },
       "timing": {
@@ -89,7 +94,7 @@
     },
     "error": {
       "invalid_node_list": "Ungültige Node-ID-Liste. Verwende durch Kommas getrennte Ganzzahlen.",
-      "empty_whitelist": "Gib mindestens eine autorisierte Node-ID ein."
+      "empty_whitelist": "Wähle mindestens einen autorisierten Node aus."
     }
   },
   "selector": {

@@ -2,6 +2,11 @@
 
 All configuration happens from the UI: no hand-written YAML, no raw Jinja2
 exposed (reply templates use simple placeholders).
+
+Nodes are picked from the devices exposed by the base `meshtastic` integration
+(a DeviceSelector), so the user never has to look up or type a numeric node id.
+Each Meshtastic node device carries the identifier `(meshtastic, "<node_num>")`,
+which we resolve back to the integer node number stored in the entry.
 """
 
 from __future__ import annotations
@@ -17,8 +22,8 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.core import callback
-from homeassistant.helpers import selector
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr, selector
 
 from .const import (
     CMD_AUTH_OVERRIDE,
@@ -42,11 +47,17 @@ from .const import (
     DOMAIN,
     MATCH_EXACT,
     MATCH_TYPES,
+    MESHTASTIC_DOMAIN,
     MODE_CHANNEL,
     MODES,
     REPLY_CHANNEL,
     REPLY_TARGETS,
 )
+
+# Form-only field keys (transient): resolved to node numbers before storing.
+FIELD_GATEWAY_DEVICE = "gateway_device"
+FIELD_AUTH_DEVICES = "authorized_devices"
+FIELD_AUTH_EXTRA = "authorized_extra"
 
 
 def _parse_nodes(raw: str) -> list[int]:
@@ -68,6 +79,61 @@ def _format_nodes(nodes: list[int] | None) -> str:
     return ", ".join(str(n) for n in (nodes or []))
 
 
+def _device_to_node(hass: HomeAssistant, device_id: str) -> int | None:
+    """Resolve a device_id to its Meshtastic node number, or None."""
+    device = dr.async_get(hass).async_get(device_id)
+    if device is None:
+        return None
+    for domain, value in device.identifiers:
+        if domain == MESHTASTIC_DOMAIN:
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
+def _node_to_device(hass: HomeAssistant, node_id: int) -> str | None:
+    """Reverse lookup: node number to device_id (for form prefill), or None."""
+    reg = dr.async_get(hass)
+    target = (MESHTASTIC_DOMAIN, str(node_id))
+    for device in reg.devices.values():
+        if target in device.identifiers:
+            return device.id
+    return None
+
+
+def _resolve_nodes(
+    hass: HomeAssistant, device_ids: list[str] | None, extra_text: str
+) -> list[int]:
+    """Combine picked devices and the optional manual list into node numbers.
+
+    Raises vol.Invalid if the manual list contains a non-integer token.
+    """
+    nodes: set[int] = set()
+    for device_id in device_ids or []:
+        node = _device_to_node(hass, device_id)
+        if node is not None:
+            nodes.add(node)
+    nodes.update(_parse_nodes(extra_text))
+    return sorted(nodes)
+
+
+def _split_for_prefill(
+    hass: HomeAssistant, node_ids: list[int] | None
+) -> tuple[list[str], str]:
+    """Split stored node ids into (known device_ids, leftover manual string)."""
+    devices: list[str] = []
+    extras: list[int] = []
+    for node in node_ids or []:
+        device_id = _node_to_device(hass, int(node))
+        if device_id:
+            devices.append(device_id)
+        else:
+            extras.append(int(node))
+    return devices, _format_nodes(extras)
+
+
 def _select(options: list[str], translation_key: str) -> selector.SelectSelector:
     """Dropdown SelectSelector with options translated via `translation_key`."""
     return selector.SelectSelector(
@@ -75,6 +141,15 @@ def _select(options: list[str], translation_key: str) -> selector.SelectSelector
             options=options,
             mode=selector.SelectSelectorMode.DROPDOWN,
             translation_key=translation_key,
+        )
+    )
+
+
+def _meshtastic_device(multiple: bool) -> selector.DeviceSelector:
+    """DeviceSelector limited to devices from the base `meshtastic` integration."""
+    return selector.DeviceSelector(
+        selector.DeviceSelectorConfig(
+            integration=MESHTASTIC_DOMAIN, multiple=multiple
         )
     )
 
@@ -87,20 +162,28 @@ class HermesConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Initial step: gateway data, mode, starting whitelist."""
+        """Initial step: pick the gateway device, mode, starting whitelist."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            gateway = _device_to_node(self.hass, user_input[FIELD_GATEWAY_DEVICE])
+            if gateway is None:
+                errors[FIELD_GATEWAY_DEVICE] = "gateway_not_meshtastic"
+
+            authorized: list[int] = []
             try:
-                authorized = _parse_nodes(user_input[CONF_AUTHORIZED_NODES])
+                authorized = _resolve_nodes(
+                    self.hass,
+                    user_input.get(FIELD_AUTH_DEVICES),
+                    user_input.get(FIELD_AUTH_EXTRA, ""),
+                )
             except vol.Invalid:
-                errors[CONF_AUTHORIZED_NODES] = "invalid_node_list"
+                errors[FIELD_AUTH_EXTRA] = "invalid_node_list"
             else:
                 if not authorized:
-                    errors[CONF_AUTHORIZED_NODES] = "empty_whitelist"
+                    errors[FIELD_AUTH_DEVICES] = "empty_whitelist"
 
             if not errors:
-                gateway = user_input[CONF_GATEWAY_NODE_ID]
                 mode = user_input[CONF_MODE]
                 channel = (
                     user_input.get(CONF_CHANNEL_INDEX)
@@ -108,8 +191,7 @@ class HermesConfigFlow(ConfigFlow, domain=DOMAIN):
                     else None
                 )
                 # unique_id per gateway+mode+channel combination: enables
-                # multi-instance (different channels = different entries) with
-                # no duplicates.
+                # multi-instance (different channels = different entries).
                 await self.async_set_unique_id(f"{gateway}_{mode}_{channel}")
                 self._abort_if_unique_id_configured()
 
@@ -130,14 +212,15 @@ class HermesConfigFlow(ConfigFlow, domain=DOMAIN):
 
         schema = vol.Schema(
             {
-                vol.Required(CONF_GATEWAY_NODE_ID): vol.Coerce(int),
+                vol.Required(FIELD_GATEWAY_DEVICE): _meshtastic_device(False),
                 vol.Required(CONF_MODE, default=MODE_CHANNEL): _select(
                     MODES, "mode"
                 ),
                 vol.Optional(CONF_CHANNEL_INDEX, default=0): vol.All(
                     vol.Coerce(int), vol.Range(min=0, max=7)
                 ),
-                vol.Required(CONF_AUTHORIZED_NODES, default=""): str,
+                vol.Optional(FIELD_AUTH_DEVICES): _meshtastic_device(True),
+                vol.Optional(FIELD_AUTH_EXTRA, default=""): str,
             }
         )
         return self.async_show_form(
@@ -197,21 +280,28 @@ class HermesOptionsFlow(OptionsFlow):
                     REPLY_TARGETS, "reply_to"
                 ),
                 vol.Optional(CMD_SERVICE_DATA): selector.ObjectSelector(),
-                vol.Optional(CMD_AUTH_OVERRIDE, default=""): str,
+                vol.Optional(FIELD_AUTH_DEVICES): _meshtastic_device(True),
+                vol.Optional(FIELD_AUTH_EXTRA, default=""): str,
             }
         )
+        prefill: dict[str, Any] = dict(existing or {})
         if existing is not None:
-            prefill = dict(existing)
-            prefill[CMD_AUTH_OVERRIDE] = _format_nodes(existing.get(CMD_AUTH_OVERRIDE))
-            schema = self.add_suggested_values_to_schema(schema, prefill)
-        return schema
+            devices, extra = _split_for_prefill(
+                self.hass, existing.get(CMD_AUTH_OVERRIDE)
+            )
+            prefill[FIELD_AUTH_DEVICES] = devices
+            prefill[FIELD_AUTH_EXTRA] = extra
+        return self.add_suggested_values_to_schema(schema, prefill)
 
     def _build_command(
         self, user_input: dict[str, Any], command_id: str
-    ) -> dict[str, Any] | None:
-        """Normalize form input into a command object. None if invalid."""
-        override_raw = user_input.get(CMD_AUTH_OVERRIDE, "")
-        override = _parse_nodes(override_raw)
+    ) -> dict[str, Any]:
+        """Normalize form input into a command object. Raises vol.Invalid."""
+        override = _resolve_nodes(
+            self.hass,
+            user_input.get(FIELD_AUTH_DEVICES),
+            user_input.get(FIELD_AUTH_EXTRA, ""),
+        )
         command = {
             CMD_ID: command_id,
             CMD_KEYWORD: user_input[CMD_KEYWORD],
@@ -244,7 +334,7 @@ class HermesOptionsFlow(OptionsFlow):
             try:
                 command = self._build_command(user_input, uuid.uuid4().hex)
             except vol.Invalid:
-                errors[CMD_AUTH_OVERRIDE] = "invalid_node_list"
+                errors[FIELD_AUTH_EXTRA] = "invalid_node_list"
             else:
                 return await self._save_commands([*self._commands(), command])
 
@@ -269,7 +359,7 @@ class HermesOptionsFlow(OptionsFlow):
         options = [
             selector.SelectOptionDict(
                 value=cmd[CMD_ID],
-                label=f"{cmd.get(CMD_KEYWORD, '?')} → {cmd.get(CMD_SERVICE, '?')}",
+                label=f"{cmd.get(CMD_KEYWORD, '?')} ({cmd.get(CMD_SERVICE, '?')})",
             )
             for cmd in commands
         ]
@@ -303,7 +393,7 @@ class HermesOptionsFlow(OptionsFlow):
             try:
                 updated = self._build_command(user_input, self._edit_id)
             except vol.Invalid:
-                errors[CMD_AUTH_OVERRIDE] = "invalid_node_list"
+                errors[FIELD_AUTH_EXTRA] = "invalid_node_list"
             else:
                 new_list = [
                     updated if c[CMD_ID] == self._edit_id else c for c in commands
@@ -332,7 +422,7 @@ class HermesOptionsFlow(OptionsFlow):
         options = [
             selector.SelectOptionDict(
                 value=cmd[CMD_ID],
-                label=f"{cmd.get(CMD_KEYWORD, '?')} → {cmd.get(CMD_SERVICE, '?')}",
+                label=f"{cmd.get(CMD_KEYWORD, '?')} ({cmd.get(CMD_SERVICE, '?')})",
             )
             for cmd in commands
         ]
@@ -356,7 +446,7 @@ class HermesOptionsFlow(OptionsFlow):
     async def async_step_whitelist(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Edit the default whitelist (authorized node ids)."""
+        """Edit the default whitelist by picking Meshtastic devices."""
         errors: dict[str, str] = {}
         current = self.config_entry.options.get(
             CONF_AUTHORIZED_NODES,
@@ -365,12 +455,16 @@ class HermesOptionsFlow(OptionsFlow):
 
         if user_input is not None:
             try:
-                nodes = _parse_nodes(user_input[CONF_AUTHORIZED_NODES])
+                nodes = _resolve_nodes(
+                    self.hass,
+                    user_input.get(FIELD_AUTH_DEVICES),
+                    user_input.get(FIELD_AUTH_EXTRA, ""),
+                )
             except vol.Invalid:
-                errors[CONF_AUTHORIZED_NODES] = "invalid_node_list"
+                errors[FIELD_AUTH_EXTRA] = "invalid_node_list"
             else:
                 if not nodes:
-                    errors[CONF_AUTHORIZED_NODES] = "empty_whitelist"
+                    errors[FIELD_AUTH_DEVICES] = "empty_whitelist"
                 else:
                     options = {
                         **self.config_entry.options,
@@ -378,15 +472,21 @@ class HermesOptionsFlow(OptionsFlow):
                     }
                     return self.async_create_entry(title="", data=options)
 
+        devices, extra = _split_for_prefill(self.hass, list(current))
         schema = vol.Schema(
             {
-                vol.Required(
-                    CONF_AUTHORIZED_NODES, default=_format_nodes(current)
-                ): str
+                vol.Optional(FIELD_AUTH_DEVICES): _meshtastic_device(True),
+                vol.Optional(FIELD_AUTH_EXTRA, default=""): str,
             }
         )
         return self.async_show_form(
-            step_id="whitelist", data_schema=schema, errors=errors
+            step_id="whitelist",
+            data_schema=self.add_suggested_values_to_schema(
+                schema,
+                user_input
+                or {FIELD_AUTH_DEVICES: devices, FIELD_AUTH_EXTRA: extra},
+            ),
+            errors=errors,
         )
 
     # --- Send timing -------------------------------------------------------

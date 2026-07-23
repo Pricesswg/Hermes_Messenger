@@ -3,18 +3,20 @@
     "step": {
       "user": {
         "title": "Hermes: puerta de enlace y canal",
-        "description": "Configura la puerta de enlace Meshtastic que Hermes escucha y a través de la cual responde. Requiere que la integración oficial de Meshtastic ya esté configurada.",
+        "description": "Elige el nodo de puerta de enlace Meshtastic que Hermes escucha y a través del cual responde, luego el modo. Requiere que la integración oficial de Meshtastic ya esté configurada.",
         "data": {
-          "gateway_node_id": "ID de nodo de la puerta de enlace",
+          "gateway_device": "Nodo de puerta de enlace (dispositivo Meshtastic)",
           "mode": "Modo",
           "channel_index": "Índice de canal (0-7, solo en modo canal)",
-          "authorized_nodes": "IDs de nodo autorizados (separados por comas)"
+          "authorized_devices": "Nodos autorizados (dispositivos Meshtastic)",
+          "authorized_extra": "IDs de nodo adicionales (separados por comas, opcional)"
         }
       }
     },
     "error": {
       "invalid_node_list": "Lista de IDs de nodo no válida. Usa enteros separados por comas.",
-      "empty_whitelist": "Introduce al menos un ID de nodo autorizado."
+      "empty_whitelist": "Selecciona al menos un nodo autorizado.",
+      "gateway_not_meshtastic": "El dispositivo seleccionado no es un nodo Meshtastic."
     },
     "abort": {
       "already_configured": "Esta combinación de puerta de enlace/canal ya está configurada."
@@ -43,7 +45,8 @@
           "reply_template": "Plantilla de respuesta",
           "reply_to": "Enrutamiento de respuesta (modo canal)",
           "service_data": "Datos del servicio (avanzado, opcional)",
-          "authorized_nodes_override": "Anulación de nodos autorizados (separados por comas, opcional)"
+          "authorized_devices": "Anulación de nodos autorizados (dispositivos Meshtastic, opcional)",
+          "authorized_extra": "IDs de nodo adicionales para la anulación (separados por comas, opcional)"
         }
       },
       "edit_command": {
@@ -57,7 +60,8 @@
           "reply_template": "Plantilla de respuesta",
           "reply_to": "Enrutamiento de respuesta (modo canal)",
           "service_data": "Datos del servicio (avanzado, opcional)",
-          "authorized_nodes_override": "Anulación de nodos autorizados (separados por comas, opcional)"
+          "authorized_devices": "Anulación de nodos autorizados (dispositivos Meshtastic, opcional)",
+          "authorized_extra": "IDs de nodo adicionales para la anulación (separados por comas, opcional)"
         }
       },
       "select_command": {
@@ -75,7 +79,8 @@
       "whitelist": {
         "title": "Nodos autorizados por defecto",
         "data": {
-          "authorized_nodes": "IDs de nodo autorizados (separados por comas)"
+          "authorized_devices": "Nodos autorizados (dispositivos Meshtastic)",
+          "authorized_extra": "IDs de nodo adicionales (separados por comas, opcional)"
         }
       },
       "timing": {
@@ -89,7 +94,7 @@
     },
     "error": {
       "invalid_node_list": "Lista de IDs de nodo no válida. Usa enteros separados por comas.",
-      "empty_whitelist": "Introduce al menos un ID de nodo autorizado."
+      "empty_whitelist": "Selecciona al menos un nodo autorizado."
     }
   },
   "selector": {

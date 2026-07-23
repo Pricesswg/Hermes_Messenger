@@ -3,18 +3,20 @@
     "step": {
       "user": {
         "title": "Hermes: gateway e canale",
-        "description": "Configura il gateway Meshtastic che Hermes ascolta e tramite cui risponde. Richiede l'integrazione Meshtastic ufficiale già configurata.",
+        "description": "Scegli il nodo gateway Meshtastic che Hermes ascolta e tramite cui risponde, poi la modalità. Richiede l'integrazione Meshtastic ufficiale già configurata.",
         "data": {
-          "gateway_node_id": "Node ID del gateway",
+          "gateway_device": "Nodo gateway (device Meshtastic)",
           "mode": "Modalità",
           "channel_index": "Indice canale (0-7, solo in modalità canale)",
-          "authorized_nodes": "Node ID autorizzati (separati da virgola)"
+          "authorized_devices": "Nodi autorizzati (device Meshtastic)",
+          "authorized_extra": "Node ID aggiuntivi (separati da virgola, opzionale)"
         }
       }
     },
     "error": {
       "invalid_node_list": "Lista di node ID non valida. Usa interi separati da virgola.",
-      "empty_whitelist": "Inserisci almeno un node ID autorizzato."
+      "empty_whitelist": "Seleziona almeno un nodo autorizzato.",
+      "gateway_not_meshtastic": "Il device selezionato non è un nodo Meshtastic."
     },
     "abort": {
       "already_configured": "Questa combinazione gateway/canale è già configurata."
@@ -43,7 +45,8 @@
           "reply_template": "Template di risposta",
           "reply_to": "Instradamento risposta (modalità canale)",
           "service_data": "Dati servizio (avanzato, opzionale)",
-          "authorized_nodes_override": "Override nodi autorizzati (virgola, opzionale)"
+          "authorized_devices": "Override nodi autorizzati (device Meshtastic, opzionale)",
+          "authorized_extra": "Node ID aggiuntivi per override (separati da virgola, opzionale)"
         }
       },
       "edit_command": {
@@ -57,7 +60,8 @@
           "reply_template": "Template di risposta",
           "reply_to": "Instradamento risposta (modalità canale)",
           "service_data": "Dati servizio (avanzato, opzionale)",
-          "authorized_nodes_override": "Override nodi autorizzati (virgola, opzionale)"
+          "authorized_devices": "Override nodi autorizzati (device Meshtastic, opzionale)",
+          "authorized_extra": "Node ID aggiuntivi per override (separati da virgola, opzionale)"
         }
       },
       "select_command": {
@@ -75,7 +79,8 @@
       "whitelist": {
         "title": "Nodi autorizzati di default",
         "data": {
-          "authorized_nodes": "Node ID autorizzati (separati da virgola)"
+          "authorized_devices": "Nodi autorizzati (device Meshtastic)",
+          "authorized_extra": "Node ID aggiuntivi (separati da virgola, opzionale)"
         }
       },
       "timing": {
@@ -89,7 +94,7 @@
     },
     "error": {
       "invalid_node_list": "Lista di node ID non valida. Usa interi separati da virgola.",
-      "empty_whitelist": "Inserisci almeno un node ID autorizzato."
+      "empty_whitelist": "Seleziona almeno un nodo autorizzato."
     }
   },
   "selector": {
