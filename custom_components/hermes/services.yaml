@@ -1,0 +1,52 @@
+broadcast:
+  name: Broadcast
+  description: >-
+    Invia un messaggio sul canale (o DM) configurato nella entry Hermes,
+    passando per il motore di split byte-safe. Pensato per notifiche push da
+    automazioni Home Assistant, anche schedulate.
+  fields:
+    config_entry_id:
+      name: Istanza Hermes
+      description: La config entry Hermes su cui inviare.
+      required: true
+      selector:
+        config_entry:
+          integration: hermes
+    message:
+      name: Messaggio
+      description: Testo da inviare (verrà spezzato se supera il limite di byte).
+      required: true
+      example: "Allarme: rilevato movimento in giardino"
+      selector:
+        text:
+          multiline: true
+
+send_direct:
+  name: Invio diretto (DM)
+  description: >-
+    Invia un messaggio diretto a un singolo nodo, bypassando il canale di
+    default della entry.
+  fields:
+    config_entry_id:
+      name: Istanza Hermes
+      description: La config entry Hermes da usare come gateway mittente.
+      required: true
+      selector:
+        config_entry:
+          integration: hermes
+    node_id:
+      name: Node ID destinatario
+      description: Node id del nodo Meshtastic a cui inviare il DM.
+      required: true
+      example: 3771721320
+      selector:
+        number:
+          mode: box
+          min: 0
+    message:
+      name: Messaggio
+      description: Testo da inviare (verrà spezzato se supera il limite di byte).
+      required: true
+      selector:
+        text:
+          multiline: true

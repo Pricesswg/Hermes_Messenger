@@ -1,0 +1,13 @@
+# Ambiente di sviluppo/test locale
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS
+.DS_Store
+
+# Impostazioni locali dell'editor/agent
+.claude/

@@ -1,0 +1,122 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Hermes — gateway e canale",
+        "description": "Configura il gateway Meshtastic che Hermes ascolta e tramite cui risponde. Richiede l'integrazione Meshtastic ufficiale già configurata.",
+        "data": {
+          "gateway_node_id": "Node ID del gateway",
+          "mode": "Modalità",
+          "channel_index": "Indice canale (0-7, solo in modalità canale)",
+          "authorized_nodes": "Node ID autorizzati (separati da virgola)"
+        }
+      }
+    },
+    "error": {
+      "invalid_node_list": "Lista di node ID non valida. Usa interi separati da virgola.",
+      "empty_whitelist": "Inserisci almeno un node ID autorizzato."
+    },
+    "abort": {
+      "already_configured": "Questa combinazione gateway/canale è già configurata."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni Hermes",
+        "menu_options": {
+          "add_command": "Aggiungi un comando",
+          "select_command": "Modifica un comando",
+          "remove_command": "Rimuovi comandi",
+          "whitelist": "Nodi autorizzati di default",
+          "timing": "Timing di invio"
+        }
+      },
+      "add_command": {
+        "title": "Nuovo comando",
+        "description": "Placeholder nella risposta: {state:entity_id} e {attr:entity_id:attributo}.",
+        "data": {
+          "keyword": "Parola chiave",
+          "match_type": "Tipo di match",
+          "service": "Servizio (dominio.servizio)",
+          "target": "Target (entità/area)",
+          "reply_template": "Template di risposta",
+          "reply_to": "Instradamento risposta (modalità canale)",
+          "service_data": "Dati servizio (avanzato, opzionale)",
+          "authorized_nodes_override": "Override nodi autorizzati (virgola, opzionale)"
+        }
+      },
+      "edit_command": {
+        "title": "Modifica comando",
+        "description": "Placeholder nella risposta: {state:entity_id} e {attr:entity_id:attributo}.",
+        "data": {
+          "keyword": "Parola chiave",
+          "match_type": "Tipo di match",
+          "service": "Servizio (dominio.servizio)",
+          "target": "Target (entità/area)",
+          "reply_template": "Template di risposta",
+          "reply_to": "Instradamento risposta (modalità canale)",
+          "service_data": "Dati servizio (avanzato, opzionale)",
+          "authorized_nodes_override": "Override nodi autorizzati (virgola, opzionale)"
+        }
+      },
+      "select_command": {
+        "title": "Scegli il comando da modificare",
+        "data": {
+          "id": "Comando"
+        }
+      },
+      "remove_command": {
+        "title": "Rimuovi comandi",
+        "data": {
+          "id": "Comandi da rimuovere"
+        }
+      },
+      "whitelist": {
+        "title": "Nodi autorizzati di default",
+        "data": {
+          "authorized_nodes": "Node ID autorizzati (separati da virgola)"
+        }
+      },
+      "timing": {
+        "title": "Timing di invio",
+        "description": "Tara sui tuoi valori hardware. Il radio può scartare risposte immediate.",
+        "data": {
+          "initial_delay": "Attesa iniziale prima della prima risposta (secondi)",
+          "part_delay": "Pausa tra le parti (secondi)"
+        }
+      }
+    },
+    "error": {
+      "invalid_node_list": "Lista di node ID non valida. Usa interi separati da virgola.",
+      "empty_whitelist": "Inserisci almeno un node ID autorizzato."
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "channel": "Canale (broadcast)",
+        "direct_message": "Messaggio diretto (DM)"
+      }
+    },
+    "match_type": {
+      "options": {
+        "exact": "Match esatto",
+        "startswith": "Inizia con"
+      }
+    },
+    "reply_to": {
+      "options": {
+        "channel": "Rispondi sullo stesso canale",
+        "sender_dm": "Rispondi in DM al mittente"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "last_command": { "name": "Ultimo comando ricevuto" },
+      "commands_executed": { "name": "Comandi eseguiti" },
+      "last_error": { "name": "Ultimo errore / rifiuto autorizzazione" }
+    }
+  }
+}

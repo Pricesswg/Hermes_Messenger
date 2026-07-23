@@ -1,0 +1,122 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Hermes — gateway and channel",
+        "description": "Configure the Meshtastic gateway Hermes listens to and replies through. Requires the official Meshtastic integration to be already set up.",
+        "data": {
+          "gateway_node_id": "Gateway node ID",
+          "mode": "Mode",
+          "channel_index": "Channel index (0-7, channel mode only)",
+          "authorized_nodes": "Authorized node IDs (comma-separated)"
+        }
+      }
+    },
+    "error": {
+      "invalid_node_list": "Invalid node ID list. Use comma-separated integers.",
+      "empty_whitelist": "Enter at least one authorized node ID."
+    },
+    "abort": {
+      "already_configured": "This gateway/channel combination is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Hermes options",
+        "menu_options": {
+          "add_command": "Add a command",
+          "select_command": "Edit a command",
+          "remove_command": "Remove commands",
+          "whitelist": "Default authorized nodes",
+          "timing": "Send timing"
+        }
+      },
+      "add_command": {
+        "title": "New command",
+        "description": "Placeholders in the reply: {state:entity_id} and {attr:entity_id:attribute}.",
+        "data": {
+          "keyword": "Keyword",
+          "match_type": "Match type",
+          "service": "Service (domain.service)",
+          "target": "Target (entity/area)",
+          "reply_template": "Reply template",
+          "reply_to": "Reply routing (channel mode)",
+          "service_data": "Service data (advanced, optional)",
+          "authorized_nodes_override": "Authorized nodes override (comma-separated, optional)"
+        }
+      },
+      "edit_command": {
+        "title": "Edit command",
+        "description": "Placeholders in the reply: {state:entity_id} and {attr:entity_id:attribute}.",
+        "data": {
+          "keyword": "Keyword",
+          "match_type": "Match type",
+          "service": "Service (domain.service)",
+          "target": "Target (entity/area)",
+          "reply_template": "Reply template",
+          "reply_to": "Reply routing (channel mode)",
+          "service_data": "Service data (advanced, optional)",
+          "authorized_nodes_override": "Authorized nodes override (comma-separated, optional)"
+        }
+      },
+      "select_command": {
+        "title": "Pick a command to edit",
+        "data": {
+          "id": "Command"
+        }
+      },
+      "remove_command": {
+        "title": "Remove commands",
+        "data": {
+          "id": "Commands to remove"
+        }
+      },
+      "whitelist": {
+        "title": "Default authorized nodes",
+        "data": {
+          "authorized_nodes": "Authorized node IDs (comma-separated)"
+        }
+      },
+      "timing": {
+        "title": "Send timing",
+        "description": "Tune to your hardware. The radio may drop immediate replies.",
+        "data": {
+          "initial_delay": "Initial delay before first reply (seconds)",
+          "part_delay": "Delay between parts (seconds)"
+        }
+      }
+    },
+    "error": {
+      "invalid_node_list": "Invalid node ID list. Use comma-separated integers.",
+      "empty_whitelist": "Enter at least one authorized node ID."
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "channel": "Channel (broadcast)",
+        "direct_message": "Direct message (DM)"
+      }
+    },
+    "match_type": {
+      "options": {
+        "exact": "Exact match",
+        "startswith": "Starts with"
+      }
+    },
+    "reply_to": {
+      "options": {
+        "channel": "Reply on the same channel",
+        "sender_dm": "Reply via DM to the sender"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "last_command": { "name": "Last command received" },
+      "commands_executed": { "name": "Commands executed" },
+      "last_error": { "name": "Last error / auth rejection" }
+    }
+  }
+}
