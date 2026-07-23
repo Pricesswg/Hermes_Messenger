@@ -1,18 +1,18 @@
-"""Costanti per l'integrazione Hermes (Meshtastic Commander)."""
+"""Constants for the Hermes integration (Meshtastic Commander)."""
 
 from __future__ import annotations
 
 DOMAIN = "hermes"
 PLATFORMS = ["sensor"]
 
-# --- Integrazione base Meshtastic (verificata su meshtastic/home-assistant) --
-# L'evento e il servizio appartengono all'integrazione ufficiale `meshtastic`.
-# Riconfermare su ogni major update della base: qui c'è tutto il coupling.
+# --- Base Meshtastic integration (verified against meshtastic/home-assistant) -
+# The event and the service belong to the official `meshtastic` integration.
+# Reconfirm on every major update of the base: all the coupling lives here.
 MESHTASTIC_DOMAIN = "meshtastic"
 EVENT_TEXT_MESSAGE = "meshtastic_api_text_message"
 SERVICE_SEND_TEXT = "send_text"
 
-# --- Chiavi Config Entry (step "user") -------------------------------------
+# --- Config Entry keys (step "user") ---------------------------------------
 CONF_GATEWAY_NODE_ID = "gateway_node_id"
 CONF_MODE = "mode"
 CONF_CHANNEL_INDEX = "channel_index"
@@ -22,12 +22,12 @@ MODE_CHANNEL = "channel"
 MODE_DIRECT = "direct_message"
 MODES = [MODE_CHANNEL, MODE_DIRECT]
 
-# --- Chiavi Options --------------------------------------------------------
+# --- Options keys ----------------------------------------------------------
 CONF_COMMANDS = "commands"
 CONF_INITIAL_DELAY = "initial_delay"
 CONF_PART_DELAY = "part_delay"
 
-# Chiavi del singolo comando (oggetto in CONF_COMMANDS).
+# Keys of a single command (object in CONF_COMMANDS).
 CMD_ID = "id"
 CMD_KEYWORD = "keyword"
 CMD_MATCH_TYPE = "match_type"
@@ -46,10 +46,10 @@ REPLY_CHANNEL = "channel"
 REPLY_SENDER_DM = "sender_dm"
 REPLY_TARGETS = [REPLY_CHANNEL, REPLY_SENDER_DM]
 
-# --- Default ---------------------------------------------------------------
-# 200 byte è il limite documentato Meshtastic; da riconfermare sul firmware.
+# --- Defaults --------------------------------------------------------------
+# 200 bytes is the documented Meshtastic limit; reconfirm against the firmware.
 DEFAULT_BYTE_LIMIT = 200
-# Il radio può scartare risposte immediate: attesa iniziale prima del 1o invio.
+# The radio may drop immediate replies: initial wait before the first send.
 DEFAULT_INITIAL_DELAY = 5
-# Pausa tra le parti successive per non congestionare la mesh.
+# Pause between subsequent parts to avoid congesting the mesh.
 DEFAULT_PART_DELAY = 2

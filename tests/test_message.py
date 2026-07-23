@@ -1,6 +1,6 @@
-"""Test dei 5 criteri di accettazione per il motore di split byte-safe.
+"""Tests for the 5 acceptance criteria of the byte-safe split engine.
 
-Puro Python, nessuna istanza Home Assistant richiesta:
+Pure Python, no Home Assistant instance required:
 
     .venv/bin/pytest tests/test_message.py -v
 """
@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-# Import diretto del modulo per path: evita di dover installare il package
-# `custom_components.hermes` (che a sua volta importerebbe Home Assistant).
+# Import the module directly by path: avoids having to install the
+# `custom_components.hermes` package (which would in turn import Home Assistant).
 _MODULE_PATH = (
     Path(__file__).resolve().parent.parent
     / "custom_components"
@@ -35,18 +35,18 @@ def _byte_len(s: str) -> int:
     return len(s.encode("utf-8"))
 
 
-# --- Criterio 1: ASCII corto -> 1 solo messaggio, nessun header ------------
+# --- Criterion 1: short ASCII -> single message, no header ------------------
 
-def test_ascii_corto_singolo_senza_header():
-    text = "Salotto: 21.5C, luci spente"
+def test_short_ascii_single_no_header():
+    text = "Living room: 21.5C, lights off"
     out = split_message(text, LIMIT)
     assert out == [text]
     assert _HEADER_RE.match(out[0]) is None
 
 
-# --- Criterio 2: ASCII lungo -> N parti, ognuna <= limite, header corretti --
+# --- Criterion 2: long ASCII -> N parts, each <= limit, correct headers ------
 
-def test_ascii_lungo_multiparte():
+def test_long_ascii_multipart():
     text = "A" * 500
     out = split_message(text, LIMIT)
 
@@ -54,87 +54,87 @@ def test_ascii_lungo_multiparte():
     for part in out:
         assert _byte_len(part) <= LIMIT
 
-    # Header sequenziali e coerenti: (1/n), (2/n), ... (n/n).
+    # Sequential and consistent headers: (1/n), (2/n), ... (n/n).
     n = len(out)
     for idx, part in enumerate(out, start=1):
         m = _HEADER_RE.match(part)
-        assert m is not None, f"parte senza header: {part!r}"
+        assert m is not None, f"part without header: {part!r}"
         assert int(m.group(1)) == idx
         assert int(m.group(2)) == n
 
-    # Nessun carattere perso: ricomponendo i contenuti si torna all'originale.
+    # No character lost: recomposing the contents yields the original.
     rebuilt = "".join(_HEADER_RE.sub("", part) for part in out)
     assert rebuilt == text
 
 
-# --- Criterio 3: accenti/emoji al limite -> nessun char tagliato -----------
+# --- Criterion 3: accents/emoji at the limit -> no character cut -------------
 
 @pytest.mark.parametrize(
     "text",
     [
-        "à" * 130,          # 2 byte/char, ~260 byte -> forza lo split
-        "€" * 90,           # 3 byte/char
-        "🚨" * 70,          # 4 byte/char (emoji)
-        "Allarme perimetro nord 🚨 rilevato movimento alle 03:14 — verificare 📹" * 6,
+        "à" * 130,          # 2 bytes/char, ~260 bytes -> forces the split
+        "€" * 90,           # 3 bytes/char
+        "🚨" * 70,          # 4 bytes/char (emoji)
+        "North perimeter alarm 🚨 motion detected at 03:14 — please check 📹" * 6,
     ],
 )
-def test_multibyte_nessun_char_troncato(text):
+def test_multibyte_no_char_truncated(text):
     out = split_message(text, LIMIT)
 
     rebuilt_parts = []
     for part in out:
-        # Ogni parte deve essere valida UTF-8 (lo è per costruzione, ma
-        # ri-decodifichiamo per certezza: nessun surrogato/troncamento).
+        # Each part must be valid UTF-8 (it is by construction, but we
+        # re-decode to be sure: no surrogate/truncation).
         assert _byte_len(part) <= LIMIT
-        part.encode("utf-8").decode("utf-8")  # non deve sollevare
+        part.encode("utf-8").decode("utf-8")  # must not raise
         rebuilt_parts.append(_HEADER_RE.sub("", part))
 
     assert "".join(rebuilt_parts) == text
 
 
-# --- Criterio 4: >=10 parti -> header a 2 cifre non sfora il budget ---------
+# --- Criterion 4: >=10 parts -> 2-digit header does not overflow the budget --
 
-def test_dieci_o_piu_parti_header_due_cifre():
-    # Limite piccolo per forzare parecchie parti con testo gestibile.
+def test_ten_or_more_parts_two_digit_header():
+    # Small limit to force many parts with manageable text.
     limit = 24
     text = "X" * 400
     out = split_message(text, limit)
 
-    assert len(out) >= 10, "il caso di test deve produrre >= 10 parti"
+    assert len(out) >= 10, "the test case must produce >= 10 parts"
     n = len(out)
-    assert n >= 10  # header a 2 cifre presente
+    assert n >= 10  # 2-digit header present
 
     for part in out:
         assert _byte_len(part) <= limit, (
-            f"parte oltre il limite ({_byte_len(part)} > {limit}): {part!r}"
+            f"part over the limit ({_byte_len(part)} > {limit}): {part!r}"
         )
 
-    # Le parti con indice >= 10 hanno effettivamente header a 2 cifre.
+    # Parts with index >= 10 actually have a 2-digit header.
     assert any(_HEADER_RE.match(p).group(1) == "10" for p in out)
     rebuilt = "".join(_HEADER_RE.sub("", part) for part in out)
     assert rebuilt == text
 
 
-# --- Criterio 5: stringa vuota -> comportamento esplicito ([]) --------------
+# --- Criterion 5: empty string -> explicit behavior ([]) --------------------
 
-def test_stringa_vuota_lista_vuota():
+def test_empty_string_empty_list():
     assert split_message("", LIMIT) == []
 
 
-# --- Guardie extra (safety valve) ------------------------------------------
+# --- Extra guards (safety valve) -------------------------------------------
 
-def test_limite_al_confine_esatto():
-    # Esattamente `limit` byte -> singolo messaggio senza header.
+def test_limit_at_exact_boundary():
+    # Exactly `limit` bytes -> single message with no header.
     text = "A" * LIMIT
     out = split_message(text, LIMIT)
     assert out == [text]
 
-    # Un byte in più -> due parti.
+    # One byte more -> two parts.
     out2 = split_message("A" * (LIMIT + 1), LIMIT)
     assert len(out2) == 2
 
 
-def test_limite_assurdo_solleva_valueerror():
-    # Header di 2 parti ~ 6 byte; con limite 6 non entra alcun carattere.
+def test_absurd_limit_raises_valueerror():
+    # A 2-part header is ~6 bytes; with a limit of 6 no character fits.
     with pytest.raises(ValueError):
-        split_message("ciao mondo lungo abbastanza da spezzarsi", 6)
+        split_message("hello world long enough to be split", 6)

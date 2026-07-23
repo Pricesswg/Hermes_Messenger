@@ -1,148 +1,147 @@
 # Hermes — Meshtastic Commander
 
-Integrazione custom per Home Assistant che permette agli iscritti di un canale
-(o DM) Meshtastic cifrato di **inviare comandi testuali che eseguono azioni Home
-Assistant e ricevono una risposta**, e a Home Assistant di **inviare notifiche
-broadcast** sulla mesh da qualunque automazione (anche schedulata).
+A custom Home Assistant integration that lets members of an encrypted Meshtastic
+channel (or DM) **send text commands that run Home Assistant actions and get a
+reply**, and lets Home Assistant **send broadcast notifications** onto the mesh
+from any automation (including scheduled ones).
 
-Hermes è un **livello applicativo** sopra l'integrazione ufficiale
-[`meshtastic/home-assistant`](https://github.com/meshtastic/home-assistant): non
-gestisce la connessione al nodo (TCP/seriale/BLE), ma ascolta i suoi eventi e usa
-i suoi servizi. Tutta la configurazione avviene da UI — niente YAML a mano, niente
-Jinja2 grezzo, niente Lovelace card custom.
+Hermes is an **application layer** on top of the official
+[`meshtastic/home-assistant`](https://github.com/meshtastic/home-assistant)
+integration: it does not manage the node connection (TCP/serial/BLE), it listens
+to its events and uses its services. All configuration happens from the UI — no
+hand-written YAML, no raw Jinja2, no custom Lovelace cards.
 
-## Prerequisiti
+## Requirements
 
-- Home Assistant recente (config flow, options flow moderno, `TargetSelector`).
-- **Integrazione Meshtastic ufficiale già installata e configurata** (`domain: meshtastic`),
-  con almeno un gateway connesso. Hermes dipende dal suo evento
-  `meshtastic_api_text_message` e dal servizio `meshtastic.send_text`.
-- Firmware Meshtastic con PKC (≥ 2.5) se vuoi usare i DM come canale affidabile
-  (vedi *Sicurezza*).
+- A recent Home Assistant (config flow, modern options flow, `TargetSelector`).
+- **The official Meshtastic integration already installed and configured**
+  (`domain: meshtastic`), with at least one connected gateway. Hermes depends on
+  its `meshtastic_api_text_message` event and its `meshtastic.send_text` service.
+- Meshtastic firmware with PKC (≥ 2.5) if you want to use DMs as a trustworthy
+  channel (see *Security*).
 
-## Installazione (HACS, repository custom privata)
+## Installation (HACS, private custom repository)
 
-Finché la repo è privata:
+While the repo is private:
 
-1. HACS → menu ⋮ → **Custom repositories**.
-2. Aggiungi l'URL della repo (categoria **Integration**). Per una repo privata
-   serve che HACS abbia accesso: configura un **Personal Access Token** GitHub con
-   scope `repo` nelle impostazioni HACS, oppure rendi la repo pubblica.
-3. Installa "Hermes", riavvia Home Assistant.
-4. **Impostazioni → Dispositivi e servizi → Aggiungi integrazione → Hermes**.
+1. HACS → ⋮ menu → **Custom repositories**.
+2. Add the repo URL (category **Integration**). For a private repo HACS needs
+   access: configure a GitHub **Personal Access Token** with the `repo` scope in
+   the HACS settings, or make the repo public.
+3. Install "Hermes", restart Home Assistant.
+4. **Settings → Devices & Services → Add Integration → Hermes**.
 
-Quando la repo diventerà pubblica, non serve altro packaging: `hacs.json` è già
-pronto.
+When the repo becomes public, no extra packaging is needed: `hacs.json` is
+already in place.
 
-## Configurazione
+## Configuration
 
-### Step iniziale (config flow)
+### Initial step (config flow)
 
-| Campo | Descrizione |
+| Field | Description |
 |-------|-------------|
-| **Node ID del gateway** | Node id del gateway Meshtastic da cui/verso cui operare. |
-| **Modalità** | `Canale (broadcast)` oppure `Messaggio diretto (DM)`. |
-| **Indice canale** | 0-7, usato solo in modalità canale. |
-| **Node ID autorizzati** | Whitelist di default, separati da virgola (almeno uno). |
+| **Gateway node ID** | Node id of the Meshtastic gateway to operate from/to. |
+| **Mode** | `Channel (broadcast)` or `Direct message (DM)`. |
+| **Channel index** | 0-7, used only in channel mode. |
+| **Authorized node IDs** | Default whitelist, comma-separated (at least one). |
 
-Per gestire **più canali**: aggiungi l'integrazione più volte (una config entry per
-combinazione gateway + canale/DM). È multi-istanza nativo, nessuna configurazione ad hoc.
+To manage **multiple channels**: add the integration multiple times (one config
+entry per gateway + channel/DM combination). This is native multi-instance, no
+ad-hoc configuration needed.
 
-### Comandi (options flow)
+### Commands (options flow)
 
-**Configura → Aggiungi un comando.** Ogni comando:
+**Configure → Add a command.** Each command:
 
-| Campo | Note |
-|-------|------|
-| **Parola chiave** | Es. `stato`, `luci off`. |
-| **Tipo di match** | `Match esatto` o `Inizia con`. |
-| **Servizio** | `dominio.servizio`, es. `light.turn_off`. |
-| **Target** | Entità o area (selettore nativo). |
-| **Template di risposta** | Placeholder semplici (sotto). |
-| **Instradamento risposta** | Su canale (broadcast) o in DM al mittente. |
-| **Dati servizio** | Opzionale, avanzato (dict). |
-| **Override nodi autorizzati** | Opzionale: whitelist specifica per questo comando. |
+| Field | Notes |
+|-------|-------|
+| **Keyword** | e.g. `status`, `lights off`. |
+| **Match type** | `Exact match` or `Starts with`. |
+| **Service** | `domain.service`, e.g. `light.turn_off`. |
+| **Target** | Entity or area (native selector). |
+| **Reply template** | Simple placeholders (below). |
+| **Reply routing** | On channel (broadcast) or DM to the sender. |
+| **Service data** | Optional, advanced (dict). |
+| **Authorized nodes override** | Optional: whitelist specific to this command. |
 
-I comandi sono **modificabili senza riavviare** l'integrazione.
+Commands are **editable without restarting** the integration.
 
-#### Placeholder del template di risposta
+#### Reply template placeholders
 
-Niente Jinja2: solo due placeholder, risolti internamente.
+No Jinja2: just two placeholders, resolved internally.
 
-- `{state:entity_id}` → stato dell'entità. Es. `{state:sensor.temperatura_salotto}`
-- `{attr:entity_id:attributo}` → valore di un attributo. Es. `{attr:climate.salotto:temperature}`
+- `{state:entity_id}` → the entity state. e.g. `{state:sensor.living_room_temp}`
+- `{attr:entity_id:attribute}` → an attribute value. e.g. `{attr:climate.living_room:temperature}`
 
-Esempio di risposta: `Salotto: {state:sensor.temp_salotto}°C, luci {state:light.salotto}`
+Example reply: `Living room: {state:sensor.living_room_temp}°C, lights {state:light.living_room}`
 
-## Servizi (per automazioni, anche schedulate)
+## Services (for automations, including scheduled ones)
 
-La "funzione di scheduling" si ottiene componendo automazioni HA standard con questi
-servizi — nessuno scheduler interno.
+The "scheduling feature" is obtained by composing standard HA automations with
+these services — no internal scheduler.
 
-- **`hermes.broadcast`** — `config_entry_id`, `message`. Invia sul canale/DM della entry.
-- **`hermes.send_direct`** — `config_entry_id`, `node_id`, `message`. DM a un singolo nodo.
+- **`hermes.broadcast`** — `config_entry_id`, `message`. Sends on the entry's channel/DM.
+- **`hermes.send_direct`** — `config_entry_id`, `node_id`, `message`. DM to a single node.
 
-Entrambi passano dallo split byte-safe (≤ 200 byte per parte, header `(i/n) `,
-nessun carattere multi-byte tagliato).
+Both pass through the byte-safe split engine (≤ 200 bytes per part, `(i/n) `
+header, no multi-byte character cut in half).
 
 ```yaml
-# Esempio: notifica schedulata ogni sera alle 22:00
+# Example: scheduled notification every evening at 22:00
 automation:
-  - alias: "Meshtastic: promemoria serale"
+  - alias: "Meshtastic: evening reminder"
     triggers:
       - trigger: time
         at: "22:00:00"
     actions:
       - action: hermes.broadcast
         data:
-          config_entry_id: <ID_ENTRY_HERMES>
-          message: "Buonanotte — chiusura cancelli tra 10 minuti."
+          config_entry_id: <HERMES_ENTRY_ID>
+          message: "Good night — gates closing in 10 minutes."
 ```
 
-## Entità diagnostiche
+## Diagnostic entities
 
-Sotto il device della config entry (device page nativa):
+Under the config entry's device (native device page):
 
-- **Ultimo comando ricevuto** — testo, nodo mittente e timestamp (attributi).
-- **Comandi eseguiti** — contatore con reset giornaliero.
-- **Ultimo errore / rifiuto autorizzazione** — utile in debug senza leggere i log.
+- **Last command received** — text, sender node and timestamp (attributes).
+- **Commands executed** — counter with a daily reset.
+- **Last error / auth rejection** — handy for debugging without reading the logs.
 
-## Sicurezza — canale vs DM+PKC
+## Security — channel vs DM+PKC
 
-> **Leggere prima di esporre azioni sensibili.**
+> **Read before exposing sensitive actions.**
 
-- **Su canale broadcast** la protezione è solo la **PSK del canale**: chiunque la
-  conosca può inviare comandi con un `from` **dichiarato ma non provato
-  crittograficamente**. La whitelist di nodi qui è una protezione **debole**
-  (spoofing del mittente possibile).
-- **Su DM con PKC** (Public Key Cryptography, firmware ≥ 2.5) l'identità del mittente
-  è garantita **a livello di protocollo** prima ancora che il messaggio arrivi a Home
-  Assistant. La whitelist qui è **affidabile**.
+- **On a broadcast channel** the only protection is the **channel PSK**: anyone
+  who knows it can send commands with a **declared but not cryptographically
+  proven** `from`. The node whitelist here is a **weak** protection (sender
+  spoofing is possible).
+- **On DM with PKC** (Public Key Cryptography, firmware ≥ 2.5) the sender
+  identity is guaranteed **at the protocol level** before the message even
+  reaches Home Assistant. The whitelist here is **reliable**.
 
-La whitelist va comunque configurata in entrambi i casi. Per comandi che controllano
-entità critiche, preferire la modalità **DM con PKC**. Verificare il comportamento sul
-**firmware effettivamente in uso**: non darlo per assodato.
+The whitelist should be configured in both cases anyway. For commands that
+control critical entities, prefer **DM with PKC** mode. Verify the behavior on
+the **firmware actually in use**: do not take it for granted.
 
-## Da tarare/verificare sull'hardware reale
+## To tune/verify on real hardware
 
-Questi valori sono default ragionevoli, non verità sperimentali:
+These values are reasonable defaults, not experimental truths:
 
-- **Timing invii** (`Configura → Timing di invio`): attesa iniziale 5s prima della
-  prima risposta (il radio può scartare risposte immediate) e 2s tra le parti. Tara
-  sui tuoi tempi reali.
-- **Limite byte** (200) è il valore documentato; conferma col tuo firmware.
-- **Schema evento e firma `send_text`** sono verificati su `meshtastic/home-assistant`
-  (branch main): riconferma dopo major update dell'integrazione base.
+- **Send timing** (`Configure → Send timing`): 5s initial wait before the first
+  reply (the radio may drop immediate replies) and 2s between parts. Tune them to
+  your real timings.
+- **Byte limit** (200) is the documented value; confirm it with your firmware.
+- **Event schema and `send_text` signature** are verified against
+  `meshtastic/home-assistant` (main branch): reconfirm after a major update of
+  the base integration.
 
-## Sviluppo / test
+## Development / testing
 
-Il motore di split è puro Python e testabile senza Home Assistant:
+The split engine is pure Python and testable without Home Assistant:
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install pytest
 .venv/bin/pytest tests/test_message.py -v
 ```
-
-> Nota packaging: aggiornare `manifest.json` (`documentation`, `issue_tracker`,
-> `codeowners`) con l'handle/URL GitHub reali prima della pubblicazione.

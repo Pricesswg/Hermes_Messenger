@@ -1,7 +1,7 @@
-"""Config flow e Options flow per Hermes.
+"""Config flow and options flow for Hermes.
 
-Tutta la configurazione avviene da UI: niente YAML a mano, niente Jinja2 grezzo
-esposto (i template di risposta usano placeholder semplici).
+All configuration happens from the UI: no hand-written YAML, no raw Jinja2
+exposed (reply templates use simple placeholders).
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ from .const import (
 
 
 def _parse_nodes(raw: str) -> list[int]:
-    """Converte una stringa 'id, id, ...' in lista di int, validando."""
+    """Convert an 'id, id, ...' string into a list of ints, validating it."""
     nodes: list[int] = []
     for token in (raw or "").replace(";", ",").split(","):
         token = token.strip()
@@ -59,17 +59,17 @@ def _parse_nodes(raw: str) -> list[int]:
         try:
             nodes.append(int(token))
         except ValueError as err:
-            raise vol.Invalid(f"node id non valido: {token!r}") from err
+            raise vol.Invalid(f"invalid node id: {token!r}") from err
     return nodes
 
 
 def _format_nodes(nodes: list[int] | None) -> str:
-    """Formatta una lista di node id come stringa per il prefill del form."""
+    """Format a list of node ids as a string for form prefill."""
     return ", ".join(str(n) for n in (nodes or []))
 
 
 def _select(options: list[str], translation_key: str) -> selector.SelectSelector:
-    """SelectSelector a tendina con opzioni tradotte via `translation_key`."""
+    """Dropdown SelectSelector with options translated via `translation_key`."""
     return selector.SelectSelector(
         selector.SelectSelectorConfig(
             options=options,
@@ -80,14 +80,14 @@ def _select(options: list[str], translation_key: str) -> selector.SelectSelector
 
 
 class HermesConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Config flow: crea una entry gateway + canale/DM."""
+    """Config flow: create a gateway + channel/DM entry."""
 
     VERSION = 1
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Step iniziale: dati del gateway, modalità, whitelist di partenza."""
+        """Initial step: gateway data, mode, starting whitelist."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
@@ -107,8 +107,9 @@ class HermesConfigFlow(ConfigFlow, domain=DOMAIN):
                     if mode == MODE_CHANNEL
                     else None
                 )
-                # unique_id per combinazione gateway+modalità+canale: consente
-                # multi-istanza (canali diversi = entry diverse) senza duplicati.
+                # unique_id per gateway+mode+channel combination: enables
+                # multi-instance (different channels = different entries) with
+                # no duplicates.
                 await self.async_set_unique_id(f"{gateway}_{mode}_{channel}")
                 self._abort_if_unique_id_configured()
 
@@ -121,7 +122,7 @@ class HermesConfigFlow(ConfigFlow, domain=DOMAIN):
                     data[CONF_CHANNEL_INDEX] = channel
 
                 title = (
-                    f"Hermes · canale {channel} · gw {gateway}"
+                    f"Hermes · channel {channel} · gw {gateway}"
                     if mode == MODE_CHANNEL
                     else f"Hermes · DM · gw {gateway}"
                 )
@@ -148,21 +149,21 @@ class HermesConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(entry: ConfigEntry) -> OptionsFlow:
-        """Restituisce l'options flow."""
+        """Return the options flow."""
         return HermesOptionsFlow()
 
 
 class HermesOptionsFlow(OptionsFlow):
-    """Options flow a menu: CRUD comandi, whitelist di default, timing."""
+    """Menu-based options flow: command CRUD, default whitelist, timing."""
 
     _edit_id: str | None = None
 
-    # --- Menu principale ---------------------------------------------------
+    # --- Main menu ---------------------------------------------------------
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Menu principale."""
+        """Main menu."""
         return self.async_show_menu(
             step_id="init",
             menu_options=[
@@ -174,13 +175,13 @@ class HermesOptionsFlow(OptionsFlow):
             ],
         )
 
-    # --- Comandi -----------------------------------------------------------
+    # --- Commands ----------------------------------------------------------
 
     def _commands(self) -> list[dict[str, Any]]:
         return list(self.config_entry.options.get(CONF_COMMANDS, []))
 
     def _command_schema(self, existing: dict[str, Any] | None = None) -> vol.Schema:
-        """Schema del form comando (condiviso tra add ed edit)."""
+        """Command form schema (shared between add and edit)."""
         schema = vol.Schema(
             {
                 vol.Required(CMD_KEYWORD): str,
@@ -208,7 +209,7 @@ class HermesOptionsFlow(OptionsFlow):
     def _build_command(
         self, user_input: dict[str, Any], command_id: str
     ) -> dict[str, Any] | None:
-        """Normalizza l'input del form in un oggetto comando. None se invalido."""
+        """Normalize form input into a command object. None if invalid."""
         override_raw = user_input.get(CMD_AUTH_OVERRIDE, "")
         override = _parse_nodes(override_raw)
         command = {
@@ -230,14 +231,14 @@ class HermesOptionsFlow(OptionsFlow):
     async def _save_commands(
         self, commands: list[dict[str, Any]]
     ) -> ConfigFlowResult:
-        """Persiste la lista comandi preservando le altre options."""
+        """Persist the command list preserving the other options."""
         options = {**self.config_entry.options, CONF_COMMANDS: commands}
         return self.async_create_entry(title="", data=options)
 
     async def async_step_add_command(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Aggiunge un nuovo comando."""
+        """Add a new command."""
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
@@ -256,7 +257,7 @@ class HermesOptionsFlow(OptionsFlow):
     async def async_step_select_command(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Sceglie quale comando modificare."""
+        """Pick which command to edit."""
         commands = self._commands()
         if not commands:
             return await self.async_step_init()
@@ -289,7 +290,7 @@ class HermesOptionsFlow(OptionsFlow):
     async def async_step_edit_command(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Modifica il comando selezionato."""
+        """Edit the selected command."""
         commands = self._commands()
         existing = next(
             (c for c in commands if c[CMD_ID] == self._edit_id), None
@@ -318,7 +319,7 @@ class HermesOptionsFlow(OptionsFlow):
     async def async_step_remove_command(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Rimuove uno o più comandi."""
+        """Remove one or more commands."""
         commands = self._commands()
         if not commands:
             return await self.async_step_init()
@@ -350,12 +351,12 @@ class HermesOptionsFlow(OptionsFlow):
             ),
         )
 
-    # --- Whitelist di default ----------------------------------------------
+    # --- Default whitelist -------------------------------------------------
 
     async def async_step_whitelist(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Modifica la whitelist di default (node id autorizzati)."""
+        """Edit the default whitelist (authorized node ids)."""
         errors: dict[str, str] = {}
         current = self.config_entry.options.get(
             CONF_AUTHORIZED_NODES,
@@ -388,12 +389,12 @@ class HermesOptionsFlow(OptionsFlow):
             step_id="whitelist", data_schema=schema, errors=errors
         )
 
-    # --- Timing invii ------------------------------------------------------
+    # --- Send timing -------------------------------------------------------
 
     async def async_step_timing(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Modifica i delay di invio (iniziale e tra le parti)."""
+        """Edit the send delays (initial and between parts)."""
         if user_input is not None:
             options = {
                 **self.config_entry.options,

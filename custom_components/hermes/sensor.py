@@ -1,8 +1,7 @@
-"""Entità diagnostiche Hermes.
+"""Hermes diagnostic entities.
 
-Tre sensori sotto un unico device (device page nativa di HA), così l'utente ha
-una "grafica pulita" senza dashboard custom: ultimo comando, contatore comandi,
-ultimo errore/rifiuto.
+Three sensors under a single device (native HA device page), so the user gets a
+"clean UI" without a custom dashboard: last command, command counter, last error.
 """
 
 from __future__ import annotations
@@ -27,7 +26,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Configura i sensori diagnostici dalla config entry."""
+    """Set up the diagnostic sensors from the config entry."""
     coordinator: HermesCoordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
         [
@@ -39,14 +38,14 @@ async def async_setup_entry(
 
 
 class _HermesSensorBase(SensorEntity):
-    """Base comune: device_info condiviso e aggancio all'observer del coordinator."""
+    """Common base: shared device_info and hook into the coordinator observer."""
 
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_should_poll = False
 
     def __init__(self, coordinator: HermesCoordinator, entry: ConfigEntry) -> None:
-        """Inizializza il sensore."""
+        """Initialize the sensor."""
         self._coordinator = coordinator
         self._entry = entry
         self._attr_device_info = {
@@ -57,7 +56,7 @@ class _HermesSensorBase(SensorEntity):
         }
 
     async def async_added_to_hass(self) -> None:
-        """Registra il sensore come osservatore del coordinator."""
+        """Register the sensor as an observer of the coordinator."""
         self.async_on_remove(self._coordinator.async_add_listener(self._handle_update))
 
     @callback
@@ -66,7 +65,7 @@ class _HermesSensorBase(SensorEntity):
 
 
 class LastCommandSensor(_HermesSensorBase):
-    """Ultimo comando ricevuto (testo + nodo + timestamp come attributi)."""
+    """Last command received (text + node + timestamp as attributes)."""
 
     _attr_translation_key = "last_command"
     _attr_icon = "mdi:message-arrow-left"
@@ -89,7 +88,7 @@ class LastCommandSensor(_HermesSensorBase):
 
 
 class CommandsExecutedSensor(_HermesSensorBase):
-    """Contatore comandi eseguiti, reset giornaliero."""
+    """Executed command counter, daily reset."""
 
     _attr_translation_key = "commands_executed"
     _attr_icon = "mdi:counter"
@@ -109,7 +108,7 @@ class CommandsExecutedSensor(_HermesSensorBase):
 
 
 class LastErrorSensor(_HermesSensorBase):
-    """Ultimo errore o rifiuto di autorizzazione (debug senza leggere i log)."""
+    """Last error or authorization rejection (debug without reading the logs)."""
 
     _attr_translation_key = "last_error"
     _attr_icon = "mdi:alert-circle-outline"

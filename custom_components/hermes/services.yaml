@@ -1,42 +1,42 @@
 broadcast:
   name: Broadcast
   description: >-
-    Invia un messaggio sul canale (o DM) configurato nella entry Hermes,
-    passando per il motore di split byte-safe. Pensato per notifiche push da
-    automazioni Home Assistant, anche schedulate.
+    Send a message on the channel (or DM) configured in the Hermes entry,
+    passing through the byte-safe split engine. Intended for push notifications
+    from Home Assistant automations, including scheduled ones.
   fields:
     config_entry_id:
-      name: Istanza Hermes
-      description: La config entry Hermes su cui inviare.
+      name: Hermes instance
+      description: The Hermes config entry to send from.
       required: true
       selector:
         config_entry:
           integration: hermes
     message:
-      name: Messaggio
-      description: Testo da inviare (verrà spezzato se supera il limite di byte).
+      name: Message
+      description: Text to send (it will be split if it exceeds the byte limit).
       required: true
-      example: "Allarme: rilevato movimento in giardino"
+      example: "Alert: motion detected in the garden"
       selector:
         text:
           multiline: true
 
 send_direct:
-  name: Invio diretto (DM)
+  name: Send direct (DM)
   description: >-
-    Invia un messaggio diretto a un singolo nodo, bypassando il canale di
-    default della entry.
+    Send a direct message to a single node, bypassing the entry's default
+    channel.
   fields:
     config_entry_id:
-      name: Istanza Hermes
-      description: La config entry Hermes da usare come gateway mittente.
+      name: Hermes instance
+      description: The Hermes config entry to use as the sending gateway.
       required: true
       selector:
         config_entry:
           integration: hermes
     node_id:
-      name: Node ID destinatario
-      description: Node id del nodo Meshtastic a cui inviare il DM.
+      name: Recipient node ID
+      description: Node id of the Meshtastic node to DM.
       required: true
       example: 3771721320
       selector:
@@ -44,8 +44,8 @@ send_direct:
           mode: box
           min: 0
     message:
-      name: Messaggio
-      description: Testo da inviare (verrà spezzato se supera il limite di byte).
+      name: Message
+      description: Text to send (it will be split if it exceeds the byte limit).
       required: true
       selector:
         text:

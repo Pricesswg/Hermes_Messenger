@@ -1,8 +1,8 @@
-"""Integrazione Hermes (Meshtastic Commander).
+"""Hermes integration (Meshtastic Commander).
 
-Livello applicativo sopra l'integrazione base `meshtastic`: ascolta gli eventi
-di messaggio testuale, esegue comandi Home Assistant e rispedisce le risposte
-sulla mesh; espone inoltre servizi broadcast/DM richiamabili da automazioni.
+Application layer on top of the base `meshtastic` integration: it listens to
+text message events, runs Home Assistant commands and sends the replies back
+over the mesh; it also exposes broadcast/DM services callable from automations.
 """
 
 from __future__ import annotations
@@ -49,21 +49,21 @@ _SEND_DIRECT_SCHEMA = vol.Schema(
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Configura Hermes da una config entry."""
+    """Set up Hermes from a config entry."""
     coordinator = HermesCoordinator(hass, entry)
     coordinator.async_setup()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
-    # Listener sull'evento della base Meshtastic. `async_on_unload` garantisce
-    # la rimozione pulita in unload/reload.
+    # Listener on the base Meshtastic event. `async_on_unload` guarantees clean
+    # removal on unload/reload.
     entry.async_on_unload(
         hass.bus.async_listen(EVENT_TEXT_MESSAGE, coordinator.async_handle_event)
     )
     entry.async_on_unload(coordinator.async_shutdown)
 
-    # Ricarica l'entry quando cambiano le options (CRUD comandi/whitelist):
-    # così le modifiche via UI sono attive senza riavviare l'integrazione.
+    # Reload the entry when options change (command/whitelist CRUD): this way UI
+    # changes take effect without restarting the integration.
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     _async_register_services(hass)
@@ -73,11 +73,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Scarica una config entry."""
+    """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
-        # Deregistra i servizi globali quando non resta più nessuna entry.
+        # Deregister the global services once no entry is left.
         if not hass.data[DOMAIN]:
             hass.services.async_remove(DOMAIN, SERVICE_BROADCAST)
             hass.services.async_remove(DOMAIN, SERVICE_SEND_DIRECT)
@@ -85,12 +85,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Ricarica l'entry al cambio delle options."""
+    """Reload the entry when options change."""
     await hass.config_entries.async_reload(entry.entry_id)
 
 
 def _async_register_services(hass: HomeAssistant) -> None:
-    """Registra i servizi globali una sola volta."""
+    """Register the global services exactly once."""
     if hass.services.has_service(DOMAIN, SERVICE_BROADCAST):
         return
 
@@ -99,7 +99,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
         coordinator = hass.data.get(DOMAIN, {}).get(entry_id)
         if coordinator is None:
             raise ServiceValidationError(
-                f"config_entry_id '{entry_id}' non è una entry Hermes valida"
+                f"config_entry_id '{entry_id}' is not a valid Hermes entry"
             )
         return coordinator
 
