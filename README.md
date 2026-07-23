@@ -193,3 +193,14 @@ python3 -m venv .venv
 .venv/bin/pip install pytest
 .venv/bin/pytest tests/test_message.py -v
 ```
+
+## License
+
+Released under the [MIT License](LICENSE), Copyright (c) 2026 Alessandro Simonitto.
+
+## Support
+
+If Hermes is useful to you, you can support the work:
+
+- Ko-fi: https://ko-fi.com/alessandrosimonitto
+- PayPal: https://www.paypal.me/AlessandroSimonitto
