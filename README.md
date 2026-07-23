@@ -52,19 +52,32 @@ Greek-deity naming line.
 - Meshtastic firmware with PKC (≥ 2.5) if you want to use DMs as a trustworthy
   channel (see *Security*).
 
-## Installation (HACS, private custom repository)
+## Installation
 
-While the repo is private:
+HACS cannot install from a private repository (it only reads publicly available
+information), so pick the method that matches the repo visibility.
+
+### Manual (works while the repo is private)
+
+1. Copy the `custom_components/hermes/` folder into your Home Assistant
+   `config/custom_components/` directory (result: `config/custom_components/hermes/`).
+2. Restart Home Assistant.
+3. **Settings, Devices & Services, Add Integration, Hermes**.
+
+Get the folder by cloning the repo, downloading it as a ZIP from GitHub, or
+copying it over Samba/SSH. Updates mean replacing the folder and restarting.
+
+### HACS (once the repo is public)
 
 1. HACS, ⋮ menu, **Custom repositories**.
-2. Add the repo URL (category **Integration**). For a private repo HACS needs
-   access: configure a GitHub **Personal Access Token** with the `repo` scope in
-   the HACS settings, or make the repo public.
-3. Install "Hermes", restart Home Assistant.
-4. **Settings, Devices & Services, Add Integration, Hermes**.
+2. Add the repo URL, category **Integration**.
+3. Install "Hermes", restart Home Assistant, then add it from
+   **Settings, Devices & Services**.
 
-When the repo becomes public, no extra packaging is needed: `hacs.json` is
-already in place.
+`hacs.json` is already in place, so going public needs no extra packaging. A
+third-party option to install from private repos is
+[Private HACS](https://github.com/pestevez/private-hacs), which uses a Personal
+Access Token.
 
 ## Configuration
 
