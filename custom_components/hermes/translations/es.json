@@ -1,0 +1,122 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Hermes — puerta de enlace y canal",
+        "description": "Configura la puerta de enlace Meshtastic que Hermes escucha y a través de la cual responde. Requiere que la integración oficial de Meshtastic ya esté configurada.",
+        "data": {
+          "gateway_node_id": "ID de nodo de la puerta de enlace",
+          "mode": "Modo",
+          "channel_index": "Índice de canal (0-7, solo en modo canal)",
+          "authorized_nodes": "IDs de nodo autorizados (separados por comas)"
+        }
+      }
+    },
+    "error": {
+      "invalid_node_list": "Lista de IDs de nodo no válida. Usa enteros separados por comas.",
+      "empty_whitelist": "Introduce al menos un ID de nodo autorizado."
+    },
+    "abort": {
+      "already_configured": "Esta combinación de puerta de enlace/canal ya está configurada."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones de Hermes",
+        "menu_options": {
+          "add_command": "Añadir un comando",
+          "select_command": "Editar un comando",
+          "remove_command": "Eliminar comandos",
+          "whitelist": "Nodos autorizados por defecto",
+          "timing": "Tiempos de envío"
+        }
+      },
+      "add_command": {
+        "title": "Nuevo comando",
+        "description": "Marcadores en la respuesta: {state:entity_id} y {attr:entity_id:attribute}.",
+        "data": {
+          "keyword": "Palabra clave",
+          "match_type": "Tipo de coincidencia",
+          "service": "Servicio (dominio.servicio)",
+          "target": "Destino (entidad/área)",
+          "reply_template": "Plantilla de respuesta",
+          "reply_to": "Enrutamiento de respuesta (modo canal)",
+          "service_data": "Datos del servicio (avanzado, opcional)",
+          "authorized_nodes_override": "Anulación de nodos autorizados (separados por comas, opcional)"
+        }
+      },
+      "edit_command": {
+        "title": "Editar comando",
+        "description": "Marcadores en la respuesta: {state:entity_id} y {attr:entity_id:attribute}.",
+        "data": {
+          "keyword": "Palabra clave",
+          "match_type": "Tipo de coincidencia",
+          "service": "Servicio (dominio.servicio)",
+          "target": "Destino (entidad/área)",
+          "reply_template": "Plantilla de respuesta",
+          "reply_to": "Enrutamiento de respuesta (modo canal)",
+          "service_data": "Datos del servicio (avanzado, opcional)",
+          "authorized_nodes_override": "Anulación de nodos autorizados (separados por comas, opcional)"
+        }
+      },
+      "select_command": {
+        "title": "Elige un comando para editar",
+        "data": {
+          "id": "Comando"
+        }
+      },
+      "remove_command": {
+        "title": "Eliminar comandos",
+        "data": {
+          "id": "Comandos a eliminar"
+        }
+      },
+      "whitelist": {
+        "title": "Nodos autorizados por defecto",
+        "data": {
+          "authorized_nodes": "IDs de nodo autorizados (separados por comas)"
+        }
+      },
+      "timing": {
+        "title": "Tiempos de envío",
+        "description": "Ajústalos a tu hardware. La radio puede descartar respuestas inmediatas.",
+        "data": {
+          "initial_delay": "Retardo inicial antes de la primera respuesta (segundos)",
+          "part_delay": "Retardo entre partes (segundos)"
+        }
+      }
+    },
+    "error": {
+      "invalid_node_list": "Lista de IDs de nodo no válida. Usa enteros separados por comas.",
+      "empty_whitelist": "Introduce al menos un ID de nodo autorizado."
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "channel": "Canal (difusión)",
+        "direct_message": "Mensaje directo (DM)"
+      }
+    },
+    "match_type": {
+      "options": {
+        "exact": "Coincidencia exacta",
+        "startswith": "Empieza por"
+      }
+    },
+    "reply_to": {
+      "options": {
+        "channel": "Responder en el mismo canal",
+        "sender_dm": "Responder por DM al remitente"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "last_command": { "name": "Último comando recibido" },
+      "commands_executed": { "name": "Comandos ejecutados" },
+      "last_error": { "name": "Último error / rechazo de autorización" }
+    }
+  }
+}

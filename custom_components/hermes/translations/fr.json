@@ -1,0 +1,122 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Hermes — passerelle et canal",
+        "description": "Configurez la passerelle Meshtastic que Hermes écoute et via laquelle il répond. Nécessite que l'intégration Meshtastic officielle soit déjà configurée.",
+        "data": {
+          "gateway_node_id": "ID de nœud de la passerelle",
+          "mode": "Mode",
+          "channel_index": "Index de canal (0-7, mode canal uniquement)",
+          "authorized_nodes": "IDs de nœud autorisés (séparés par des virgules)"
+        }
+      }
+    },
+    "error": {
+      "invalid_node_list": "Liste d'IDs de nœud invalide. Utilisez des entiers séparés par des virgules.",
+      "empty_whitelist": "Saisissez au moins un ID de nœud autorisé."
+    },
+    "abort": {
+      "already_configured": "Cette combinaison passerelle/canal est déjà configurée."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options Hermes",
+        "menu_options": {
+          "add_command": "Ajouter une commande",
+          "select_command": "Modifier une commande",
+          "remove_command": "Supprimer des commandes",
+          "whitelist": "Nœuds autorisés par défaut",
+          "timing": "Délais d'envoi"
+        }
+      },
+      "add_command": {
+        "title": "Nouvelle commande",
+        "description": "Espaces réservés dans la réponse : {state:entity_id} et {attr:entity_id:attribute}.",
+        "data": {
+          "keyword": "Mot-clé",
+          "match_type": "Type de correspondance",
+          "service": "Service (domaine.service)",
+          "target": "Cible (entité/zone)",
+          "reply_template": "Modèle de réponse",
+          "reply_to": "Routage de la réponse (mode canal)",
+          "service_data": "Données du service (avancé, facultatif)",
+          "authorized_nodes_override": "Remplacement des nœuds autorisés (séparés par des virgules, facultatif)"
+        }
+      },
+      "edit_command": {
+        "title": "Modifier la commande",
+        "description": "Espaces réservés dans la réponse : {state:entity_id} et {attr:entity_id:attribute}.",
+        "data": {
+          "keyword": "Mot-clé",
+          "match_type": "Type de correspondance",
+          "service": "Service (domaine.service)",
+          "target": "Cible (entité/zone)",
+          "reply_template": "Modèle de réponse",
+          "reply_to": "Routage de la réponse (mode canal)",
+          "service_data": "Données du service (avancé, facultatif)",
+          "authorized_nodes_override": "Remplacement des nœuds autorisés (séparés par des virgules, facultatif)"
+        }
+      },
+      "select_command": {
+        "title": "Choisissez une commande à modifier",
+        "data": {
+          "id": "Commande"
+        }
+      },
+      "remove_command": {
+        "title": "Supprimer des commandes",
+        "data": {
+          "id": "Commandes à supprimer"
+        }
+      },
+      "whitelist": {
+        "title": "Nœuds autorisés par défaut",
+        "data": {
+          "authorized_nodes": "IDs de nœud autorisés (séparés par des virgules)"
+        }
+      },
+      "timing": {
+        "title": "Délais d'envoi",
+        "description": "Ajustez selon votre matériel. La radio peut ignorer les réponses immédiates.",
+        "data": {
+          "initial_delay": "Délai initial avant la première réponse (secondes)",
+          "part_delay": "Délai entre les parties (secondes)"
+        }
+      }
+    },
+    "error": {
+      "invalid_node_list": "Liste d'IDs de nœud invalide. Utilisez des entiers séparés par des virgules.",
+      "empty_whitelist": "Saisissez au moins un ID de nœud autorisé."
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "channel": "Canal (diffusion)",
+        "direct_message": "Message direct (DM)"
+      }
+    },
+    "match_type": {
+      "options": {
+        "exact": "Correspondance exacte",
+        "startswith": "Commence par"
+      }
+    },
+    "reply_to": {
+      "options": {
+        "channel": "Répondre sur le même canal",
+        "sender_dm": "Répondre en DM à l'expéditeur"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "last_command": { "name": "Dernière commande reçue" },
+      "commands_executed": { "name": "Commandes exécutées" },
+      "last_error": { "name": "Dernière erreur / refus d'autorisation" }
+    }
+  }
+}

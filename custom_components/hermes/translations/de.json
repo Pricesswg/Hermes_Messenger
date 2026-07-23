@@ -1,0 +1,122 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Hermes — Gateway und Kanal",
+        "description": "Konfiguriere das Meshtastic-Gateway, das Hermes abhört und über das es antwortet. Erfordert, dass die offizielle Meshtastic-Integration bereits eingerichtet ist.",
+        "data": {
+          "gateway_node_id": "Gateway-Node-ID",
+          "mode": "Modus",
+          "channel_index": "Kanalindex (0-7, nur im Kanalmodus)",
+          "authorized_nodes": "Autorisierte Node-IDs (durch Kommas getrennt)"
+        }
+      }
+    },
+    "error": {
+      "invalid_node_list": "Ungültige Node-ID-Liste. Verwende durch Kommas getrennte Ganzzahlen.",
+      "empty_whitelist": "Gib mindestens eine autorisierte Node-ID ein."
+    },
+    "abort": {
+      "already_configured": "Diese Gateway-/Kanal-Kombination ist bereits konfiguriert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Hermes-Optionen",
+        "menu_options": {
+          "add_command": "Befehl hinzufügen",
+          "select_command": "Befehl bearbeiten",
+          "remove_command": "Befehle entfernen",
+          "whitelist": "Standardmäßig autorisierte Nodes",
+          "timing": "Sendezeiten"
+        }
+      },
+      "add_command": {
+        "title": "Neuer Befehl",
+        "description": "Platzhalter in der Antwort: {state:entity_id} und {attr:entity_id:attribute}.",
+        "data": {
+          "keyword": "Schlüsselwort",
+          "match_type": "Übereinstimmungstyp",
+          "service": "Dienst (domain.service)",
+          "target": "Ziel (Entität/Bereich)",
+          "reply_template": "Antwortvorlage",
+          "reply_to": "Antwort-Routing (Kanalmodus)",
+          "service_data": "Dienstdaten (erweitert, optional)",
+          "authorized_nodes_override": "Autorisierte Nodes überschreiben (durch Kommas getrennt, optional)"
+        }
+      },
+      "edit_command": {
+        "title": "Befehl bearbeiten",
+        "description": "Platzhalter in der Antwort: {state:entity_id} und {attr:entity_id:attribute}.",
+        "data": {
+          "keyword": "Schlüsselwort",
+          "match_type": "Übereinstimmungstyp",
+          "service": "Dienst (domain.service)",
+          "target": "Ziel (Entität/Bereich)",
+          "reply_template": "Antwortvorlage",
+          "reply_to": "Antwort-Routing (Kanalmodus)",
+          "service_data": "Dienstdaten (erweitert, optional)",
+          "authorized_nodes_override": "Autorisierte Nodes überschreiben (durch Kommas getrennt, optional)"
+        }
+      },
+      "select_command": {
+        "title": "Wähle einen Befehl zum Bearbeiten",
+        "data": {
+          "id": "Befehl"
+        }
+      },
+      "remove_command": {
+        "title": "Befehle entfernen",
+        "data": {
+          "id": "Zu entfernende Befehle"
+        }
+      },
+      "whitelist": {
+        "title": "Standardmäßig autorisierte Nodes",
+        "data": {
+          "authorized_nodes": "Autorisierte Node-IDs (durch Kommas getrennt)"
+        }
+      },
+      "timing": {
+        "title": "Sendezeiten",
+        "description": "Passe sie an deine Hardware an. Das Funkgerät kann sofortige Antworten verwerfen.",
+        "data": {
+          "initial_delay": "Anfängliche Verzögerung vor der ersten Antwort (Sekunden)",
+          "part_delay": "Verzögerung zwischen Teilen (Sekunden)"
+        }
+      }
+    },
+    "error": {
+      "invalid_node_list": "Ungültige Node-ID-Liste. Verwende durch Kommas getrennte Ganzzahlen.",
+      "empty_whitelist": "Gib mindestens eine autorisierte Node-ID ein."
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "channel": "Kanal (Broadcast)",
+        "direct_message": "Direktnachricht (DM)"
+      }
+    },
+    "match_type": {
+      "options": {
+        "exact": "Exakte Übereinstimmung",
+        "startswith": "Beginnt mit"
+      }
+    },
+    "reply_to": {
+      "options": {
+        "channel": "Auf demselben Kanal antworten",
+        "sender_dm": "Per DM an den Absender antworten"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "last_command": { "name": "Letzter empfangener Befehl" },
+      "commands_executed": { "name": "Ausgeführte Befehle" },
+      "last_error": { "name": "Letzter Fehler / Autorisierungsablehnung" }
+    }
+  }
+}
