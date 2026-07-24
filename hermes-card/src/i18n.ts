@@ -26,6 +26,10 @@ const en: Dict = {
   "devices.empty": "No Meshtastic devices found. Set up the Meshtastic integration first.",
   "devices.unknown": "Unknown",
 
+  "map.noSelection": "No node selected yet. Pick the nodes to show in Settings.",
+  "map.noPosition": "The selected nodes have not reported a position yet.",
+  "map.waiting": "waiting for position",
+
   "settings.title": "Settings",
   "settings.global": "Global",
   "settings.owmKey": "OpenWeather API key",
@@ -100,6 +104,10 @@ const it: Dict = {
   "devices.title": "Dispositivi",
   "devices.empty": "Nessun dispositivo Meshtastic trovato. Configura prima l'integrazione Meshtastic.",
   "devices.unknown": "Sconosciuto",
+
+  "map.noSelection": "Nessun nodo selezionato. Scegli i nodi da mostrare in Impostazioni.",
+  "map.noPosition": "I nodi selezionati non hanno ancora inviato una posizione.",
+  "map.waiting": "in attesa di posizione",
 
   "settings.title": "Impostazioni",
   "settings.global": "Globali",
@@ -176,6 +184,10 @@ const es: Dict = {
   "devices.empty": "No se han encontrado dispositivos Meshtastic. Configura primero la integración Meshtastic.",
   "devices.unknown": "Desconocido",
 
+  "map.noSelection": "Ningún nodo seleccionado. Elige los nodos a mostrar en Ajustes.",
+  "map.noPosition": "Los nodos seleccionados aún no han enviado una posición.",
+  "map.waiting": "esperando posición",
+
   "settings.title": "Ajustes",
   "settings.global": "Globales",
   "settings.owmKey": "Clave API de OpenWeather",
@@ -251,6 +263,10 @@ const fr: Dict = {
   "devices.empty": "Aucun appareil Meshtastic trouvé. Configurez d'abord l'intégration Meshtastic.",
   "devices.unknown": "Inconnu",
 
+  "map.noSelection": "Aucun nœud sélectionné. Choisissez les nœuds à afficher dans Paramètres.",
+  "map.noPosition": "Les nœuds sélectionnés n'ont pas encore transmis de position.",
+  "map.waiting": "en attente de position",
+
   "settings.title": "Paramètres",
   "settings.global": "Globaux",
   "settings.owmKey": "Clé API OpenWeather",
@@ -325,6 +341,10 @@ const de: Dict = {
   "devices.title": "Geräte",
   "devices.empty": "Keine Meshtastic-Geräte gefunden. Richte zuerst die Meshtastic-Integration ein.",
   "devices.unknown": "Unbekannt",
+
+  "map.noSelection": "Kein Node ausgewählt. Wähle in den Einstellungen die anzuzeigenden Nodes.",
+  "map.noPosition": "Die ausgewählten Nodes haben noch keine Position gemeldet.",
+  "map.waiting": "warte auf Position",
 
   "settings.title": "Einstellungen",
   "settings.global": "Global",

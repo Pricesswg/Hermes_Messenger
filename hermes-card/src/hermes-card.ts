@@ -4,6 +4,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { translator } from "./i18n";
 import { hermesLayout, hermesTokens } from "./styles";
 import { renderDevices } from "./screens/devices";
+import { renderMap } from "./screens/map";
 import { renderMessages } from "./screens/messages";
 import { renderPlaceholder } from "./screens/placeholder";
 import { renderSettings } from "./screens/settings";
@@ -299,7 +300,7 @@ export class HermesCard extends LitElement {
       case "devices":
         return renderDevices(hass, t);
       case "map":
-        return renderPlaceholder(t("tab.map"), 3, t);
+        return renderMap(hass, this._settings, t);
       case "messages":
         return renderMessages(
           {

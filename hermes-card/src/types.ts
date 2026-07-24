@@ -113,6 +113,16 @@ export interface NodeInfo {
   name: string;
 }
 
+/** A node ready to be drawn on the map. */
+export interface MapNode {
+  nodeNum: number | null;
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+  battery: number | null;
+  lastSeen: string;
+}
+
 /** A Meshtastic node as seen through the Home Assistant device registry. */
 export interface MeshNode {
   deviceId: string;

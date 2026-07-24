@@ -1,6 +1,7 @@
 import type {
   HassEntityState,
   HomeAssistant,
+  MapNode,
   MeshNode,
 } from "./types";
 
@@ -91,6 +92,58 @@ export function meshNodes(hass: HomeAssistant): MeshNode[] {
   }
 
   return [...byDevice.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Positions of the Meshtastic nodes, restricted to the ones the user chose to
+ * show on the map. Coordinates come from the device_tracker entities the base
+ * integration creates per node (TrackerEntity with latitude and longitude).
+ *
+ * An empty selection means "none chosen yet" and draws nothing, which keeps
+ * the map deliberate: this is meant as an emergency tracker for a handful of
+ * nodes, not a dump of every node the mesh has ever heard.
+ */
+export function mapNodes(
+  hass: HomeAssistant,
+  selected: number[]
+): MapNode[] {
+  if (!selected?.length) return [];
+  const wanted = new Set(selected.map(Number));
+  const out: MapNode[] = [];
+
+  for (const entry of entitiesForPlatform(hass, MESHTASTIC)) {
+    if (!entry.entity_id.startsWith("device_tracker.")) continue;
+    const deviceId = (entry as any).device_id as string | undefined;
+    if (!deviceId) continue;
+
+    const nodeNum = nodeNumFor(hass, deviceId);
+    if (nodeNum === null || !wanted.has(nodeNum)) continue;
+
+    const state = hass.states[entry.entity_id];
+    if (!state) continue;
+
+    const latitude = state.attributes?.latitude;
+    const longitude = state.attributes?.longitude;
+    const device = hass.devices?.[deviceId];
+    const battery = state.attributes?.battery_level;
+
+    out.push({
+      nodeNum,
+      name:
+        device?.name_by_user ||
+        device?.name ||
+        state.attributes?.friendly_name ||
+        String(nodeNum),
+      latitude: typeof latitude === "number" ? latitude : null,
+      longitude: typeof longitude === "number" ? longitude : null,
+      battery: typeof battery === "number" ? battery : null,
+      lastSeen: state.last_changed
+        ? new Date(state.last_changed).toLocaleString()
+        : "",
+    });
+  }
+
+  return out.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** State plus unit, ready to print. */
