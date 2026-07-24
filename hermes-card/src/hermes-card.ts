@@ -4,6 +4,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { translator } from "./i18n";
 import { hermesLayout, hermesTokens } from "./styles";
 import { renderDevices } from "./screens/devices";
+import { renderLog } from "./screens/log";
 import { renderMap } from "./screens/map";
 import { renderMessages } from "./screens/messages";
 import { renderPlaceholder } from "./screens/placeholder";
@@ -13,6 +14,8 @@ import type {
   HermesCardConfig,
   HermesCommand,
   HermesEntry,
+  HermesLogEntry,
+  HermesPreset,
   HermesSettings,
   HomeAssistant,
   NodeInfo,
@@ -21,18 +24,25 @@ import type {
 import { VERSION } from "./version";
 import { setCatalogue } from "./actions";
 import {
+  clearHistory,
   fetchActions,
   fetchEntries,
+  fetchHistory,
   fetchNodes,
+  fetchPresets,
   fetchSettings,
   removeCommand,
+  removePreset,
   saveCommand,
+  savePreset,
+  sendPreset,
   updateEntry,
   updateSettings,
 } from "./ws";
 
 const TABS: TabId[] = [
   "status",
+  "log",
   "devices",
   "map",
   "messages",
@@ -74,6 +84,10 @@ export class HermesCard extends LitElement {
   @state() private _mapShowAll = false;
   @state() private _mapRadiusOn = false;
   @state() private _mapRadiusKm = 25;
+  @state() private _presets: HermesPreset[] = [];
+  @state() private _editingPreset: HermesPreset | null = null;
+  @state() private _history: HermesLogEntry[] = [];
+  @state() private _logFilter = "";
 
   private _loaded = false;
 
@@ -147,6 +161,18 @@ export class HermesCard extends LitElement {
       setCatalogue(await fetchActions(this.hass));
     } catch (err) {
       console.warn("Hermes: using the built-in action catalogue", err);
+    }
+
+    try {
+      this._presets = await fetchPresets(this.hass);
+    } catch (err) {
+      console.error("Hermes: failed to load presets", err);
+    }
+
+    try {
+      this._history = await fetchHistory(this.hass);
+    } catch (err) {
+      console.error("Hermes: failed to load the log", err);
     }
 
     try {
@@ -233,6 +259,58 @@ export class HermesCard extends LitElement {
     this._showAdvanced = !this._showAdvanced;
   };
 
+  private _onPresetNew = (): void => {
+    this._editingPreset = { label: "", text: "", node_id: null };
+  };
+
+  private _onPresetEdit = (preset: HermesPreset): void => {
+    this._editingPreset = { ...preset };
+  };
+
+  private _onPresetInput = (key: keyof HermesPreset, value: unknown): void => {
+    if (!this._editingPreset) return;
+    this._editingPreset = {
+      ...this._editingPreset,
+      [key]: value,
+    } as HermesPreset;
+  };
+
+  private _onPresetCancel = (): void => {
+    this._editingPreset = null;
+  };
+
+  private _onPresetSave = async (): Promise<void> => {
+    if (!this.hass || !this._editingPreset?.text) return;
+    await savePreset(this.hass, this._editingPreset);
+    this._editingPreset = null;
+    this._presets = await fetchPresets(this.hass);
+    this._flagSaved();
+  };
+
+  private _onPresetDelete = async (preset: HermesPreset): Promise<void> => {
+    if (!this.hass || !preset.id) return;
+    await removePreset(this.hass, preset.id);
+    this._presets = await fetchPresets(this.hass);
+  };
+
+  private _onPresetSend = async (preset: HermesPreset): Promise<void> => {
+    const entryId = this._selectedEntry ?? this._entries[0]?.entry_id;
+    if (!this.hass || !entryId || !preset.id) return;
+    await sendPreset(this.hass, entryId, preset.id);
+    this._flagSaved();
+    this._history = await fetchHistory(this.hass);
+  };
+
+  private _onLogFilter = (value: string): void => {
+    this._logFilter = value;
+  };
+
+  private _onLogClear = async (): Promise<void> => {
+    if (!this.hass) return;
+    await clearHistory(this.hass);
+    this._history = [];
+  };
+
   private _onToggleShowAll = (): void => {
     this._mapShowAll = !this._mapShowAll;
   };
@@ -312,6 +390,16 @@ export class HermesCard extends LitElement {
     switch (this._tab) {
       case "status":
         return renderStatus(hass, t);
+      case "log":
+        return renderLog(
+          {
+            entries: this._history,
+            filter: this._logFilter,
+            onFilter: this._onLogFilter,
+            onClear: this._onLogClear,
+          },
+          t
+        );
       case "devices":
         return renderDevices(hass, t);
       case "map":
@@ -350,6 +438,15 @@ export class HermesCard extends LitElement {
             onToggleAdvanced: this._onToggleAdvanced,
             onSave: this._onSaveCommand,
             onCancel: this._onCancel,
+            presets: this._presets,
+            editingPreset: this._editingPreset,
+            onPresetNew: this._onPresetNew,
+            onPresetEdit: this._onPresetEdit,
+            onPresetDelete: this._onPresetDelete,
+            onPresetInput: this._onPresetInput,
+            onPresetSave: this._onPresetSave,
+            onPresetCancel: this._onPresetCancel,
+            onPresetSend: this._onPresetSend,
           },
           t
         );

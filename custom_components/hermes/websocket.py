@@ -53,6 +53,12 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_command_remove)
     websocket_api.async_register_command(hass, ws_nodes_list)
     websocket_api.async_register_command(hass, ws_actions)
+    websocket_api.async_register_command(hass, ws_presets_list)
+    websocket_api.async_register_command(hass, ws_preset_save)
+    websocket_api.async_register_command(hass, ws_preset_remove)
+    websocket_api.async_register_command(hass, ws_preset_send)
+    websocket_api.async_register_command(hass, ws_history_list)
+    websocket_api.async_register_command(hass, ws_history_clear)
 
 
 def _entry_payload(entry: Any) -> dict[str, Any]:
@@ -239,3 +245,113 @@ def ws_nodes_list(hass: HomeAssistant, connection, msg: dict) -> None:
             break
     nodes.sort(key=lambda n: n["name"].lower())
     connection.send_result(msg["id"], nodes)
+
+
+# --- Quick send presets ----------------------------------------------------
+
+
+@websocket_api.websocket_command({vol.Required("type"): "hermes/presets/list"})
+@callback
+def ws_presets_list(hass: HomeAssistant, connection, msg: dict) -> None:
+    """List the quick send presets."""
+    store = hass.data.get(DATA_STORE)
+    connection.send_result(msg["id"], store.presets if store else [])
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hermes/presets/save",
+        vol.Required("preset"): dict,
+    }
+)
+@websocket_api.async_response
+async def ws_preset_save(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Create or update a quick send preset."""
+    store = hass.data.get(DATA_STORE)
+    if store is None:
+        connection.send_error(msg["id"], "not_ready", "Hermes store not loaded")
+        return
+    connection.send_result(msg["id"], await store.async_save_preset(msg["preset"]))
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hermes/presets/remove",
+        vol.Required("preset_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_preset_remove(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Delete a quick send preset."""
+    store = hass.data.get(DATA_STORE)
+    if store is None:
+        connection.send_error(msg["id"], "not_ready", "Hermes store not loaded")
+        return
+    await store.async_remove_preset(msg["preset_id"])
+    connection.send_result(msg["id"], {"removed": msg["preset_id"]})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hermes/presets/send",
+        vol.Required("entry_id"): str,
+        vol.Required("preset_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_preset_send(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Fire a preset through the existing send services.
+
+    The sending logic is not duplicated here: broadcast and send_direct already
+    handle splitting, delays and logging.
+    """
+    store = hass.data.get(DATA_STORE)
+    entry = _get_entry(hass, msg["entry_id"])
+    if store is None or entry is None:
+        connection.send_error(msg["id"], "not_found", "Unknown Hermes entry")
+        return
+
+    preset = next(
+        (p for p in store.presets if p.get("id") == msg["preset_id"]), None
+    )
+    if preset is None:
+        connection.send_error(msg["id"], "not_found", "Unknown preset")
+        return
+
+    node_id = preset.get("node_id")
+    data = {"config_entry_id": entry.entry_id, "message": preset.get("text", "")}
+    if node_id:
+        await hass.services.async_call(
+            DOMAIN, "send_direct", {**data, "node_id": int(node_id)}, blocking=True
+        )
+    else:
+        await hass.services.async_call(DOMAIN, "broadcast", data, blocking=True)
+
+    connection.send_result(msg["id"], {"sent": preset["id"]})
+
+
+# --- Message log -----------------------------------------------------------
+
+
+@websocket_api.websocket_command({vol.Required("type"): "hermes/history/list"})
+@callback
+def ws_history_list(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Return the log of received and sent messages, newest first."""
+    store = hass.data.get(DATA_STORE)
+    connection.send_result(msg["id"], store.history if store else [])
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required("type"): "hermes/history/clear"})
+@websocket_api.async_response
+async def ws_history_clear(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Empty the log."""
+    store = hass.data.get(DATA_STORE)
+    if store is None:
+        connection.send_error(msg["id"], "not_ready", "Hermes store not loaded")
+        return
+    await store.async_clear_history()
+    connection.send_result(msg["id"], {"cleared": True})

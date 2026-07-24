@@ -47,6 +47,7 @@ export interface HermesCardConfig {
 
 export type TabId =
   | "status"
+  | "log"
   | "devices"
   | "map"
   | "messages"
@@ -71,6 +72,24 @@ export interface ActionDef {
   label: string;
   service: string;
   value?: ActionValueSpec;
+}
+
+/** A ready made message the user fires with one click. */
+export interface HermesPreset {
+  id?: string;
+  label: string;
+  text: string;
+  /** Send as a DM to this node; empty means broadcast on the entry channel. */
+  node_id?: number | null;
+}
+
+/** One line of the received and sent log. */
+export interface HermesLogEntry {
+  ts: string;
+  direction: "in" | "out";
+  node: number | null;
+  text: string;
+  outcome: string;
 }
 
 /** Global settings, stored by the integration outside any config entry. */

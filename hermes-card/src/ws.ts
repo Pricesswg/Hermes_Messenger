@@ -2,6 +2,8 @@
 
 import type {
   HermesCommand,
+  HermesLogEntry,
+  HermesPreset,
   HermesEntry,
   HermesSettings,
   HomeAssistant,
@@ -65,4 +67,42 @@ export function fetchActions(hass: HomeAssistant): Promise<any> {
 
 export function fetchNodes(hass: HomeAssistant): Promise<NodeInfo[]> {
   return hass.callWS<NodeInfo[]>({ type: "hermes/nodes/list" });
+}
+
+export function fetchPresets(hass: HomeAssistant): Promise<HermesPreset[]> {
+  return hass.callWS<HermesPreset[]>({ type: "hermes/presets/list" });
+}
+
+export function savePreset(
+  hass: HomeAssistant,
+  preset: HermesPreset
+): Promise<HermesPreset> {
+  return hass.callWS<HermesPreset>({ type: "hermes/presets/save", preset });
+}
+
+export function removePreset(
+  hass: HomeAssistant,
+  presetId: string
+): Promise<unknown> {
+  return hass.callWS({ type: "hermes/presets/remove", preset_id: presetId });
+}
+
+export function sendPreset(
+  hass: HomeAssistant,
+  entryId: string,
+  presetId: string
+): Promise<unknown> {
+  return hass.callWS({
+    type: "hermes/presets/send",
+    entry_id: entryId,
+    preset_id: presetId,
+  });
+}
+
+export function fetchHistory(hass: HomeAssistant): Promise<HermesLogEntry[]> {
+  return hass.callWS<HermesLogEntry[]>({ type: "hermes/history/list" });
+}
+
+export function clearHistory(hass: HomeAssistant): Promise<unknown> {
+  return hass.callWS({ type: "hermes/history/clear" });
 }

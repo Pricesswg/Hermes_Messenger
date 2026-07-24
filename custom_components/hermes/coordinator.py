@@ -34,6 +34,7 @@ from .const import (
     CONF_INITIAL_DELAY,
     CONF_MODE,
     CONF_PART_DELAY,
+    DATA_STORE,
     DEFAULT_BYTE_LIMIT,
     DEFAULT_INITIAL_DELAY,
     DEFAULT_PART_DELAY,
@@ -155,19 +156,29 @@ class HermesCoordinator:
         # below).
         command = self._match_command(text)
         if command is None:
+            self._log("in", text, sender, "no_match")
             return
 
         if not self._is_authorized(sender, command):
             # Silent drop: do not confirm to an attacker that the node/channel
             # is alive and listening.
             self._record_error("authorization rejected", sender, text)
+            self._log("in", text, sender, "unauthorized")
             _LOGGER.debug(
                 "Hermes: node %s NOT authorized for '%s', dropping", sender, text
             )
             self._notify_sensors()
             return
 
+        self._log("in", text, sender, "matched")
         await self._execute(command, sender, text)
+
+    @callback
+    def _log(self, direction: str, text: str, node: int | None, outcome: str) -> None:
+        """Append to the shared message log, if the store is loaded."""
+        store = self.hass.data.get(DATA_STORE)
+        if store is not None:
+            store.async_log(direction, text, node, outcome)
 
     def _matches_mode(self, to: dict[str, Any]) -> bool:
         """Filter channel vs DM against the real `to` schema."""
@@ -325,6 +336,7 @@ class HermesCoordinator:
 
     async def _send_parts(self, parts: list[str], base: dict[str, Any]) -> None:
         """Send the parts in sequence with an intermediate pause."""
+        self._log("out", " ".join(parts), base.get("to"), "sent")
         for index, part in enumerate(parts):
             if index:
                 await asyncio.sleep(self.part_delay)

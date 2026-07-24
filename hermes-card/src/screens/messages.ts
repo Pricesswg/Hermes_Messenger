@@ -15,6 +15,7 @@ import type {
   ActionDef,
   HermesCommand,
   HermesEntry,
+  HermesPreset,
   HomeAssistant,
 } from "../types";
 
@@ -41,6 +42,15 @@ export interface MessagesCtx {
   onToggleAdvanced: () => void;
   onSave: () => void;
   onCancel: () => void;
+  presets: HermesPreset[];
+  editingPreset: HermesPreset | null;
+  onPresetNew: () => void;
+  onPresetEdit: (preset: HermesPreset) => void;
+  onPresetDelete: (preset: HermesPreset) => void;
+  onPresetInput: (key: keyof HermesPreset, value: unknown) => void;
+  onPresetSave: () => void;
+  onPresetCancel: () => void;
+  onPresetSend: (preset: HermesPreset) => void;
 }
 
 export function renderMessages(
@@ -100,7 +110,109 @@ export function renderMessages(
               ${t("messages.add")}
             </button>
           </div>
+
+          ${renderPresets(ctx, entry, t)}
         `}
+  `;
+}
+
+/**
+ * Quick send presets: ready made texts fired with one click, the equivalent of
+ * the canned messages in the Meshtastic app.
+ */
+function renderPresets(
+  ctx: MessagesCtx,
+  entry: HermesEntry,
+  t: (k: string) => string
+): TemplateResult {
+  if (ctx.editingPreset) {
+    const draft = ctx.editingPreset;
+    return html`
+      <div class="section" style="margin-top:22px">
+        <div class="section-title">${t("presets.title")}</div>
+        <div class="panel">
+          <div class="field">
+            <label>${t("presets.label")}</label>
+            <input
+              .value=${draft.label ?? ""}
+              @input=${(e: Event) =>
+                ctx.onPresetInput("label", (e.target as HTMLInputElement).value)}
+            />
+          </div>
+          <div class="field">
+            <label>${t("presets.text")}</label>
+            <textarea
+              .value=${draft.text ?? ""}
+              @input=${(e: Event) =>
+                ctx.onPresetInput("text", (e.target as HTMLTextAreaElement).value)}
+            ></textarea>
+          </div>
+          <div class="field">
+            <label>${t("presets.node")}</label>
+            <input
+              type="number"
+              .value=${draft.node_id ? String(draft.node_id) : ""}
+              @input=${(e: Event) => {
+                const raw = (e.target as HTMLInputElement).value.trim();
+                ctx.onPresetInput("node_id", raw ? Number(raw) : null);
+              }}
+            />
+            <span class="hint">${t("presets.nodeHint")}</span>
+          </div>
+          <div class="actions">
+            <button class="btn primary" @click=${ctx.onPresetSave}>
+              ${t("common.save")}
+            </button>
+            <button class="btn" @click=${ctx.onPresetCancel}>
+              ${t("common.cancel")}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  return html`
+    <div class="section" style="margin-top:22px">
+      <div class="section-title">${t("presets.title")}</div>
+      ${ctx.presets.length
+        ? ctx.presets.map(
+            (preset) => html`
+              <div class="list-row">
+                <div class="meta">
+                  <span class="kw">${preset.label || preset.text}</span>
+                  <span class="sub">
+                    ${preset.node_id
+                      ? `${t("presets.toNode")} ${preset.node_id}`
+                      : t("presets.toChannel")}
+                  </span>
+                </div>
+                <div class="actions" style="margin:0">
+                  <button
+                    class="btn primary"
+                    @click=${() => ctx.onPresetSend(preset)}
+                    ?disabled=${!entry}
+                  >
+                    ${t("presets.send")}
+                  </button>
+                  <button class="btn" @click=${() => ctx.onPresetEdit(preset)}>
+                    ${t("common.edit")}
+                  </button>
+                  <button
+                    class="btn danger"
+                    @click=${() => ctx.onPresetDelete(preset)}
+                  >
+                    ${t("common.delete")}
+                  </button>
+                </div>
+              </div>
+            `
+          )
+        : html`<div class="empty">${t("presets.empty")}</div>`}
+      <div class="actions">
+        <button class="btn" @click=${ctx.onPresetNew}>${t("presets.add")}</button>
+      </div>
+    </div>
   `;
 }
 

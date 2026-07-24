@@ -556,6 +556,51 @@ export const hermesLayout = css`
     background: #ffd60a;
   }
 
+  .log-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  .log-row .dir {
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  .log-row .dir.in {
+    color: var(--info);
+  }
+
+  .log-row .dir.out {
+    color: var(--ok);
+  }
+
+  .log-body {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .log-text {
+    font-size: 0.84rem;
+    word-break: break-word;
+  }
+
+  .log-meta {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    margin-top: 2px;
+  }
+
+  button.chip[data-on="1"] {
+    border-color: var(--accent);
+    border-width: 2px;
+    background: var(--bg-soft);
+  }
+
   .sub-error {
     margin-top: 8px;
     font-family: var(--font-mono);

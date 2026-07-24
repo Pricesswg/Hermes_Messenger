@@ -63,6 +63,17 @@ DEFAULT_SETTINGS = {
     SETTING_MAP_ZOOM: 10,
 }
 
+# Quick send presets, the equivalent of the canned messages in the Meshtastic
+# app: ready made texts the user fires with one click from the card.
+STORE_PRESETS = "presets"
+
+# Log of received and sent traffic. Capped so the store cannot grow without
+# bound, and clearable from the card: it holds the text of channel messages.
+STORE_HISTORY = "history"
+HISTORY_MAX_ENTRIES = 200
+# Debounce writes: a busy channel would otherwise hit the disk per message.
+HISTORY_SAVE_DELAY = 15
+
 DATA_STORE = f"{DOMAIN}_store"
 DATA_WS_REGISTERED = f"{DOMAIN}_ws_registered"
 
