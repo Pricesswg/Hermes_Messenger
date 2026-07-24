@@ -475,6 +475,70 @@ export const hermesLayout = css`
     text-decoration: underline;
   }
 
+  .map-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 10px;
+  }
+
+  label.check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-soft);
+    cursor: pointer;
+  }
+
+  label.check input {
+    width: auto;
+    margin: 0;
+  }
+
+  .radius {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .radius input[type="range"] {
+    width: 160px;
+    padding: 0;
+  }
+
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  .legend .dot {
+    margin-left: 8px;
+  }
+
+  .dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  .dot.on {
+    background: #2ecc71;
+  }
+
+  .dot.off {
+    background: #ffd60a;
+  }
+
   .sub-error {
     margin-top: 8px;
     font-family: var(--font-mono);

@@ -1,5 +1,7 @@
 import { html, type TemplateResult } from "lit";
 
+import "../hermes-entity-picker";
+
 import {
   actionsForEntity,
   buildActionToken,
@@ -23,8 +25,6 @@ export interface MessagesCtx {
   editing: HermesCommand | null;
   /** Set when loading the gateways failed, so we do not claim there are none. */
   loadError: string | null;
-  /** Entity ids offered as autocomplete for the target field. */
-  entityIds: string[];
   /** Entity currently driving the button palette. */
   paletteEntity: string;
   /** Chosen default for the action parameter, per action id. */
@@ -191,16 +191,13 @@ function renderPalette(
     <div class="palette">
       <div class="field">
         <label>${t("messages.paletteEntity")}</label>
-        <input
-          list="hermes-entities"
+        <hermes-entity-picker
+          .hass=${ctx.hass}
           .value=${entityId}
           placeholder="light.kitchen"
-          @input=${(e: Event) =>
-            ctx.onPaletteEntity((e.target as HTMLInputElement).value.trim())}
-        />
-        <datalist id="hermes-entities">
-          ${ctx.entityIds.map((id) => html`<option value=${id}></option>`)}
-        </datalist>
+          @value-changed=${(e: CustomEvent) =>
+            ctx.onPaletteEntity(e.detail.value)}
+        ></hermes-entity-picker>
         <span class="hint">${t("messages.paletteHint")}</span>
       </div>
 
@@ -331,18 +328,18 @@ function renderForm(
             </div>
             <div class="field">
               <label>${t("messages.target")}</label>
-              <input
-                list="hermes-entities"
+              <hermes-entity-picker
+                .hass=${ctx.hass}
                 .value=${draft.target?.entity_id ?? ""}
                 placeholder="light.kitchen"
-                @input=${(e: Event) => {
-                  const value = (e.target as HTMLInputElement).value.trim();
+                @value-changed=${(e: CustomEvent) => {
+                  const value = e.detail.value;
                   ctx.onDraftInput(
                     "target",
                     value ? { entity_id: value } : undefined
                   );
                 }}
-              />
+              ></hermes-entity-picker>
             </div>
           `
         : ""}

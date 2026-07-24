@@ -73,8 +73,14 @@ export class HermesMap extends LitElement {
         width: 16px;
         height: 16px;
         border-radius: 50%;
-        background: var(--accent, #ffd60a);
         border: 2px solid #1b1b1b;
+      }
+      .pin div.on {
+        background: #2ecc71;
+        box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.35);
+      }
+      .pin div.off {
+        background: #ffd60a;
         box-shadow: 0 0 0 3px rgba(255, 214, 10, 0.35);
       }
     `,
@@ -84,6 +90,9 @@ export class HermesMap extends LitElement {
   @property({ attribute: false }) public nodes: MapNode[] = [];
   @property() public owmKey = "";
   @property({ type: Number }) public zoom = 10;
+  /** Radius filter in km; 0 disables the circle. */
+  @property({ type: Number }) public radiusKm = 0;
+  @property({ attribute: false }) public center: [number, number] | null = null;
 
   @state() private _owmLayer = "";
 
@@ -91,6 +100,7 @@ export class HermesMap extends LitElement {
   private _base?: L.TileLayer;
   private _owm?: L.TileLayer;
   private _markers: L.Marker[] = [];
+  private _circle?: L.Circle;
   private _resizeObserver?: ResizeObserver;
 
   protected firstUpdated(): void {
@@ -113,7 +123,9 @@ export class HermesMap extends LitElement {
   }
 
   protected updated(changed: Map<string, unknown>): void {
-    if (changed.has("nodes")) this._drawNodes();
+    if (changed.has("nodes") || changed.has("radiusKm") || changed.has("center")) {
+      this._drawNodes();
+    }
   }
 
   public disconnectedCallback(): void {
@@ -152,7 +164,9 @@ export class HermesMap extends LitElement {
       const marker = L.marker(position, {
         icon: L.divIcon({
           className: "pin",
-          html: "<div></div>",
+          // Green when the node was heard recently, yellow when it was not, so
+          // the state of the mesh reads at a glance.
+          html: `<div class="${node.connected ? "on" : "off"}"></div>`,
           iconSize: [16, 16],
           iconAnchor: [8, 8],
         }),
@@ -161,6 +175,21 @@ export class HermesMap extends LitElement {
 
       marker.bindPopup(this._popup(node));
       this._markers.push(marker);
+    }
+
+    this._circle?.remove();
+    this._circle = undefined;
+    if (this.radiusKm > 0 && this.center) {
+      this._circle = L.circle(this.center, {
+        radius: this.radiusKm * 1000,
+        // Literal colour: Leaflet writes this straight onto the SVG stroke,
+        // where a CSS custom property is not reliably resolved.
+        color: "#e0a800",
+        weight: 2,
+        fillOpacity: 0.06,
+      }).addTo(this._map);
+      this._map.fitBounds(this._circle.getBounds(), { padding: [20, 20] });
+      return;
     }
 
     if (points.length === 1) {

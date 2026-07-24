@@ -121,6 +121,10 @@ export interface MapNode {
   longitude: number | null;
   battery: number | null;
   lastSeen: string;
+  /** Heard recently enough to count as reachable. Drives the pin colour. */
+  connected: boolean;
+  /** True when the node is one the user explicitly picked in Settings. */
+  selected: boolean;
 }
 
 /** A Meshtastic node as seen through the Home Assistant device registry. */

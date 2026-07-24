@@ -105,21 +105,34 @@ export function meshNodes(hass: HomeAssistant): MeshNode[] {
  */
 export function mapNodes(
   hass: HomeAssistant,
-  selected: number[]
+  selected: number[],
+  includeAll = false
 ): MapNode[] {
-  if (!selected?.length) return [];
-  const wanted = new Set(selected.map(Number));
-  const out: MapNode[] = [];
+  const wanted = new Set((selected ?? []).map(Number));
+  if (!includeAll && !wanted.size) return [];
 
+  // Group the per node entities by device: the tracker carries the position,
+  // the last heard sensor tells whether the node is still reachable.
+  const trackers = new Map<string, string>();
+  const lastHeard = new Map<string, string>();
   for (const entry of entitiesForPlatform(hass, MESHTASTIC)) {
-    if (!entry.entity_id.startsWith("device_tracker.")) continue;
     const deviceId = (entry as any).device_id as string | undefined;
     if (!deviceId) continue;
+    if (entry.entity_id.startsWith("device_tracker.")) {
+      trackers.set(deviceId, entry.entity_id);
+    } else if (entry.entity_id.includes("last_heard")) {
+      lastHeard.set(deviceId, entry.entity_id);
+    }
+  }
 
+  const out: MapNode[] = [];
+  for (const [deviceId, trackerId] of trackers) {
     const nodeNum = nodeNumFor(hass, deviceId);
-    if (nodeNum === null || !wanted.has(nodeNum)) continue;
+    if (nodeNum === null) continue;
+    const isSelected = wanted.has(nodeNum);
+    if (!includeAll && !isSelected) continue;
 
-    const state = hass.states[entry.entity_id];
+    const state = hass.states[trackerId];
     if (!state) continue;
 
     const latitude = state.attributes?.latitude;
@@ -140,10 +153,48 @@ export function mapNodes(
       lastSeen: state.last_changed
         ? new Date(state.last_changed).toLocaleString()
         : "",
+      connected: isReachable(hass, lastHeard.get(deviceId)),
+      selected: isSelected,
     });
   }
 
   return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * A node counts as reachable when it was heard within the threshold, which is
+ * how the Meshtastic clients themselves decide whether to show a node as
+ * active. Without a last heard sensor we fall back to the entity simply not
+ * being unavailable.
+ */
+export const REACHABLE_WITHIN_MS = 2 * 60 * 60 * 1000;
+
+function isReachable(hass: HomeAssistant, lastHeardId?: string): boolean {
+  if (!lastHeardId) return false;
+  const state = hass.states[lastHeardId];
+  if (!state || state.state === "unavailable" || state.state === "unknown") {
+    return false;
+  }
+  const heard = Date.parse(state.state);
+  if (Number.isNaN(heard)) return false;
+  return Date.now() - heard <= REACHABLE_WITHIN_MS;
+}
+
+/** Great circle distance in kilometres, for the radius filter. */
+export function distanceKm(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
 }
 
 /** State plus unit, ready to print. */

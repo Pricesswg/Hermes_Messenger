@@ -71,6 +71,9 @@ export class HermesCard extends LitElement {
   @state() private _paletteEntity = "";
   @state() private _paletteValues: Record<string, number | string> = {};
   @state() private _showAdvanced = false;
+  @state() private _mapShowAll = false;
+  @state() private _mapRadiusOn = false;
+  @state() private _mapRadiusKm = 25;
 
   private _loaded = false;
 
@@ -230,6 +233,18 @@ export class HermesCard extends LitElement {
     this._showAdvanced = !this._showAdvanced;
   };
 
+  private _onToggleShowAll = (): void => {
+    this._mapShowAll = !this._mapShowAll;
+  };
+
+  private _onToggleRadius = (): void => {
+    this._mapRadiusOn = !this._mapRadiusOn;
+  };
+
+  private _onRadiusChange = (km: number): void => {
+    this._mapRadiusKm = km;
+  };
+
   /**
    * Insert a token where the cursor sits in the template textarea, so the user
    * can build a sentence around the tokens instead of only appending.
@@ -300,7 +315,19 @@ export class HermesCard extends LitElement {
       case "devices":
         return renderDevices(hass, t);
       case "map":
-        return renderMap(hass, this._settings, t);
+        return renderMap(
+          {
+            hass,
+            settings: this._settings,
+            showAll: this._mapShowAll,
+            radiusOn: this._mapRadiusOn,
+            radiusKm: this._mapRadiusKm,
+            onToggleShowAll: this._onToggleShowAll,
+            onToggleRadius: this._onToggleRadius,
+            onRadiusChange: this._onRadiusChange,
+          },
+          t
+        );
       case "messages":
         return renderMessages(
           {
@@ -309,7 +336,6 @@ export class HermesCard extends LitElement {
             selectedEntry: this._selectedEntry,
             editing: this._editing,
             loadError: this._loadError,
-            entityIds: Object.keys(hass.states).sort(),
             paletteEntity: this._paletteEntity,
             paletteValues: this._paletteValues,
             showAdvanced: this._showAdvanced,
