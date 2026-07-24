@@ -83,5 +83,14 @@ if [ "$MANIFEST_V" != "$CARD_V" ]; then
 fi
 
 echo "Done. manifest and card both at $MANIFEST_V"
-echo "Next: git add -A && git commit && git push"
-echo "Optional tag: git tag v$MANIFEST_V && git push origin v$MANIFEST_V"
+echo
+echo "Next:"
+echo "  git add -A && git commit -m '...' && git push"
+echo
+echo "Then TAG AND PUBLISH, this part is not optional:"
+echo "  git tag v$MANIFEST_V && git push origin v$MANIFEST_V"
+echo "  gh release create v$MANIFEST_V --title v$MANIFEST_V --notes '...'"
+echo
+echo "Without a release HACS has no version to track: it falls back to the"
+echo "default branch and offers a commit hash instead of $MANIFEST_V, so the"
+echo "user never sees a proper update."
