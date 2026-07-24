@@ -33,6 +33,7 @@ const en: Dict = {
   "map.radiusFilter": "Filter by radius",
   "map.connected": "heard recently",
   "map.notConnected": "not heard recently",
+  "map.noneInRadius": "No node inside the radius. Widen it or turn the filter off.",
 
   "settings.title": "Settings",
   "settings.global": "Global",
@@ -116,6 +117,7 @@ const it: Dict = {
   "map.radiusFilter": "Filtra per raggio",
   "map.connected": "sentito di recente",
   "map.notConnected": "non sentito di recente",
+  "map.noneInRadius": "Nessun nodo dentro il raggio. Allargalo o disattiva il filtro.",
 
   "settings.title": "Impostazioni",
   "settings.global": "Globali",
@@ -199,6 +201,7 @@ const es: Dict = {
   "map.radiusFilter": "Filtrar por radio",
   "map.connected": "oído recientemente",
   "map.notConnected": "no oído recientemente",
+  "map.noneInRadius": "Ningún nodo dentro del radio. Amplíalo o desactiva el filtro.",
 
   "settings.title": "Ajustes",
   "settings.global": "Globales",
@@ -282,6 +285,7 @@ const fr: Dict = {
   "map.radiusFilter": "Filtrer par rayon",
   "map.connected": "entendu récemment",
   "map.notConnected": "pas entendu récemment",
+  "map.noneInRadius": "Aucun nœud dans le rayon. Élargissez-le ou désactivez le filtre.",
 
   "settings.title": "Paramètres",
   "settings.global": "Globaux",
@@ -365,6 +369,7 @@ const de: Dict = {
   "map.radiusFilter": "Nach Radius filtern",
   "map.connected": "kürzlich gehört",
   "map.notConnected": "nicht kürzlich gehört",
+  "map.noneInRadius": "Kein Node im Radius. Vergrößere ihn oder schalte den Filter aus.",
 
   "settings.title": "Einstellungen",
   "settings.global": "Global",

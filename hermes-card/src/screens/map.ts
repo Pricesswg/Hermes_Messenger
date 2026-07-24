@@ -32,25 +32,28 @@ export function renderMap(
   t: (k: string) => string
 ): TemplateResult {
   const selected = ctx.settings?.map_nodes ?? [];
-  let nodes = mapNodes(ctx.hass, selected, ctx.showAll);
+  const allNodes = mapNodes(ctx.hass, selected, ctx.showAll);
 
-  const center = referencePoint(nodes);
+  const center = referencePoint(allNodes);
+  const radiusActive = ctx.radiusOn && center !== null && ctx.radiusKm > 0;
 
-  // The radius filter drops nodes outside the circle, so the map stays
-  // readable when "show all" pulls in the whole mesh.
-  if (ctx.radiusOn && center && ctx.radiusKm > 0) {
-    nodes = nodes.filter(
-      (node) =>
-        node.latitude === null ||
-        node.longitude === null ||
-        distanceKm(center[0], center[1], node.latitude, node.longitude) <=
-          ctx.radiusKm
-    );
-  }
+  // The radius only ever hides nodes from the map. Nodes without a position
+  // are never filtered out: they have no distance to compare, and dropping
+  // them would make authorized nodes silently vanish from the list.
+  const nodes = radiusActive
+    ? allNodes.filter(
+        (node) =>
+          node.latitude === null ||
+          node.longitude === null ||
+          distanceKm(center![0], center![1], node.latitude, node.longitude) <=
+            ctx.radiusKm
+      )
+    : allNodes;
 
   const positioned = nodes.filter(
     (node) => node.latitude !== null && node.longitude !== null
   );
+  const anyPositioned = allNodes.some((node) => node.latitude !== null);
 
   return html`
     <h2 class="screen-title">${t("tab.map")}</h2>
@@ -102,7 +105,11 @@ export function renderMap(
     ${!selected.length && !ctx.showAll
       ? html`<div class="empty">${t("map.noSelection")}</div>`
       : positioned.length === 0
-        ? html`<div class="empty">${t("map.noPosition")}</div>`
+        ? html`<div class="empty">
+            ${anyPositioned && radiusActive
+              ? t("map.noneInRadius")
+              : t("map.noPosition")}
+          </div>`
         : html`
             <hermes-map
               .hass=${ctx.hass}

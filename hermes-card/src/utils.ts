@@ -111,8 +111,10 @@ export function mapNodes(
   const wanted = new Set((selected ?? []).map(Number));
   if (!includeAll && !wanted.size) return [];
 
-  // Group the per node entities by device: the tracker carries the position,
-  // the last heard sensor tells whether the node is still reachable.
+  // Group the per node entities by device. Position comes from the tracker and
+  // reachability from the last heard sensor, but neither is required: a node
+  // that never reported a position still has to appear in the list, otherwise
+  // authorized nodes look like they do not exist.
   const trackers = new Map<string, string>();
   const lastHeard = new Map<string, string>();
   for (const entry of entitiesForPlatform(hass, MESHTASTIC)) {
@@ -125,35 +127,34 @@ export function mapNodes(
     }
   }
 
+  // Iterate the devices, not the trackers, so every known node is listed.
   const out: MapNode[] = [];
-  for (const [deviceId, trackerId] of trackers) {
-    const nodeNum = nodeNumFor(hass, deviceId);
+  for (const device of Object.values(hass.devices ?? {})) {
+    const nodeNum = nodeNumFor(hass, device.id);
     if (nodeNum === null) continue;
     const isSelected = wanted.has(nodeNum);
     if (!includeAll && !isSelected) continue;
 
-    const state = hass.states[trackerId];
-    if (!state) continue;
-
-    const latitude = state.attributes?.latitude;
-    const longitude = state.attributes?.longitude;
-    const device = hass.devices?.[deviceId];
-    const battery = state.attributes?.battery_level;
+    const trackerId = trackers.get(device.id);
+    const state = trackerId ? hass.states[trackerId] : undefined;
+    const latitude = state?.attributes?.latitude;
+    const longitude = state?.attributes?.longitude;
+    const battery = state?.attributes?.battery_level;
 
     out.push({
       nodeNum,
       name:
-        device?.name_by_user ||
-        device?.name ||
-        state.attributes?.friendly_name ||
+        device.name_by_user ||
+        device.name ||
+        state?.attributes?.friendly_name ||
         String(nodeNum),
       latitude: typeof latitude === "number" ? latitude : null,
       longitude: typeof longitude === "number" ? longitude : null,
       battery: typeof battery === "number" ? battery : null,
-      lastSeen: state.last_changed
+      lastSeen: state?.last_changed
         ? new Date(state.last_changed).toLocaleString()
         : "",
-      connected: isReachable(hass, lastHeard.get(deviceId)),
+      connected: isReachable(hass, lastHeard.get(device.id)),
       selected: isSelected,
     });
   }

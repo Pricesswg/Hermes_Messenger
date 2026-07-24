@@ -45,7 +45,14 @@ export class HermesEntityPicker extends LitElement {
     }
     .opt:hover,
     .opt[data-active="1"] {
-      background: var(--accent-soft);
+      /* Follow the Home Assistant theme rather than painting our yellow here.
+       * A light yellow fill sat under the theme's white text on dark themes and
+       * was unreadable, and prefers-color-scheme is not enough because a HA
+       * dashboard can be dark while the OS is light. Theme background, theme
+       * text, and the accent only as an edge marker: legible either way. */
+      background: var(--bg-soft, rgba(127, 127, 127, 0.14));
+      color: var(--text);
+      box-shadow: inset 3px 0 0 var(--accent, #ffd60a);
     }
     .opt .name {
       font-size: 0.84rem;

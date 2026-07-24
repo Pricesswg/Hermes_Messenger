@@ -59,6 +59,17 @@ export const hermesTokens = css`
     font-family: var(--font-sans);
     color: var(--text);
   }
+
+  /* Dark theme: the light yellow highlight would sit under the theme's white
+   * text and become unreadable. Use a translucent accent that darkens instead,
+   * and a light ink, so highlighted rows and chips stay legible either way.
+   * Every rule that paints --accent-soft must also set --accent-ink as colour. */
+  @media (prefers-color-scheme: dark) {
+    :host {
+      --accent-soft: rgba(255, 214, 10, 0.18);
+      --accent-ink: oklch(0.9 0.12 92);
+    }
+  }
 `;
 
 export const hermesLayout = css`
@@ -345,7 +356,8 @@ export const hermesLayout = css`
   button.btn.primary {
     background: var(--accent);
     border-color: var(--accent-strong);
-    color: oklch(0.25 0.05 90);
+    /* The accent stays a bright gold in both themes, so the ink stays dark. */
+    color: #1b1b1b;
   }
 
   button.btn.danger {
@@ -431,17 +443,22 @@ export const hermesLayout = css`
 
   button.chip:hover {
     border-color: var(--accent);
-    background: var(--accent-soft);
+    background: var(--bg-soft);
+    color: var(--text);
   }
 
   button.chip.read {
     border-style: dashed;
   }
 
+  /* Action chips read as "actionable" through the accent border rather than a
+   * yellow fill, so the label keeps the theme text colour and stays legible on
+   * dark dashboards. */
   button.chip.do {
-    background: var(--accent-soft);
+    background: var(--surface);
     border-color: var(--accent);
-    color: var(--accent-ink);
+    border-width: 2px;
+    color: var(--text);
   }
 
   .chip-group button.chip {

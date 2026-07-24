@@ -102,6 +102,7 @@ export class HermesMap extends LitElement {
   private _markers: L.Marker[] = [];
   private _circle?: L.Circle;
   private _resizeObserver?: ResizeObserver;
+  private _signature = "";
 
   protected firstUpdated(): void {
     const container = this.renderRoot.querySelector("#map") as HTMLElement;
@@ -122,8 +123,17 @@ export class HermesMap extends LitElement {
     window.setTimeout(() => this._map?.invalidateSize(), 60);
   }
 
-  protected updated(changed: Map<string, unknown>): void {
-    if (changed.has("nodes") || changed.has("radiusKm") || changed.has("center")) {
+  protected updated(): void {
+    // Compare by value, not identity. The parent rebuilds the nodes array and
+    // the centre tuple on every render, so an identity check would redraw and
+    // re-fit the view continuously, making the map impossible to pan.
+    const signature = JSON.stringify([
+      this.nodes.map((n) => [n.nodeNum, n.latitude, n.longitude, n.connected]),
+      this.radiusKm,
+      this.center,
+    ]);
+    if (signature !== this._signature) {
+      this._signature = signature;
       this._drawNodes();
     }
   }
