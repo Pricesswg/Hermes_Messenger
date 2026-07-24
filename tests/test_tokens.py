@@ -182,3 +182,42 @@ def test_bool_is_not_treated_as_numeric():
     # bool is a subclass of int in Python: it must not count as the numeric slot.
     params = {"away": True}
     assert apply_argument(params, 23.0) == params
+
+
+# --- entity bounds ---------------------------------------------------------
+
+_ACTIONS_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "custom_components"
+    / "hermes"
+    / "actions.py"
+)
+_aspec = importlib.util.spec_from_file_location("hermes_actions", _ACTIONS_PATH)
+actions_mod = importlib.util.module_from_spec(_aspec)
+sys.modules["hermes_actions"] = actions_mod
+_aspec.loader.exec_module(actions_mod)
+
+entity_bounds = actions_mod.entity_bounds
+
+
+def test_entity_bounds_prefer_the_device_over_the_catalogue():
+    # The catalogue says 5 to 35, the thermostat really accepts 7 to 30.
+    attributes = {"min_temp": 7, "max_temp": 30}
+    catalogue = {"key": "temperature", "min": 5, "max": 35}
+    assert entity_bounds(attributes, "temperature", catalogue) == (7.0, 30.0)
+
+
+def test_entity_bounds_fall_back_to_the_catalogue():
+    assert entity_bounds({}, "temperature", {"min": 5, "max": 35}) == (5.0, 35.0)
+
+
+def test_entity_bounds_none_when_nothing_known():
+    assert entity_bounds({}, "temperature", None) == (None, None)
+
+
+def test_argument_rejected_against_the_real_device_range():
+    # 33 is inside the generic catalogue range but outside this device's.
+    low, high = entity_bounds({"min_temp": 7, "max_temp": 30}, "temperature",
+                              {"min": 5, "max": 35})
+    assert apply_argument({"temperature": 21}, 33.0, low, high) == {"temperature": 21}
+    assert apply_argument({"temperature": 21}, 28.0, low, high) == {"temperature": 28}

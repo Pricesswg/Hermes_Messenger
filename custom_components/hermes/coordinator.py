@@ -46,7 +46,7 @@ from .const import (
     REPLY_SENDER_DM,
     SERVICE_SEND_TEXT,
 )
-from .actions import value_spec
+from .actions import entity_bounds, value_spec
 from .message import split_message
 from .tokens import apply_argument, parse_actions, parse_argument, strip_actions
 
@@ -259,10 +259,15 @@ class HermesCoordinator:
             params = dict(token.params)
             if argument is not None and len(params) == 1:
                 key = next(iter(params))
-                spec = value_spec(token.service, key) or {}
-                params = apply_argument(
-                    params, argument, spec.get("min"), spec.get("max")
+                # The device is the authority on its own limits; the catalogue
+                # is only the fallback when the entity does not publish them.
+                state = self.hass.states.get(token.entity_id)
+                low, high = entity_bounds(
+                    state.attributes if state else {},
+                    key,
+                    value_spec(token.service, key),
                 )
+                params = apply_argument(params, argument, low, high)
             try:
                 await self.hass.services.async_call(
                     token.domain,

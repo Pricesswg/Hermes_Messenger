@@ -5,7 +5,9 @@ import {
   buildActionToken,
   buildAttrToken,
   buildStateToken,
+  rangeLabel,
   readableAttributes,
+  resolveValueSpec,
 } from "../actions";
 import type {
   ActionDef,
@@ -126,13 +128,18 @@ function renderRow(
   `;
 }
 
-/** The value picker shown next to an action that takes a parameter. */
+/**
+ * The value picker shown next to an action that takes a parameter.
+ * The bounds come from the selected entity when it publishes them, so you see
+ * the range the device really accepts while you build the command.
+ */
 function renderValueInput(
   ctx: MessagesCtx,
-  action: ActionDef
+  action: ActionDef,
+  entityId: string
 ): TemplateResult | "" {
-  const spec = action.value;
-  if (!spec) return "";
+  if (!action.value) return "";
+  const spec = resolveValueSpec(ctx.hass, entityId, action.value);
   const current = ctx.paletteValues[action.id] ?? spec.default ?? "";
 
   if (spec.type === "enum") {
@@ -153,6 +160,7 @@ function renderValueInput(
     `;
   }
 
+  const range = rangeLabel(spec);
   return html`
     <input
       class="inline"
@@ -164,7 +172,7 @@ function renderValueInput(
       @input=${(e: Event) =>
         ctx.onPaletteValue(action.id, Number((e.target as HTMLInputElement).value))}
     />
-    ${spec.unit ? html`<span class="unit">${spec.unit}</span>` : ""}
+    ${range ? html`<span class="unit">${range}</span>` : ""}
   `;
 }
 
@@ -232,13 +240,16 @@ function renderPalette(
                             action,
                             entityId,
                             ctx.paletteValues[action.id] ??
-                              action.value?.default
+                              (action.value
+                                ? resolveValueSpec(ctx.hass, entityId, action.value)
+                                    .default
+                                : undefined)
                           )
                         )}
                     >
                       ${action.label}
                     </button>
-                    ${renderValueInput(ctx, action)}
+                    ${renderValueInput(ctx, action, entityId)}
                   </span>
                 `
               )}

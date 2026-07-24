@@ -4,7 +4,7 @@
 // fallback keeps the palette usable if that call has not landed yet, the same
 // arrangement Chronos uses.
 
-import type { ActionDef, HomeAssistant } from "./types";
+import type { ActionDef, ActionValueSpec, HomeAssistant } from "./types";
 
 const GENERIC: ActionDef[] = [
   { id: "turn_on", label: "Turn on", service: "homeassistant.turn_on" },
@@ -99,6 +99,74 @@ export function buildStateToken(entityId: string): string {
 
 export function buildAttrToken(entityId: string, attribute: string): string {
   return `{attr:${entityId}:${attribute}}`;
+}
+
+// Where the real limits of a parameter live in the entity attributes. The
+// catalogue only carries generic defaults; the device is the authority, so a
+// thermostat that accepts 7 to 30 shows 7 to 30 instead of the generic 5 to 35.
+const RANGE_ATTRS: Record<string, { min?: string; max?: string; step?: string }> = {
+  temperature: { min: "min_temp", max: "max_temp", step: "target_temp_step" },
+  percentage: { step: "percentage_step" },
+  value: { min: "min", max: "max", step: "step" },
+};
+
+// Enum parameters whose allowed options the entity publishes itself.
+const ENUM_ATTRS: Record<string, string> = {
+  hvac_mode: "hvac_modes",
+  preset_mode: "preset_modes",
+  fan_mode: "fan_modes",
+  swing_mode: "swing_modes",
+  operation_mode: "operation_list",
+  source: "source_list",
+};
+
+/**
+ * Narrow a catalogue value descriptor to what the selected entity really
+ * supports, so while building the command you can see the range to expect.
+ */
+export function resolveValueSpec(
+  hass: HomeAssistant,
+  entityId: string,
+  spec: ActionValueSpec
+): ActionValueSpec {
+  const attributes = hass.states[entityId]?.attributes ?? {};
+  const resolved: ActionValueSpec = { ...spec };
+
+  const mapping = RANGE_ATTRS[spec.key] ?? {};
+  for (const kind of ["min", "max", "step"] as const) {
+    const attr = mapping[kind];
+    const value = attr ? attributes[attr] : undefined;
+    if (typeof value === "number") resolved[kind] = value;
+  }
+
+  const enumAttr = ENUM_ATTRS[spec.key];
+  const options = enumAttr ? attributes[enumAttr] : undefined;
+  if (Array.isArray(options) && options.length) {
+    resolved.options = options.map(String);
+    if (resolved.default === undefined || !resolved.options.includes(String(resolved.default))) {
+      resolved.default = resolved.options[0];
+    }
+  }
+
+  // Keep the default inside the resolved range.
+  if (typeof resolved.default === "number") {
+    if (typeof resolved.min === "number" && resolved.default < resolved.min) {
+      resolved.default = resolved.min;
+    }
+    if (typeof resolved.max === "number" && resolved.default > resolved.max) {
+      resolved.default = resolved.max;
+    }
+  }
+
+  return resolved;
+}
+
+/** Human readable range shown next to a value input, empty when unknown. */
+export function rangeLabel(spec: ActionValueSpec): string {
+  if (spec.type === "enum") return "";
+  if (typeof spec.min !== "number" || typeof spec.max !== "number") return "";
+  const unit = spec.unit ? ` ${spec.unit}` : "";
+  return `${spec.min} to ${spec.max}${unit}`;
 }
 
 /**

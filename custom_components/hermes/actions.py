@@ -205,6 +205,43 @@ GENERIC_ACTIONS: list[dict[str, Any]] = [
 ]
 
 
+# Where the real limits of a parameter live in the entity attributes. The
+# catalogue only carries sensible generic defaults; the device is the authority
+# (a thermostat may well accept 7 to 30, not the generic 5 to 35).
+RANGE_ATTRS: dict[str, dict[str, str]] = {
+    "temperature": {"min": "min_temp", "max": "max_temp", "step": "target_temp_step"},
+    "percentage": {"step": "percentage_step"},
+    "value": {"min": "min", "max": "max", "step": "step"},
+}
+
+# Enum parameters whose allowed options the entity publishes itself.
+ENUM_ATTRS: dict[str, str] = {
+    "hvac_mode": "hvac_modes",
+    "preset_mode": "preset_modes",
+    "fan_mode": "fan_modes",
+    "swing_mode": "swing_modes",
+    "operation_mode": "operation_list",
+    "source": "source_list",
+}
+
+
+def entity_bounds(
+    attributes: dict[str, Any], key: str, spec: dict[str, Any] | None = None
+) -> tuple[float | None, float | None]:
+    """Real min and max for a parameter, entity first and catalogue as fallback."""
+    mapping = RANGE_ATTRS.get(key, {})
+    spec = spec or {}
+
+    def pick(kind: str) -> float | None:
+        attr = mapping.get(kind)
+        if attr and isinstance(attributes.get(attr), (int, float)):
+            return float(attributes[attr])
+        value = spec.get(kind)
+        return float(value) if isinstance(value, (int, float)) else None
+
+    return pick("min"), pick("max")
+
+
 def actions_for_domain(domain: str) -> list[dict[str, Any]]:
     """Actions offered for an entity domain, generic ones as fallback."""
     return ACTIONS_BY_TYPE.get(DOMAIN_TO_TYPE.get(domain, ""), GENERIC_ACTIONS)
