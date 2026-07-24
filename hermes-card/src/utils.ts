@@ -1,5 +1,6 @@
 import type {
   HassEntityState,
+  HermesEntry,
   HomeAssistant,
   MapNode,
   MeshNode,
@@ -196,6 +197,63 @@ export function distanceKm(
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+// Every place a command can name an entity: the advanced target field, the two
+// read placeholders and the action token.
+const REFERENCE_PATTERNS = [
+  /\{state:([^:}]+)\}/g,
+  /\{attr:([^:}]+):[^}]+\}/g,
+  /\{do:[^:}]+:([^:}]+?)(?::[^}]*)?\}/g,
+];
+
+/**
+ * Which entities the configured commands actually touch, mapped to the
+ * keywords that use them. This is what makes the Home Assistant tab a coherence
+ * check: an entity that was renamed or deleted still sits in a command, and
+ * without this the failure only shows up when someone texts the keyword.
+ */
+export function referencedEntities(
+  entries: HermesEntry[]
+): Map<string, string[]> {
+  const used = new Map<string, string[]>();
+
+  const add = (entityId: string, keyword: string) => {
+    const id = entityId.trim();
+    if (!id.includes(".")) return;
+    const list = used.get(id) ?? [];
+    if (!list.includes(keyword)) list.push(keyword);
+    used.set(id, list);
+  };
+
+  for (const entry of entries) {
+    for (const command of entry.commands ?? []) {
+      const keyword = command.keyword || "?";
+      const target = command.target?.entity_id;
+      if (typeof target === "string") add(target, keyword);
+
+      const template = command.reply_template ?? "";
+      for (const pattern of REFERENCE_PATTERNS) {
+        pattern.lastIndex = 0;
+        let match: RegExpExecArray | null;
+        while ((match = pattern.exec(template)) !== null) {
+          add(match[1], keyword);
+        }
+      }
+    }
+  }
+
+  return new Map([...used.entries()].sort((a, b) => a[0].localeCompare(b[0])));
+}
+
+/** Entities created by Hermes itself, for the shared values section. */
+export function hermesEntities(hass: HomeAssistant): HassEntityState[] {
+  const out: HassEntityState[] = [];
+  for (const entry of entitiesForPlatform(hass, HERMES)) {
+    const state = hass.states[entry.entity_id];
+    if (state) out.push(state);
+  }
+  return out.sort((a, b) => a.entity_id.localeCompare(b.entity_id));
 }
 
 /** State plus unit, ready to print. */

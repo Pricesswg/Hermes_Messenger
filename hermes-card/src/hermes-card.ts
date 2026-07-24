@@ -4,10 +4,10 @@ import { customElement, property, state } from "lit/decorators.js";
 import { translator } from "./i18n";
 import { hermesLayout, hermesTokens } from "./styles";
 import { renderDevices } from "./screens/devices";
+import { renderHomeAssistant } from "./screens/homeassistant";
 import { renderLog } from "./screens/log";
 import { renderMap } from "./screens/map";
 import { renderMessages } from "./screens/messages";
-import { renderPlaceholder } from "./screens/placeholder";
 import { renderSettings } from "./screens/settings";
 import { renderStatus } from "./screens/status";
 import type {
@@ -88,6 +88,8 @@ export class HermesCard extends LitElement {
   @state() private _editingPreset: HermesPreset | null = null;
   @state() private _history: HermesLogEntry[] = [];
   @state() private _logFilter = "";
+  @state() private _testText = "";
+  @state() private _sendingTest = false;
 
   private _loaded = false;
 
@@ -301,6 +303,28 @@ export class HermesCard extends LitElement {
     this._history = await fetchHistory(this.hass);
   };
 
+  private _onTestText = (value: string): void => {
+    this._testText = value;
+  };
+
+  private _onSendTest = async (): Promise<void> => {
+    const entryId = this._selectedEntry ?? this._entries[0]?.entry_id;
+    if (!this.hass || !entryId || !this._testText) return;
+    this._sendingTest = true;
+    try {
+      await this.hass.callService("hermes", "broadcast", {
+        config_entry_id: entryId,
+        message: this._testText,
+      });
+      this._flagSaved();
+      this._history = await fetchHistory(this.hass);
+    } catch (err) {
+      console.error("Hermes: test send failed", err);
+    } finally {
+      this._sendingTest = false;
+    }
+  };
+
   private _onLogFilter = (value: string): void => {
     this._logFilter = value;
   };
@@ -451,7 +475,18 @@ export class HermesCard extends LitElement {
           t
         );
       case "homeassistant":
-        return renderPlaceholder(t("tab.homeassistant"), 4, t);
+        return renderHomeAssistant(
+          {
+            hass,
+            entries: this._entries,
+            testText: this._testText,
+            selectedEntry: this._selectedEntry,
+            sending: this._sendingTest,
+            onTestText: this._onTestText,
+            onSendTest: this._onSendTest,
+          },
+          t
+        );
       case "settings":
         return renderSettings(
           {

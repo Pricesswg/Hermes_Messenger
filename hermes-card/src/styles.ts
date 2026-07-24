@@ -556,6 +556,26 @@ export const hermesLayout = css`
     background: #ffd60a;
   }
 
+  .dot.bad {
+    background: var(--danger);
+  }
+
+  .used {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    margin-left: 6px;
+  }
+
+  .warn-badge {
+    margin-left: 8px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--danger);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
   .log-row {
     display: flex;
     gap: 10px;
