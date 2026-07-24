@@ -97,6 +97,8 @@ export interface HermesSettings {
   openweather_api_key: string;
   map_nodes: number[];
   map_zoom: number;
+  /** auto, mobile, tablet or desktop. */
+  map_height: string;
 }
 
 /** One configured command, as stored in the config entry options. */

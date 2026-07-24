@@ -55,12 +55,15 @@ STORAGE_KEY = f"{DOMAIN}.settings"
 SETTING_OPENWEATHER_KEY = "openweather_api_key"
 SETTING_MAP_NODES = "map_nodes"
 SETTING_MAP_ZOOM = "map_zoom"
+# auto, mobile, tablet or desktop. "auto" scales with the viewport.
+SETTING_MAP_HEIGHT = "map_height"
 
 DEFAULT_SETTINGS = {
     SETTING_OPENWEATHER_KEY: "",
     # Node numbers to draw on the map. Empty means "none selected yet".
     SETTING_MAP_NODES: [],
     SETTING_MAP_ZOOM: 10,
+    SETTING_MAP_HEIGHT: "auto",
 }
 
 # Quick send presets, the equivalent of the canned messages in the Meshtastic

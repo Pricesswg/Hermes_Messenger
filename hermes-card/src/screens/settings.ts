@@ -16,23 +16,51 @@ export interface SettingsCtx {
   draftEntries: Record<string, Record<string, any>>;
 }
 
-/** Read the selected values of a multi-select as numbers. */
-function selectedNumbers(event: Event): number[] {
-  const select = event.target as HTMLSelectElement;
-  return [...select.selectedOptions].map((o) => Number(o.value));
-}
-
-function nodeOptions(
+/**
+ * Node chooser as checkboxes.
+ *
+ * A native multi-select was used before and was wrong twice: it needs
+ * ctrl-clicking to pick more than one, which nobody discovers, and Lit can only
+ * set the `selected` attribute on an option, while the browser reads the
+ * property once the user has interacted, so a saved selection did not always
+ * come back. Checkboxes bind to a property and are obvious to use.
+ */
+function nodeChecklist(
   nodes: NodeInfo[],
-  selected: number[]
-): TemplateResult[] {
-  return nodes.map(
-    (node) => html`
-      <option value=${node.node_num} ?selected=${selected.includes(node.node_num)}>
-        ${node.name} (${node.node_num})
-      </option>
-    `
-  );
+  selected: number[],
+  onChange: (values: number[]) => void,
+  emptyText: string
+): TemplateResult {
+  if (!nodes.length) {
+    return html`<div class="hint">${emptyText}</div>`;
+  }
+  const current = new Set((selected ?? []).map(Number));
+
+  return html`
+    <div class="checklist">
+      ${nodes.map(
+        (node) => html`
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${current.has(node.node_num)}
+              @change=${(e: Event) => {
+                const next = new Set(current);
+                if ((e.target as HTMLInputElement).checked) {
+                  next.add(node.node_num);
+                } else {
+                  next.delete(node.node_num);
+                }
+                onChange([...next].sort((a, b) => a - b));
+              }}
+            />
+            <span>${node.name}</span>
+            <span class="node-num">${node.node_num}</span>
+          </label>
+        `
+      )}
+    </div>
+  `;
 }
 
 export function renderSettings(
@@ -69,14 +97,14 @@ export function renderSettings(
         </div>
 
         <div class="field">
-          <label for="mapnodes">${t("settings.mapNodes")}</label>
-          <select
-            id="mapnodes"
-            multiple
-            @change=${(e: Event) => ctx.onGlobalInput("map_nodes", selectedNumbers(e))}
-          >
-            ${nodeOptions(ctx.nodes, (globalValue("map_nodes") as number[]) ?? [])}
-          </select>
+          <label>${t("settings.mapNodes")}</label>
+          ${nodeChecklist(
+            ctx.nodes,
+            (globalValue("map_nodes") as number[]) ?? [],
+            (values) => ctx.onGlobalInput("map_nodes", values),
+            t("settings.noNodes")
+          )}
+          <span class="hint">${t("settings.mapNodesHint")}</span>
         </div>
 
         <div class="actions">
@@ -163,20 +191,14 @@ function renderEntry(
 
         <div class="field">
           <label>${t("settings.authorizedNodes")}</label>
-          <select
-            multiple
-            @change=${(e: Event) =>
-              ctx.onEntryInput(
-                entry.entry_id,
-                "authorized_nodes",
-                selectedNumbers(e)
-              )}
-          >
-            ${nodeOptions(
-              ctx.nodes,
-              (value("authorized_nodes", entry.authorized_nodes) as number[]) ?? []
-            )}
-          </select>
+          ${nodeChecklist(
+            ctx.nodes,
+            (value("authorized_nodes", entry.authorized_nodes) as number[]) ?? [],
+            (values) =>
+              ctx.onEntryInput(entry.entry_id, "authorized_nodes", values),
+            t("settings.noNodes")
+          )}
+          <span class="hint">${t("settings.authorizedHint")}</span>
         </div>
 
         <div class="actions">

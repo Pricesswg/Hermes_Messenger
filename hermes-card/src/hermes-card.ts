@@ -347,6 +347,13 @@ export class HermesCard extends LitElement {
     this._mapRadiusKm = km;
   };
 
+  private _onHeightChange = async (mode: string): Promise<void> => {
+    if (!this.hass) return;
+    // Persist straight away: a display preference the user has to set again on
+    // every visit is not a preference.
+    this._settings = await updateSettings(this.hass, { map_height: mode });
+  };
+
   /**
    * Insert a token where the cursor sits in the template textarea, so the user
    * can build a sentence around the tokens instead of only appending.
@@ -437,6 +444,7 @@ export class HermesCard extends LitElement {
             onToggleShowAll: this._onToggleShowAll,
             onToggleRadius: this._onToggleRadius,
             onRadiusChange: this._onRadiusChange,
+            onHeightChange: this._onHeightChange,
           },
           t
         );

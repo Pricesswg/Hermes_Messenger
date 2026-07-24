@@ -15,7 +15,10 @@ export interface MapCtx {
   onToggleShowAll: () => void;
   onToggleRadius: () => void;
   onRadiusChange: (km: number) => void;
+  onHeightChange: (mode: string) => void;
 }
+
+const HEIGHT_MODES = ["auto", "mobile", "tablet", "desktop"];
 
 /** Centre of the radius circle: the first shown node that has a position. */
 function referencePoint(nodes: MapNode[]): [number, number] | null {
@@ -77,6 +80,27 @@ export function renderMap(
         <span>${t("map.radiusFilter")}</span>
       </label>
 
+      <span class="radius">
+        <label class="check" style="gap:6px">
+          <span>${t("map.size")}</span>
+          <select
+            @change=${(e: Event) =>
+              ctx.onHeightChange((e.target as HTMLSelectElement).value)}
+          >
+            ${HEIGHT_MODES.map(
+              (mode) => html`
+                <option
+                  value=${mode}
+                  ?selected=${(ctx.settings?.map_height ?? "auto") === mode}
+                >
+                  ${t(`map.size.${mode}`)}
+                </option>
+              `
+            )}
+          </select>
+        </label>
+      </span>
+
       ${ctx.radiusOn
         ? html`
             <span class="radius">
@@ -118,6 +142,7 @@ export function renderMap(
               .zoom=${ctx.settings?.map_zoom ?? 10}
               .radiusKm=${ctx.radiusOn ? ctx.radiusKm : 0}
               .center=${center}
+              .heightMode=${ctx.settings?.map_height ?? "auto"}
             ></hermes-map>
           `}
 

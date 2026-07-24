@@ -36,7 +36,9 @@ export class HermesMap extends LitElement {
         display: block;
       }
       #map {
-        height: 420px;
+        /* Driven by the size preset. "auto" scales with the viewport so the
+         * same card is usable on a phone and on a desktop without a setting. */
+        height: var(--hermes-map-height, clamp(320px, 60vh, 900px));
         border-radius: var(--r-md, 10px);
         border: 1px solid var(--border);
         overflow: hidden;
@@ -93,6 +95,7 @@ export class HermesMap extends LitElement {
   /** Radius filter in km; 0 disables the circle. */
   @property({ type: Number }) public radiusKm = 0;
   @property({ attribute: false }) public center: [number, number] | null = null;
+  @property() public heightMode = "auto";
 
   @state() private _owmLayer = "";
 
@@ -103,6 +106,7 @@ export class HermesMap extends LitElement {
   private _circle?: L.Circle;
   private _resizeObserver?: ResizeObserver;
   private _signature = "";
+  private _heightApplied = "";
 
   protected firstUpdated(): void {
     const container = this.renderRoot.querySelector("#map") as HTMLElement;
@@ -123,6 +127,19 @@ export class HermesMap extends LitElement {
     window.setTimeout(() => this._map?.invalidateSize(), 60);
   }
 
+  protected willUpdate(): void {
+    const heights: Record<string, string> = {
+      auto: "clamp(320px, 60vh, 900px)",
+      mobile: "340px",
+      tablet: "520px",
+      desktop: "760px",
+    };
+    this.style.setProperty(
+      "--hermes-map-height",
+      heights[this.heightMode] ?? heights.auto
+    );
+  }
+
   protected updated(): void {
     // Compare by value, not identity. The parent rebuilds the nodes array and
     // the centre tuple on every render, so an identity check would redraw and
@@ -135,6 +152,11 @@ export class HermesMap extends LitElement {
     if (signature !== this._signature) {
       this._signature = signature;
       this._drawNodes();
+    }
+    if (this.heightMode !== this._heightApplied) {
+      this._heightApplied = this.heightMode;
+      // Leaflet caches the container size, so it must be told after a resize.
+      window.setTimeout(() => this._map?.invalidateSize(), 50);
     }
   }
 

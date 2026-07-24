@@ -556,6 +556,28 @@ export const hermesLayout = css`
     background: #ffd60a;
   }
 
+  .checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 8px 10px;
+    background: var(--bg-sunken);
+  }
+
+  .checklist .check {
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 3px 0;
+  }
+
+  .checklist .node-num {
+    margin-left: auto;
+  }
+
   .dot.bad {
     background: var(--danger);
   }
