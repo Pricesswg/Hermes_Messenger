@@ -75,7 +75,7 @@ def test_long_ascii_multipart():
         "à" * 130,          # 2 bytes/char, ~260 bytes -> forces the split
         "€" * 90,           # 3 bytes/char
         "🚨" * 70,          # 4 bytes/char (emoji)
-        "North perimeter alarm 🚨 motion detected at 03:14 — please check 📹" * 6,
+        "North perimeter alarm 🚨 motion detected at 03:14, please check 📹" * 6,
     ],
 )
 def test_multibyte_no_char_truncated(text):
