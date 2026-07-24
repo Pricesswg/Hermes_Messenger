@@ -7,6 +7,7 @@ export interface SettingsCtx {
   entries: HermesEntry[];
   nodes: NodeInfo[];
   saved: boolean;
+  loadError: string | null;
   onGlobalInput: (key: keyof HermesSettings, value: unknown) => void;
   onEntryInput: (entryId: string, key: string, value: unknown) => void;
   onSaveGlobal: () => void;
@@ -86,9 +87,14 @@ export function renderSettings(
       </div>
     </div>
 
-    ${ctx.entries.length === 0
-      ? html`<div class="empty">${t("common.noEntries")}</div>`
-      : ctx.entries.map((entry) => renderEntry(ctx, entry, t))}
+    ${ctx.loadError
+      ? html`<div class="empty">
+          <div>${t("common.loadError")}</div>
+          <div class="sub-error">${ctx.loadError}</div>
+        </div>`
+      : ctx.entries.length === 0
+        ? html`<div class="empty">${t("common.noEntries")}</div>`
+        : ctx.entries.map((entry) => renderEntry(ctx, entry, t))}
   `;
 }
 

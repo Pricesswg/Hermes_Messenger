@@ -59,6 +59,10 @@ export function removeCommand(
   });
 }
 
+export function fetchActions(hass: HomeAssistant): Promise<any> {
+  return hass.callWS<any>({ type: "hermes/actions" });
+}
+
 export function fetchNodes(hass: HomeAssistant): Promise<NodeInfo[]> {
   return hass.callWS<NodeInfo[]>({ type: "hermes/nodes/list" });
 }

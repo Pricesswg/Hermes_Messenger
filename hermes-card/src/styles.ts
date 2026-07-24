@@ -389,4 +389,97 @@ export const hermesLayout = css`
     font-weight: 700;
     color: var(--ok);
   }
+
+  .palette {
+    background: var(--bg-sunken);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 12px;
+    margin-bottom: 14px;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .chip-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-pill);
+    padding: 3px 8px 3px 3px;
+  }
+
+  button.chip {
+    appearance: none;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  button.chip:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  button.chip.read {
+    border-style: dashed;
+  }
+
+  button.chip.do {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .chip-group button.chip {
+    border: none;
+    background: transparent;
+    padding: 4px 8px;
+  }
+
+  input.inline {
+    width: 76px;
+    padding: 4px 6px;
+    font-size: 0.78rem;
+  }
+
+  select.inline {
+    width: auto;
+    padding: 4px 6px;
+    font-size: 0.78rem;
+  }
+
+  .unit {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  button.btn.link {
+    background: none;
+    border: none;
+    color: var(--accent-ink);
+    padding: 4px 0;
+    text-decoration: underline;
+  }
+
+  .sub-error {
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--danger);
+    word-break: break-word;
+  }
 `;

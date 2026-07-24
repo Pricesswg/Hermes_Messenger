@@ -19,6 +19,7 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 
+from .actions import ACTIONS_BY_TYPE, DOMAIN_TO_TYPE, GENERIC_ACTIONS
 from .const import (
     CMD_ID,
     CONF_AUTHORIZED_NODES,
@@ -51,6 +52,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_command_save)
     websocket_api.async_register_command(hass, ws_command_remove)
     websocket_api.async_register_command(hass, ws_nodes_list)
+    websocket_api.async_register_command(hass, ws_actions)
 
 
 def _entry_payload(entry: Any) -> dict[str, Any]:
@@ -193,6 +195,20 @@ def ws_command_remove(hass: HomeAssistant, connection, msg: dict) -> None:
     options = {**entry.options, CONF_COMMANDS: commands}
     hass.config_entries.async_update_entry(entry, options=options)
     connection.send_result(msg["id"], {"removed": msg["command_id"]})
+
+
+@websocket_api.websocket_command({vol.Required("type"): "hermes/actions"})
+@callback
+def ws_actions(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Serve the curated action catalogue used to build the message buttons."""
+    connection.send_result(
+        msg["id"],
+        {
+            "by_type": ACTIONS_BY_TYPE,
+            "domain_to_type": DOMAIN_TO_TYPE,
+            "generic": GENERIC_ACTIONS,
+        },
+    )
 
 
 @websocket_api.websocket_command({vol.Required("type"): "hermes/nodes/list"})

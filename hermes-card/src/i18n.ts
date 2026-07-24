@@ -56,6 +56,17 @@ const en: Dict = {
   "messages.onChannel": "On the channel",
   "messages.senderDm": "DM to sender",
   "messages.confirmDelete": "Delete this command?",
+  "messages.keywordHint": "The text people send from a Meshtastic node to trigger this.",
+  "messages.matchHint": "Use \"Starts with\" if you want to accept a value, like \"temp 21\".",
+  "messages.paletteEntity": "Pick an entity",
+  "messages.paletteHint": "Choose what you want to read or control, then click a button below.",
+  "messages.pickEntityFirst": "Pick an entity to see what you can do with it.",
+  "messages.groupRead": "Read",
+  "messages.groupDo": "Do",
+  "messages.readState": "Value",
+  "messages.templateHint": "Click the buttons above to build this. Action buttons run something and send nothing.",
+  "messages.advanced": "Advanced",
+  "messages.hideAdvanced": "Hide advanced",
 
   "common.comingSoon": "Coming in the next build phase.",
   "common.phase": "Phase",
@@ -66,6 +77,7 @@ const en: Dict = {
   "common.loading": "Loading",
   "common.saved": "Saved",
   "common.noEntries": "No Hermes gateway configured yet.",
+  "common.loadError": "Could not load data from Home Assistant.",
 };
 
 const it: Dict = {
@@ -119,6 +131,17 @@ const it: Dict = {
   "messages.onChannel": "Sul canale",
   "messages.senderDm": "DM al mittente",
   "messages.confirmDelete": "Eliminare questo comando?",
+  "messages.keywordHint": "Il testo che si invia da un nodo Meshtastic per far scattare il comando.",
+  "messages.matchHint": "Usa \"Inizia con\" se vuoi accettare un valore, tipo \"temp 21\".",
+  "messages.paletteEntity": "Scegli una entità",
+  "messages.paletteHint": "Scegli cosa vuoi leggere o comandare, poi clicca un pulsante qui sotto.",
+  "messages.pickEntityFirst": "Scegli una entità per vedere cosa puoi farci.",
+  "messages.groupRead": "Leggi",
+  "messages.groupDo": "Fai",
+  "messages.readState": "Valore",
+  "messages.templateHint": "Componi cliccando i pulsanti sopra. I pulsanti azione eseguono e non inviano testo.",
+  "messages.advanced": "Avanzate",
+  "messages.hideAdvanced": "Nascondi avanzate",
 
   "common.comingSoon": "In arrivo nella prossima fase di sviluppo.",
   "common.phase": "Fase",
@@ -129,6 +152,7 @@ const it: Dict = {
   "common.loading": "Caricamento",
   "common.saved": "Salvato",
   "common.noEntries": "Nessun gateway Hermes configurato.",
+  "common.loadError": "Impossibile caricare i dati da Home Assistant.",
 };
 
 const es: Dict = {
@@ -182,6 +206,17 @@ const es: Dict = {
   "messages.onChannel": "En el canal",
   "messages.senderDm": "DM al remitente",
   "messages.confirmDelete": "¿Eliminar este comando?",
+  "messages.keywordHint": "El texto que se envía desde un nodo Meshtastic para activarlo.",
+  "messages.matchHint": "Usa \"Empieza por\" si quieres aceptar un valor, como \"temp 21\".",
+  "messages.paletteEntity": "Elige una entidad",
+  "messages.paletteHint": "Elige qué quieres leer o controlar y pulsa un botón de abajo.",
+  "messages.pickEntityFirst": "Elige una entidad para ver qué puedes hacer con ella.",
+  "messages.groupRead": "Leer",
+  "messages.groupDo": "Hacer",
+  "messages.readState": "Valor",
+  "messages.templateHint": "Compón pulsando los botones de arriba. Los botones de acción ejecutan y no envían texto.",
+  "messages.advanced": "Avanzado",
+  "messages.hideAdvanced": "Ocultar avanzado",
 
   "common.comingSoon": "Llegará en la próxima fase de desarrollo.",
   "common.phase": "Fase",
@@ -192,6 +227,7 @@ const es: Dict = {
   "common.loading": "Cargando",
   "common.saved": "Guardado",
   "common.noEntries": "Todavía no hay ninguna puerta de enlace Hermes configurada.",
+  "common.loadError": "No se han podido cargar los datos de Home Assistant.",
 };
 
 const fr: Dict = {
@@ -245,6 +281,17 @@ const fr: Dict = {
   "messages.onChannel": "Sur le canal",
   "messages.senderDm": "DM à l'expéditeur",
   "messages.confirmDelete": "Supprimer cette commande ?",
+  "messages.keywordHint": "Le texte envoyé depuis un nœud Meshtastic pour la déclencher.",
+  "messages.matchHint": "Utilisez \"Commence par\" pour accepter une valeur, comme \"temp 21\".",
+  "messages.paletteEntity": "Choisissez une entité",
+  "messages.paletteHint": "Choisissez ce que vous voulez lire ou piloter, puis cliquez un bouton ci-dessous.",
+  "messages.pickEntityFirst": "Choisissez une entité pour voir ce que vous pouvez en faire.",
+  "messages.groupRead": "Lire",
+  "messages.groupDo": "Faire",
+  "messages.readState": "Valeur",
+  "messages.templateHint": "Composez avec les boutons ci-dessus. Les boutons d'action exécutent et n'envoient rien.",
+  "messages.advanced": "Avancé",
+  "messages.hideAdvanced": "Masquer avancé",
 
   "common.comingSoon": "Arrive dans la prochaine phase de développement.",
   "common.phase": "Phase",
@@ -255,6 +302,7 @@ const fr: Dict = {
   "common.loading": "Chargement",
   "common.saved": "Enregistré",
   "common.noEntries": "Aucune passerelle Hermes configurée pour le moment.",
+  "common.loadError": "Impossible de charger les données depuis Home Assistant.",
 };
 
 const de: Dict = {
@@ -308,6 +356,17 @@ const de: Dict = {
   "messages.onChannel": "Auf dem Kanal",
   "messages.senderDm": "DM an Absender",
   "messages.confirmDelete": "Diesen Befehl löschen?",
+  "messages.keywordHint": "Der Text, den man von einem Meshtastic-Node sendet, um ihn auszulösen.",
+  "messages.matchHint": "Nutze \"Beginnt mit\", wenn ein Wert akzeptiert werden soll, etwa \"temp 21\".",
+  "messages.paletteEntity": "Entität wählen",
+  "messages.paletteHint": "Wähle, was du lesen oder steuern willst, dann klicke unten einen Button.",
+  "messages.pickEntityFirst": "Wähle eine Entität, um zu sehen, was möglich ist.",
+  "messages.groupRead": "Lesen",
+  "messages.groupDo": "Ausführen",
+  "messages.readState": "Wert",
+  "messages.templateHint": "Mit den Buttons oben zusammenstellen. Aktions-Buttons führen aus und senden keinen Text.",
+  "messages.advanced": "Erweitert",
+  "messages.hideAdvanced": "Erweitert ausblenden",
 
   "common.comingSoon": "Kommt in der nächsten Ausbaustufe.",
   "common.phase": "Phase",
@@ -318,6 +377,7 @@ const de: Dict = {
   "common.loading": "Wird geladen",
   "common.saved": "Gespeichert",
   "common.noEntries": "Noch kein Hermes-Gateway konfiguriert.",
+  "common.loadError": "Daten konnten nicht aus Home Assistant geladen werden.",
 };
 
 const DICTS: Record<string, Dict> = { en, it, es, fr, de };

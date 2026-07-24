@@ -46,7 +46,9 @@ from .const import (
     REPLY_SENDER_DM,
     SERVICE_SEND_TEXT,
 )
+from .actions import value_spec
 from .message import split_message
+from .tokens import apply_argument, parse_actions, parse_argument, strip_actions
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -221,7 +223,11 @@ class HermesCoordinator:
             self._record_error(f"service execution: {err}", sender, text)
             _LOGGER.warning("Hermes: error running '%s': %s", service, err)
 
-        reply = self._render_reply(command.get(CMD_REPLY_TEMPLATE) or "")
+        template = command.get(CMD_REPLY_TEMPLATE) or ""
+        await self._run_action_tokens(command, template, text)
+
+        # Action tokens render to nothing, so only the human sentence is sent.
+        reply = self._render_reply(strip_actions(template))
         if reply:
             # Fire-and-forget: the send delays must not block the event bus.
             self.entry.async_create_background_task(
@@ -230,6 +236,49 @@ class HermesCoordinator:
                 name="hermes_reply",
             )
         self._notify_sensors()
+
+    async def _run_action_tokens(
+        self, command: dict[str, Any], template: str, message: str
+    ) -> None:
+        """Execute the `{do:...}` tokens of a template, in order.
+
+        The number the sender may append after the keyword overrides the
+        configured default. It is parsed strictly as a number and validated
+        against the catalogue range, and it never touches the service or the
+        entity id.
+        """
+        actions = parse_actions(template)
+        if not actions:
+            return
+
+        argument: float | None = None
+        if command.get(CMD_MATCH_TYPE) == MATCH_STARTSWITH:
+            argument = parse_argument(message, command.get(CMD_KEYWORD) or "")
+
+        for token in actions:
+            params = dict(token.params)
+            if argument is not None and len(params) == 1:
+                key = next(iter(params))
+                spec = value_spec(token.service, key) or {}
+                params = apply_argument(
+                    params, argument, spec.get("min"), spec.get("max")
+                )
+            try:
+                await self.hass.services.async_call(
+                    token.domain,
+                    token.name,
+                    params,
+                    blocking=True,
+                    target={"entity_id": token.entity_id},
+                )
+            except Exception as err:  # noqa: BLE001 - one bad token must not stop the rest
+                self._record_error(f"action {token.service}: {err}", None, message)
+                _LOGGER.warning(
+                    "Hermes: action token %s on %s failed: %s",
+                    token.service,
+                    token.entity_id,
+                    err,
+                )
 
     def _render_reply(self, template_str: str) -> str:
         """Resolve {state:...}/{attr:...:...} placeholders by reading states."""

@@ -1,18 +1,42 @@
 import { html, type TemplateResult } from "lit";
 
-import type { HermesCommand, HermesEntry } from "../types";
+import {
+  actionsForEntity,
+  buildActionToken,
+  buildAttrToken,
+  buildStateToken,
+  readableAttributes,
+} from "../actions";
+import type {
+  ActionDef,
+  HermesCommand,
+  HermesEntry,
+  HomeAssistant,
+} from "../types";
 
 export interface MessagesCtx {
+  hass: HomeAssistant;
   entries: HermesEntry[];
   selectedEntry: string | null;
   editing: HermesCommand | null;
+  /** Set when loading the gateways failed, so we do not claim there are none. */
+  loadError: string | null;
   /** Entity ids offered as autocomplete for the target field. */
   entityIds: string[];
+  /** Entity currently driving the button palette. */
+  paletteEntity: string;
+  /** Chosen default for the action parameter, per action id. */
+  paletteValues: Record<string, number | string>;
+  showAdvanced: boolean;
   onSelectEntry: (entryId: string) => void;
   onNew: () => void;
   onEdit: (command: HermesCommand) => void;
   onDelete: (command: HermesCommand) => void;
   onDraftInput: (key: keyof HermesCommand, value: unknown) => void;
+  onPaletteEntity: (entityId: string) => void;
+  onPaletteValue: (actionId: string, value: number | string) => void;
+  onInsert: (token: string) => void;
+  onToggleAdvanced: () => void;
   onSave: () => void;
   onCancel: () => void;
 }
@@ -21,6 +45,15 @@ export function renderMessages(
   ctx: MessagesCtx,
   t: (k: string) => string
 ): TemplateResult {
+  if (ctx.loadError) {
+    return html`
+      <div class="empty">
+        <div>${t("common.loadError")}</div>
+        <div class="sub-error">${ctx.loadError}</div>
+      </div>
+    `;
+  }
+
   if (!ctx.entries.length) {
     return html`<div class="empty">${t("common.noEntries")}</div>`;
   }
@@ -74,11 +107,12 @@ function renderRow(
   command: HermesCommand,
   t: (k: string) => string
 ): TemplateResult {
+  const summary = command.service || command.reply_template || "";
   return html`
     <div class="list-row">
       <div class="meta">
         <span class="kw">${command.keyword}</span>
-        <span class="sub">${command.service}</span>
+        <span class="sub">${summary}</span>
       </div>
       <div class="actions" style="margin:0">
         <button class="btn" @click=${() => ctx.onEdit(command)}>
@@ -88,6 +122,128 @@ function renderRow(
           ${t("common.delete")}
         </button>
       </div>
+    </div>
+  `;
+}
+
+/** The value picker shown next to an action that takes a parameter. */
+function renderValueInput(
+  ctx: MessagesCtx,
+  action: ActionDef
+): TemplateResult | "" {
+  const spec = action.value;
+  if (!spec) return "";
+  const current = ctx.paletteValues[action.id] ?? spec.default ?? "";
+
+  if (spec.type === "enum") {
+    return html`
+      <select
+        class="inline"
+        @change=${(e: Event) =>
+          ctx.onPaletteValue(action.id, (e.target as HTMLSelectElement).value)}
+      >
+        ${(spec.options ?? []).map(
+          (option) => html`
+            <option value=${option} ?selected=${option === current}>
+              ${option}
+            </option>
+          `
+        )}
+      </select>
+    `;
+  }
+
+  return html`
+    <input
+      class="inline"
+      type="number"
+      min=${spec.min ?? 0}
+      max=${spec.max ?? 100}
+      step=${spec.step ?? 1}
+      .value=${String(current)}
+      @input=${(e: Event) =>
+        ctx.onPaletteValue(action.id, Number((e.target as HTMLInputElement).value))}
+    />
+    ${spec.unit ? html`<span class="unit">${spec.unit}</span>` : ""}
+  `;
+}
+
+/**
+ * The palette: pick an entity, then click a button. Read buttons insert the
+ * value placeholder, action buttons insert a self contained action token.
+ * The user never has to know a service name.
+ */
+function renderPalette(
+  ctx: MessagesCtx,
+  t: (k: string) => string
+): TemplateResult {
+  const entityId = ctx.paletteEntity;
+
+  return html`
+    <div class="palette">
+      <div class="field">
+        <label>${t("messages.paletteEntity")}</label>
+        <input
+          list="hermes-entities"
+          .value=${entityId}
+          placeholder="light.kitchen"
+          @input=${(e: Event) =>
+            ctx.onPaletteEntity((e.target as HTMLInputElement).value.trim())}
+        />
+        <datalist id="hermes-entities">
+          ${ctx.entityIds.map((id) => html`<option value=${id}></option>`)}
+        </datalist>
+        <span class="hint">${t("messages.paletteHint")}</span>
+      </div>
+
+      ${!entityId || !ctx.hass.states[entityId]
+        ? html`<div class="hint">${t("messages.pickEntityFirst")}</div>`
+        : html`
+            <div class="section-title">${t("messages.groupRead")}</div>
+            <div class="chips">
+              <button
+                class="chip read"
+                @click=${() => ctx.onInsert(buildStateToken(entityId))}
+              >
+                ${t("messages.readState")}
+              </button>
+              ${readableAttributes(ctx.hass, entityId).map(
+                (attr) => html`
+                  <button
+                    class="chip read"
+                    @click=${() => ctx.onInsert(buildAttrToken(entityId, attr))}
+                  >
+                    ${attr}
+                  </button>
+                `
+              )}
+            </div>
+
+            <div class="section-title">${t("messages.groupDo")}</div>
+            <div class="chips">
+              ${actionsForEntity(entityId).map(
+                (action) => html`
+                  <span class="chip-group">
+                    <button
+                      class="chip do"
+                      @click=${() =>
+                        ctx.onInsert(
+                          buildActionToken(
+                            action,
+                            entityId,
+                            ctx.paletteValues[action.id] ??
+                              action.value?.default
+                          )
+                        )}
+                    >
+                      ${action.label}
+                    </button>
+                    ${renderValueInput(ctx, action)}
+                  </span>
+                `
+              )}
+            </div>
+          `}
     </div>
   `;
 }
@@ -107,6 +263,7 @@ function renderForm(
       <div class="field">
         <label>${t("messages.keyword")}</label>
         <input .value=${draft.keyword ?? ""} @input=${bind("keyword")} />
+        <span class="hint">${t("messages.keywordHint")}</span>
       </div>
 
       <div class="field">
@@ -119,43 +276,19 @@ function renderForm(
             ${t("messages.startswith")}
           </option>
         </select>
+        <span class="hint">${t("messages.matchHint")}</span>
       </div>
 
-      <div class="field">
-        <label>${t("messages.service")}</label>
-        <input
-          .value=${draft.service ?? ""}
-          placeholder="light.turn_off"
-          @input=${bind("service")}
-        />
-        <span class="hint">${t("messages.serviceHint")}</span>
-      </div>
-
-      <div class="field">
-        <label>${t("messages.target")}</label>
-        <input
-          list="hermes-entities"
-          .value=${draft.target?.entity_id ?? ""}
-          placeholder="light.kitchen"
-          @input=${(e: Event) => {
-            const value = (e.target as HTMLInputElement).value.trim();
-            ctx.onDraftInput("target", value ? { entity_id: value } : undefined);
-          }}
-        />
-        <datalist id="hermes-entities">
-          ${ctx.entityIds.map((id) => html`<option value=${id}></option>`)}
-        </datalist>
-        <span class="hint">${t("messages.targetHint")}</span>
-      </div>
+      ${renderPalette(ctx, t)}
 
       <div class="field">
         <label>${t("messages.replyTemplate")}</label>
         <textarea
+          id="hermes-template"
           .value=${draft.reply_template ?? ""}
-          placeholder="{state:sensor.living_room_temp}"
           @input=${bind("reply_template")}
         ></textarea>
-        <span class="hint">${t("messages.replyHint")}</span>
+        <span class="hint">${t("messages.templateHint")}</span>
       </div>
 
       <div class="field">
@@ -169,6 +302,39 @@ function renderForm(
           </option>
         </select>
       </div>
+
+      <button class="btn link" @click=${ctx.onToggleAdvanced}>
+        ${ctx.showAdvanced ? t("messages.hideAdvanced") : t("messages.advanced")}
+      </button>
+
+      ${ctx.showAdvanced
+        ? html`
+            <div class="field" style="margin-top:10px">
+              <label>${t("messages.service")}</label>
+              <input
+                .value=${draft.service ?? ""}
+                placeholder="light.turn_off"
+                @input=${bind("service")}
+              />
+              <span class="hint">${t("messages.serviceHint")}</span>
+            </div>
+            <div class="field">
+              <label>${t("messages.target")}</label>
+              <input
+                list="hermes-entities"
+                .value=${draft.target?.entity_id ?? ""}
+                placeholder="light.kitchen"
+                @input=${(e: Event) => {
+                  const value = (e.target as HTMLInputElement).value.trim();
+                  ctx.onDraftInput(
+                    "target",
+                    value ? { entity_id: value } : undefined
+                  );
+                }}
+              />
+            </div>
+          `
+        : ""}
 
       <div class="actions">
         <button class="btn primary" @click=${ctx.onSave}>

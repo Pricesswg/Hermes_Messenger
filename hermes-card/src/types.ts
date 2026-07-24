@@ -53,6 +53,26 @@ export type TabId =
   | "homeassistant"
   | "settings";
 
+/** Value descriptor of an action parameter, from the curated catalogue. */
+export interface ActionValueSpec {
+  key: string;
+  type: "number" | "enum";
+  unit?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  default?: number | string;
+  options?: string[];
+}
+
+/** One entry of the curated action catalogue. */
+export interface ActionDef {
+  id: string;
+  label: string;
+  service: string;
+  value?: ActionValueSpec;
+}
+
 /** Global settings, stored by the integration outside any config entry. */
 export interface HermesSettings {
   openweather_api_key: string;

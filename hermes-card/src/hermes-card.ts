@@ -18,7 +18,9 @@ import type {
   TabId,
 } from "./types";
 import { VERSION } from "./version";
+import { setCatalogue } from "./actions";
 import {
+  fetchActions,
   fetchEntries,
   fetchNodes,
   fetchSettings,
@@ -64,6 +66,10 @@ export class HermesCard extends LitElement {
 
   @state() private _selectedEntry: string | null = null;
   @state() private _editing: HermesCommand | null = null;
+  @state() private _loadError: string | null = null;
+  @state() private _paletteEntity = "";
+  @state() private _paletteValues: Record<string, number | string> = {};
+  @state() private _showAdvanced = false;
 
   private _loaded = false;
 
@@ -98,21 +104,47 @@ export class HermesCard extends LitElement {
     }
   }
 
-  private async _load(): Promise<void> {
+  /**
+   * Load backend data.
+   *
+   * Each call is isolated: a failure in one must not blank the others, which
+   * previously made the Messages tab claim "no gateway configured" when the
+   * real problem was a failed request. Entries are also retried, because the
+   * card can be loaded by the frontend before the integration has registered
+   * its websocket commands, and without a retry the tab stayed empty forever.
+   */
+  private async _load(attempt = 0): Promise<void> {
     if (!this.hass) return;
+
     try {
-      const [entries, nodes] = await Promise.all([
-        fetchEntries(this.hass),
-        fetchNodes(this.hass),
-      ]);
+      const entries = await fetchEntries(this.hass);
       this._entries = entries;
-      this._nodes = nodes;
+      this._loadError = null;
       if (!this._selectedEntry && entries.length) {
         this._selectedEntry = entries[0].entry_id;
       }
     } catch (err) {
-      console.error("Hermes: failed to load entries or nodes", err);
+      if (attempt < 3) {
+        window.setTimeout(() => void this._load(attempt + 1), 500 * (attempt + 1));
+        return;
+      }
+      this._loadError = String((err as any)?.message ?? err);
+      console.error("Hermes: failed to load gateways", err);
     }
+
+    try {
+      this._nodes = await fetchNodes(this.hass);
+    } catch (err) {
+      console.error("Hermes: failed to load nodes", err);
+    }
+
+    try {
+      // Authoritative action catalogue; the client fallback covers a failure.
+      setCatalogue(await fetchActions(this.hass));
+    } catch (err) {
+      console.warn("Hermes: using the built-in action catalogue", err);
+    }
+
     try {
       // Admin only: a non-admin user simply does not get the global settings.
       this._settings = await fetchSettings(this.hass);
@@ -185,6 +217,52 @@ export class HermesCard extends LitElement {
     this._editing = null;
   };
 
+  private _onPaletteEntity = (entityId: string): void => {
+    this._paletteEntity = entityId;
+  };
+
+  private _onPaletteValue = (actionId: string, value: number | string): void => {
+    this._paletteValues = { ...this._paletteValues, [actionId]: value };
+  };
+
+  private _onToggleAdvanced = (): void => {
+    this._showAdvanced = !this._showAdvanced;
+  };
+
+  /**
+   * Insert a token where the cursor sits in the template textarea, so the user
+   * can build a sentence around the tokens instead of only appending.
+   */
+  private _onInsert = (token: string): void => {
+    if (!this._editing) return;
+    const area = this.renderRoot.querySelector(
+      "#hermes-template"
+    ) as HTMLTextAreaElement | null;
+    const current = this._editing.reply_template ?? "";
+
+    if (!area) {
+      this._editing = { ...this._editing, reply_template: current + token };
+      return;
+    }
+
+    const start = area.selectionStart ?? current.length;
+    const end = area.selectionEnd ?? current.length;
+    const next = current.slice(0, start) + token + current.slice(end);
+    this._editing = { ...this._editing, reply_template: next };
+
+    // Put the caret after the inserted token once Lit has re-rendered.
+    void this.updateComplete.then(() => {
+      const el = this.renderRoot.querySelector(
+        "#hermes-template"
+      ) as HTMLTextAreaElement | null;
+      if (el) {
+        const pos = start + token.length;
+        el.focus();
+        el.setSelectionRange(pos, pos);
+      }
+    });
+  };
+
   private _onSaveCommand = async (): Promise<void> => {
     const entryId = this._selectedEntry;
     if (!this.hass || !entryId || !this._editing) return;
@@ -225,15 +303,24 @@ export class HermesCard extends LitElement {
       case "messages":
         return renderMessages(
           {
+            hass,
             entries: this._entries,
             selectedEntry: this._selectedEntry,
             editing: this._editing,
+            loadError: this._loadError,
             entityIds: Object.keys(hass.states).sort(),
+            paletteEntity: this._paletteEntity,
+            paletteValues: this._paletteValues,
+            showAdvanced: this._showAdvanced,
             onSelectEntry: this._onSelectEntry,
             onNew: this._onNew,
             onEdit: this._onEdit,
             onDelete: this._onDeleteCommand,
             onDraftInput: this._onDraftInput,
+            onPaletteEntity: this._onPaletteEntity,
+            onPaletteValue: this._onPaletteValue,
+            onInsert: this._onInsert,
+            onToggleAdvanced: this._onToggleAdvanced,
             onSave: this._onSaveCommand,
             onCancel: this._onCancel,
           },
@@ -248,6 +335,7 @@ export class HermesCard extends LitElement {
             entries: this._entries,
             nodes: this._nodes,
             saved: this._saved,
+            loadError: this._loadError,
             draftGlobal: this._draftGlobal,
             draftEntries: this._draftEntries,
             onGlobalInput: this._onGlobalInput,
