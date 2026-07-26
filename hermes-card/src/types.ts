@@ -90,6 +90,12 @@ export interface ChatMessage {
   outgoing: boolean;
 }
 
+/** The radio settings Hermes can change, and what each one accepts. */
+export interface RadioConfig {
+  values: Record<string, string | number | boolean>;
+  options: Record<string, string[]>;
+}
+
 /** What the gateway radio reports about itself. */
 export interface RadioInfo {
   firmware: string | null;

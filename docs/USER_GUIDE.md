@@ -187,6 +187,39 @@ style header, never cutting a character in half.
 
 ---
 
+## Reading and writing messages
+
+The **Chat** tab shows the traffic itself, grouped into conversations: every
+channel on the radio at the top, whether or not anyone has written on one yet,
+and direct messages below. Pick one and reply from the box at the bottom.
+
+It covers every channel the gateway hears, not only the one commands arrive on,
+which is deliberately a different question from the **Log** tab. Log answers what
+Hermes decided about a message; Chat is the conversation.
+
+Conversations are capped per thread and in number, and the quietest one is
+dropped when the cap is reached, so a busy mesh cannot grow the store forever.
+
+## Configuring the radio
+
+**Settings** has a **Radio configuration** section that writes to the node
+itself: region, modem preset, hop limit, transmit power, whether transmitting is
+enabled at all, the node role and how often it announces itself.
+
+Read this before using it. These settings belong to the radio, not to Hermes.
+Most of them restart the node, and the wrong region or modem preset stops it
+talking to every other node until they match again. Change one at a time and
+check the mesh after each.
+
+Hermes reads the current configuration, applies only the fields you changed, and
+writes the whole thing back, so nothing you did not touch is reset. The values
+offered in each menu come from the firmware on your own node, not from a list
+kept here, so a newer firmware offers its own.
+
+It has its own save button, separate from every other setting on the page, for
+the same reason: writing to a radio should never happen as a side effect of
+changing a reply delay.
+
 ## The map
 
 **Map** draws the nodes you picked in Settings. Only those, which is what makes

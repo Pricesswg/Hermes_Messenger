@@ -15,6 +15,7 @@ import logging
 from typing import Any
 
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
 from .const import MESHTASTIC_DOMAIN
@@ -236,6 +237,116 @@ async def async_radio_details(hass: HomeAssistant) -> dict[str, Any]:
             break
 
     return details
+
+
+# The radio settings Hermes offers, and where each one lives. Deliberately a
+# short list: these are the ones an operator actually changes, and every extra
+# field is another way to make a node unreachable from a web page.
+LORA_FIELDS = ("region", "modem_preset", "hop_limit", "tx_enabled", "tx_power")
+DEVICE_FIELDS = ("role", "node_info_broadcast_secs")
+
+
+def _field_value(message: Any, field: str) -> Any:
+    """Current value of a field, with enums read as their name."""
+    value = getattr(message, field)
+    descriptor = message.DESCRIPTOR.fields_by_name.get(field)
+    if descriptor is not None and descriptor.enum_type is not None:
+        entry = descriptor.enum_type.values_by_number.get(value)
+        return entry.name if entry is not None else value
+    return value
+
+
+def _field_options(message: Any, field: str) -> list[str] | None:
+    """Allowed values of an enum field, or None when it is not one.
+
+    Read from the descriptor of the running firmware rather than from a list
+    kept here, so a node on a newer firmware offers its own regions and presets
+    instead of whatever was true when this was written.
+    """
+    descriptor = message.DESCRIPTOR.fields_by_name.get(field)
+    if descriptor is None or descriptor.enum_type is None:
+        return None
+    return [entry.name for entry in descriptor.enum_type.values]
+
+
+def _apply_field(message: Any, field: str, value: Any) -> None:
+    """Set one field, translating an enum name back to its number."""
+    descriptor = message.DESCRIPTOR.fields_by_name.get(field)
+    if descriptor is None:
+        return
+    if descriptor.enum_type is not None and isinstance(value, str):
+        entry = descriptor.enum_type.values_by_name.get(value)
+        if entry is None:
+            raise ValueError(f"{value} is not a valid {field}")
+        setattr(message, field, entry.number)
+        return
+    if isinstance(getattr(message, field), bool):
+        setattr(message, field, bool(value))
+    else:
+        setattr(message, field, type(getattr(message, field))(value))
+
+
+def _interface(hass: HomeAssistant) -> Any | None:
+    """The base integration's interface, which owns the node connection."""
+    for client in _clients(hass):
+        interface = getattr(client, "_interface", None)
+        if interface is not None:
+            return interface
+    return None
+
+
+async def async_get_radio_config(hass: HomeAssistant) -> dict[str, Any]:
+    """Read the settings Hermes can change, with the values each one allows."""
+    interface = _interface(hass)
+    if interface is None:
+        return {}
+
+    result: dict[str, Any] = {"values": {}, "options": {}}
+    try:
+        lora = await interface.request_lora_config()
+        device = await interface.request_device_config()
+    except Exception as err:  # noqa: BLE001 - the node may be busy or away
+        _LOGGER.debug("Hermes: could not read the radio config: %s", err)
+        return {}
+
+    for message, fields in ((lora, LORA_FIELDS), (device, DEVICE_FIELDS)):
+        for field in fields:
+            try:
+                result["values"][field] = _field_value(message, field)
+                options = _field_options(message, field)
+                if options:
+                    result["options"][field] = options
+            except Exception:  # noqa: BLE001 - a field may not exist on this firmware
+                continue
+
+    return result
+
+
+async def async_set_radio_config(hass: HomeAssistant, patch: dict[str, Any]) -> None:
+    """Change the named settings and leave every other one untouched.
+
+    Read, modify, write back. The firmware takes a whole config message, so
+    building one from the patch alone would silently reset everything not
+    mentioned, which on a radio means losing settings nobody asked to change.
+    """
+    interface = _interface(hass)
+    if interface is None:
+        raise HomeAssistantError("The Meshtastic integration is not connected")
+
+    lora_patch = {k: v for k, v in patch.items() if k in LORA_FIELDS}
+    device_patch = {k: v for k, v in patch.items() if k in DEVICE_FIELDS}
+
+    if lora_patch:
+        lora = await interface.request_lora_config()
+        for field, value in lora_patch.items():
+            _apply_field(lora, field, value)
+        await interface.write_lora_config(lora)
+
+    if device_patch:
+        device = await interface.request_device_config()
+        for field, value in device_patch.items():
+            _apply_field(device, field, value)
+        await interface.write_device_config(device)
 
 
 def gateway_firmware(hass: HomeAssistant) -> str | None:

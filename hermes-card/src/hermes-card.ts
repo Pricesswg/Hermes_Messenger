@@ -13,6 +13,7 @@ import { renderSettings } from "./screens/settings";
 import { renderStatus } from "./screens/status";
 import type {
   ChatMessage,
+  RadioConfig,
   HermesCardConfig,
   HermesChannel,
   HermesCommand,
@@ -33,6 +34,7 @@ import {
   fetchActions,
   fetchChannels,
   fetchChats,
+  fetchRadioConfig,
   fetchRadioInfo,
   fetchEntries,
   fetchHistory,
@@ -44,6 +46,7 @@ import {
   saveCommand,
   savePreset,
   sendChat,
+  setRadioConfig,
   sendPreset,
   updateEntry,
   updateSettings,
@@ -112,6 +115,10 @@ export class HermesCard extends LitElement {
   @state() private _chatThread: string | null = null;
   @state() private _chatDraft = "";
   @state() private _chatSending = false;
+  @state() private _radioConfig: RadioConfig | null = null;
+  @state() private _radioDraft: Record<string, string | number | boolean> = {};
+  @state() private _radioSaving = false;
+  @state() private _radioError: string | null = null;
 
   private _loaded = false;
   private _pollTimer?: number;
@@ -283,6 +290,14 @@ export class HermesCard extends LitElement {
     }
 
     try {
+      // Admin only, and it talks to the radio, so a failure here is normal on a
+      // node that is busy or away and must not blank the rest of the screen.
+      this._radioConfig = await fetchRadioConfig(this.hass);
+    } catch (err) {
+      console.warn("Hermes: could not read the radio configuration", err);
+    }
+
+    try {
       // Admin only: a non-admin user simply does not get the global settings.
       this._settings = await fetchSettings(this.hass);
     } catch {
@@ -435,6 +450,31 @@ export class HermesCard extends LitElement {
       console.error("Hermes: test send failed", err);
     } finally {
       this._sendingTest = false;
+    }
+  };
+
+  private _onRadioInput = (
+    field: string,
+    value: string | number | boolean
+  ): void => {
+    this._radioDraft = { ...this._radioDraft, [field]: value };
+    this._radioError = null;
+  };
+
+  private _onRadioSave = async (): Promise<void> => {
+    if (!this.hass || !Object.keys(this._radioDraft).length) return;
+    this._radioSaving = true;
+    this._radioError = null;
+    try {
+      this._radioConfig = await setRadioConfig(this.hass, this._radioDraft);
+      this._radioDraft = {};
+      this._flagSaved();
+    } catch (err) {
+      // Shown in place rather than logged away: this one changed the radio, or
+      // failed to, and the user needs to know which.
+      this._radioError = String((err as any)?.message ?? err);
+    } finally {
+      this._radioSaving = false;
     }
   };
 
@@ -731,6 +771,12 @@ export class HermesCard extends LitElement {
             draftEntries: this._draftEntries,
             onGlobalInput: this._onGlobalInput,
             onEntryInput: this._onEntryInput,
+            radioConfig: this._radioConfig,
+            radioDraft: this._radioDraft,
+            radioSaving: this._radioSaving,
+            radioError: this._radioError,
+            onRadioInput: this._onRadioInput,
+            onRadioSave: this._onRadioSave,
             onSaveGlobal: this._onSaveGlobal,
             onSaveEntry: this._onSaveEntry,
           },

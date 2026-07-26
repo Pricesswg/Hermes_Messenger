@@ -22,7 +22,9 @@ from homeassistant.helpers import device_registry as dr
 from .actions import ACTIONS_BY_TYPE, DOMAIN_TO_TYPE, GENERIC_ACTIONS
 from .meshtastic_api import (
     async_get_channels,
+    async_get_radio_config,
     async_radio_details,
+    async_set_radio_config,
     gateway_firmware,
     is_radio_connected,
     node_num_from_device,
@@ -82,6 +84,8 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_chats_list)
     websocket_api.async_register_command(hass, ws_chat_send)
     websocket_api.async_register_command(hass, ws_chat_clear)
+    websocket_api.async_register_command(hass, ws_radio_config_get)
+    websocket_api.async_register_command(hass, ws_radio_config_set)
 
 
 def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
@@ -546,3 +550,37 @@ async def ws_chat_clear(hass: HomeAssistant, connection, msg: dict) -> None:
         return
     await store.async_clear_chat(msg["thread"])
     connection.send_result(msg["id"], {"cleared": msg["thread"]})
+
+
+# --- Radio configuration ---------------------------------------------------
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required("type"): "hermes/radio/config/get"})
+@websocket_api.async_response
+async def ws_radio_config_get(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Current radio settings, with the values each one accepts."""
+    connection.send_result(msg["id"], await async_get_radio_config(hass))
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hermes/radio/config/set",
+        vol.Required("patch"): dict,
+    }
+)
+@websocket_api.async_response
+async def ws_radio_config_set(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Write the named radio settings to the node.
+
+    Admin only, and it changes the radio itself rather than anything belonging
+    to Hermes, so a failure is reported rather than swallowed: the caller has to
+    know the node did not take the change.
+    """
+    try:
+        await async_set_radio_config(hass, msg["patch"])
+    except Exception as err:  # noqa: BLE001 - surface whatever the radio said
+        connection.send_error(msg["id"], "write_failed", str(err))
+        return
+    connection.send_result(msg["id"], await async_get_radio_config(hass))

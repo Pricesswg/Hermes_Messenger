@@ -5,6 +5,7 @@ import type {
   HermesEntry,
   HermesSettings,
   NodeInfo,
+  RadioConfig,
 } from "../types";
 
 export interface SettingsCtx {
@@ -24,6 +25,12 @@ export interface SettingsCtx {
   onSaveEntry: (entryId: string) => void;
   draftGlobal: Partial<HermesSettings>;
   draftEntries: Record<string, Record<string, any>>;
+  radioConfig: RadioConfig | null;
+  radioDraft: Record<string, string | number | boolean>;
+  radioSaving: boolean;
+  radioError: string | null;
+  onRadioInput: (field: string, value: string | number | boolean) => void;
+  onRadioSave: () => void;
 }
 
 /**
@@ -215,6 +222,8 @@ export function renderSettings(
         <div class="hint">${t("settings.firmwareOnlyGateway")}</div>
       </div>
     </div>
+
+    ${renderRadioConfig(ctx, t)}
 
     ${ctx.loadError
       ? html`<div class="empty">
@@ -485,6 +494,105 @@ function renderChannelPicker(
       ${known?.default_psk
         ? html`<div class="note warn">${t("settings.defaultPskWarning")}</div>`
         : ""}
+    </div>
+  `;
+}
+
+/**
+ * The radio's own settings, which are not Hermes settings at all.
+ *
+ * Kept in its own section with its own save button for that reason: these are
+ * written to the node, most of them make it restart, and the wrong region or
+ * modem preset silently cuts it off from every other node. Mixing them into the
+ * same save as a reply delay would invite exactly the accident this guards
+ * against.
+ */
+function renderRadioConfig(
+  ctx: SettingsCtx,
+  t: (k: string) => string
+): TemplateResult {
+  const config = ctx.radioConfig;
+  if (!config || !Object.keys(config.values).length) return html``;
+
+  const value = (field: string) =>
+    ctx.radioDraft[field] ?? config.values[field];
+  const dirty = Object.keys(ctx.radioDraft).length > 0;
+
+  const field = (name: string): TemplateResult => {
+    const current = value(name);
+    const options = config.options[name];
+
+    if (options) {
+      return html`
+        <div class="field">
+          <label>${t(`radioCfg.${name}`)}</label>
+          <select
+            @change=${(e: Event) =>
+              ctx.onRadioInput(name, (e.target as HTMLSelectElement).value)}
+          >
+            ${options.map(
+              (option: string) => html`
+                <option value=${option} ?selected=${option === current}>
+                  ${option}
+                </option>
+              `
+            )}
+          </select>
+        </div>
+      `;
+    }
+
+    if (typeof config.values[name] === "boolean") {
+      return html`
+        <div class="field">
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${Boolean(current)}
+              @change=${(e: Event) =>
+                ctx.onRadioInput(name, (e.target as HTMLInputElement).checked)}
+            />
+            <span>${t(`radioCfg.${name}`)}</span>
+          </label>
+        </div>
+      `;
+    }
+
+    return html`
+      <div class="field">
+        <label>${t(`radioCfg.${name}`)}</label>
+        <input
+          type="number"
+          .value=${String(current ?? "")}
+          @input=${(e: Event) =>
+            ctx.onRadioInput(name, Number((e.target as HTMLInputElement).value))}
+        />
+      </div>
+    `;
+  };
+
+  return html`
+    <div class="section">
+      <div class="section-title">${t("radioCfg.title")}</div>
+      <div class="panel">
+        <div class="note warn">${t("radioCfg.warning")}</div>
+
+        ${Object.keys(config.values).map((name) => field(name))}
+
+        ${ctx.radioError
+          ? html`<div class="note warn">${ctx.radioError}</div>`
+          : ""}
+
+        <div class="actions">
+          <button
+            class="btn primary"
+            ?disabled=${!dirty || ctx.radioSaving}
+            @click=${ctx.onRadioSave}
+          >
+            ${ctx.radioSaving ? t("common.loading") : t("radioCfg.write")}
+          </button>
+        </div>
+      </div>
     </div>
   `;
 }

@@ -2,6 +2,7 @@
 
 import type {
   ChatMessage,
+  RadioConfig,
   RadioInfo,
   HermesChannel,
   HermesCommand,
@@ -140,4 +141,15 @@ export function sendChat(
 
 export function clearChat(hass: HomeAssistant, thread: string): Promise<unknown> {
   return hass.callWS({ type: "hermes/chats/clear", thread });
+}
+
+export function fetchRadioConfig(hass: HomeAssistant): Promise<RadioConfig> {
+  return hass.callWS<RadioConfig>({ type: "hermes/radio/config/get" });
+}
+
+export function setRadioConfig(
+  hass: HomeAssistant,
+  patch: Record<string, string | number | boolean>
+): Promise<RadioConfig> {
+  return hass.callWS<RadioConfig>({ type: "hermes/radio/config/set", patch });
 }
