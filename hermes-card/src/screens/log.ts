@@ -6,8 +6,10 @@ export interface LogCtx {
   entries: HermesLogEntry[];
   /** "", "in" or "out". */
   filter: string;
+  updatedAt: string;
   onFilter: (value: string) => void;
   onClear: () => void;
+  onRefresh: () => void;
 }
 
 /** Received and sent traffic, newest first. */
@@ -20,7 +22,15 @@ export function renderLog(
     : ctx.entries;
 
   return html`
-    <h2 class="screen-title">${t("tab.log")}</h2>
+    <h2 class="screen-title">
+      ${t("tab.log")}
+      <button class="btn refresh" @click=${ctx.onRefresh}>
+        ${t("settings.refresh")}
+      </button>
+      ${ctx.updatedAt
+        ? html`<span class="hint">${t("status.updatedAt")} ${ctx.updatedAt}</span>`
+        : ""}
+    </h2>
 
     <div class="map-controls">
       ${["", "in", "out"].map(

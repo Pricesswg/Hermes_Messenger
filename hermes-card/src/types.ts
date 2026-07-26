@@ -32,6 +32,12 @@ export interface HomeAssistant {
   language?: string;
   locale?: { language?: string };
   callWS<T>(msg: Record<string, any>): Promise<T>;
+  connection?: {
+    subscribeEvents<T>(
+      callback: (event: T) => void,
+      eventType: string
+    ): Promise<() => Promise<void>>;
+  };
   callService(
     domain: string,
     service: string,

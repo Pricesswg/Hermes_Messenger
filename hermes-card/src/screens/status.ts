@@ -8,6 +8,7 @@ export function renderStatus(
   hass: HomeAssistant,
   entries: HermesEntry[],
   onApplySeen: (entry: HermesEntry) => void,
+  updatedAt: string,
   t: (k: string) => string
 ): TemplateResult {
   if (!hasHermes(hass)) {
@@ -25,7 +26,12 @@ export function renderStatus(
       : value;
 
   return html`
-    <h2 class="screen-title">${t("status.title")}</h2>
+    <h2 class="screen-title">
+      ${t("status.title")}
+      ${updatedAt
+        ? html`<span class="hint">${t("status.updatedAt")} ${updatedAt}</span>`
+        : ""}
+    </h2>
     <div class="grid">
       <div class="panel stat">
         <div class="label">${t("status.nodes")}</div>

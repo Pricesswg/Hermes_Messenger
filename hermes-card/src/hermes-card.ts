@@ -98,9 +98,12 @@ export class HermesCard extends LitElement {
   /** Set when loading the nodes failed, so an error is not shown as "none". */
   @state() private _nodesError: string | null = null;
   @state() private _refreshing = false;
+  /** Clock time of the last successful refresh, shown so it is not guesswork. */
+  @state() private _updatedAt = "";
 
   private _loaded = false;
   private _pollTimer?: number;
+  private _unsubscribe?: () => Promise<void>;
 
   public setConfig(config: HermesCardConfig): void {
     this._config = config;
@@ -115,9 +118,13 @@ export class HermesCard extends LitElement {
 
   public connectedCallback(): void {
     super.connectedCallback();
-    // Status and Log are watched while testing from a node in the other hand,
-    // so they poll. Only the two cheap calls, and only on those tabs.
-    this._pollTimer = window.setInterval(() => void this._poll(), 10000);
+    // Listen to the same event the integration listens to, so a message shows
+    // up as it arrives instead of whenever a timer happens to fire. Polling
+    // alone meant staring at a screen with no idea whether it was working.
+    void this._subscribe();
+    // Safety net for anything that does not raise the event, and for a
+    // connection that dropped the subscription.
+    this._pollTimer = window.setInterval(() => void this._poll(), 15000);
   }
 
   public disconnectedCallback(): void {
@@ -126,16 +133,35 @@ export class HermesCard extends LitElement {
       window.clearInterval(this._pollTimer);
       this._pollTimer = undefined;
     }
+    if (this._unsubscribe) {
+      void this._unsubscribe();
+      this._unsubscribe = undefined;
+    }
   }
 
-  private async _poll(): Promise<void> {
+  private async _subscribe(): Promise<void> {
+    const connection = this.hass?.connection;
+    if (!connection?.subscribeEvents || this._unsubscribe) return;
+    try {
+      this._unsubscribe = await connection.subscribeEvents(
+        () => void this._poll(true),
+        "meshtastic_api_text_message"
+      );
+    } catch (err) {
+      console.warn("Hermes: live updates unavailable, falling back to polling", err);
+    }
+  }
+
+  /** Refresh the monitoring data. `force` ignores which tab is open. */
+  private async _poll(force = false): Promise<void> {
     if (!this.hass || !this._loaded) return;
-    if (this._tab !== "status" && this._tab !== "log") return;
+    if (!force && this._tab !== "status" && this._tab !== "log") return;
     try {
       this._entries = await fetchEntries(this.hass);
       this._history = await fetchHistory(this.hass);
-    } catch {
-      // Transient: the next tick retries, and _load already reports failures.
+      this._updatedAt = new Date().toLocaleTimeString();
+    } catch (err) {
+      console.warn("Hermes: refresh failed", err);
     }
   }
 
@@ -510,14 +536,22 @@ export class HermesCard extends LitElement {
     const hass = this.hass!;
     switch (this._tab) {
       case "status":
-        return renderStatus(hass, this._entries, this._onApplySeen, t);
+        return renderStatus(
+          hass,
+          this._entries,
+          this._onApplySeen,
+          this._updatedAt,
+          t
+        );
       case "log":
         return renderLog(
           {
             entries: this._history,
             filter: this._logFilter,
+            updatedAt: this._updatedAt,
             onFilter: this._onLogFilter,
             onClear: this._onLogClear,
+            onRefresh: () => void this._poll(true),
           },
           t
         );
@@ -609,7 +643,13 @@ export class HermesCard extends LitElement {
           t
         );
       default:
-        return renderStatus(hass, this._entries, this._onApplySeen, t);
+        return renderStatus(
+          hass,
+          this._entries,
+          this._onApplySeen,
+          this._updatedAt,
+          t
+        );
     }
   }
 
