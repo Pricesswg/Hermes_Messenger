@@ -238,23 +238,128 @@ it.
 
 ## Security
 
-**On a channel**, the only protection is the channel key. Anyone who has it can
-send a message claiming to be any node: the sender is stated, not proven. The
-whitelist is a weak defence there.
+Hermes turns a text message into a Home Assistant action. That is the whole
+point, and it is also the whole risk: whoever can get a message accepted can do
+whatever the commands allow. This section is about keeping that set small and
+the senders real.
 
-**On direct messages with PKC** (firmware 2.5 and later) the sender is verified
-by the protocol before the message reaches Home Assistant. The whitelist is
-trustworthy there.
+### What actually protects you
 
-For anything that matters, prefer direct messages. Verify the behaviour on the
-firmware you actually run.
+There are two very different situations, and the difference decides everything
+else.
 
-Two more things worth knowing:
+**On a channel**, the only protection is the channel key, shared by everyone on
+it. Messages carry a sender, but nothing proves it: anyone holding the key can
+send a message claiming to be any node. The authorized nodes list is therefore a
+**weak** defence on a channel. It stops mistakes and casual traffic, not someone
+who wants in.
 
-- Unauthorized senders get **silence**, not a refusal. A reply would confirm to a
-  stranger that a Home Assistant is listening behind that node.
-- A rate limit caps how many commands one node can run per minute, which protects
-  against a malfunctioning node or a repeater duplicating packets.
+**On a direct message with PKC** (firmware 2.5 and later) the message is
+encrypted for the recipient and the sender is verified by the protocol, before it
+ever reaches Home Assistant. Here the authorized nodes list means what it says.
+
+So the rule is short: **a channel tells you things, a direct message changes
+them.**
+
+### The recommended shape
+
+Run Hermes twice, which costs nothing because each config entry is independent.
+
+| Instance | Mode | Commands on it |
+|----------|------|----------------|
+| Status | a channel | Read only: temperatures, whether the alarm is armed, node battery, "am I still online" |
+| Control | direct messages | Anything that acts: lights, heating, gates, scenes |
+
+Add the integration a second time to get the second instance. The channel one
+answers questions from anyone on the channel who is on the list; the direct
+message one is the only place where anything happens.
+
+If you keep a single instance, use direct messages and accept that the channel
+is not a command surface at all.
+
+### What not to put on a channel
+
+Not because Hermes will refuse, but because a leaked channel key turns each of
+these into someone else's control:
+
+- unlocking doors, opening gates, disarming an alarm
+- anything irreversible, or expensive, or that runs while you are away
+- anything whose reply reveals whether the house is empty
+
+Presence, location and "nobody home" are the ones people forget. A status
+command answering `alarm: disarmed, nobody home` on a channel is an
+announcement, and it is worse than a light switch.
+
+### Where the blast radius is set
+
+A command runs as Home Assistant itself. There is no user behind it, no
+permission check, no confirmation. The command list **is** the permission list.
+
+So the question to ask about each command is not "is this convenient" but
+"would I accept a stranger triggering this, on the day the key leaks". Anything
+that fails that test belongs on direct messages, or nowhere.
+
+Two design choices help, and it is worth knowing exactly how far they go:
+
+- The sender never supplies a service name, an entity or a template. All of that
+  is written by you in the card. The only thing a message contributes is the
+  keyword and, when the match type allows it, **one number**, parsed strictly as
+  a number and checked against the range your device accepts. There is no way to
+  make a message reach something you did not configure.
+- A command that arrived privately is always answered privately. Publishing the
+  answer of a private exchange onto a channel would broadcast the state of your
+  home, so it is not offered.
+
+### Recommended settings
+
+- **Never use the default channel key.** The key `AQ==` is published in the
+  Meshtastic documentation, so a channel using it is public. Settings flags it.
+- **Fill the authorized nodes list** on every instance, even the channel one. It
+  is weak there, not useless.
+- **Leave the rate limit on.** It will not stop an attacker, who can stay under
+  it, but it does stop a malfunctioning node or a repeater duplicating packets
+  from replaying a command hundreds of times.
+- **Set the help keyword only if you want the command list readable.** It answers
+  authorized nodes only, but on a channel "authorized" is a soft claim.
+- **Prefer replies by direct message** for anything that reveals state, even when
+  the command arrived on a channel.
+
+### Rotating a key, and losing a node
+
+A node holds the keys of every channel it is on. A node that is lost, stolen,
+sold or lent is a copy of those keys in someone else's hands.
+
+When that happens, change the channel key on every remaining node. Until you do,
+the whitelist is protecting nothing on that channel: whoever holds the old node
+can send as any node they like.
+
+The same applies to a node you flash and pass on. Wipe it first.
+
+### What is stored, and where
+
+The Log and Chat tabs keep the text of messages in Home Assistant's storage, on
+disk, unencrypted, like any other Home Assistant data. Both are capped and both
+can be cleared from the card.
+
+If people on your channel would not want their messages sitting in your Home
+Assistant, clear the conversations, or do not run the channel instance.
+
+### Beyond Meshtastic
+
+None of the above helps if Home Assistant itself is reachable. Hermes is one
+door; the usual ones matter more:
+
+- do not expose Home Assistant to the internet without a reverse proxy and
+  multi-factor authentication
+- keep it and its integrations updated
+- treat anyone with a Home Assistant admin account as able to change every
+  Hermes setting, including which nodes are authorized
+
+### The short version
+
+Status on a channel. Control on direct messages, with PKC firmware on both ends
+and a whitelist. Never the default key. Assume a channel key will leak one day,
+and configure so that the day it does, all anyone learns is the temperature.
 
 ---
 

@@ -144,36 +144,28 @@ Under the config entry's device (native device page):
 - **Commands executed**: counter with a daily reset.
 - **Last error / auth rejection**: handy for debugging without reading the logs.
 
-## Security: channel vs DM+PKC
+## Security
 
-> **Read before exposing sensitive actions.**
+A channel tells you things, a direct message changes them.
 
-- **On a broadcast channel** the only protection is the **channel PSK**: anyone
-  who knows it can send commands with a **declared but not cryptographically
-  proven** `from`. The node whitelist here is a **weak** protection (sender
-  spoofing is possible).
-- **On DM with PKC** (Public Key Cryptography, firmware ≥ 2.5) the sender
-  identity is guaranteed **at the protocol level** before the message even
-  reaches Home Assistant. The whitelist here is **reliable**.
+**On a channel** the only protection is the shared key. Messages carry a sender
+but nothing proves it, so anyone holding the key can claim to be any node: the
+authorized nodes list is a weak defence there. **On a direct message with PKC**
+(firmware 2.5 and later) the sender is verified by the protocol before the
+message reaches Home Assistant, and the list means what it says.
 
-### Where a reply can go
+The recommended shape is two instances: status queries on a channel, anything
+that acts on direct messages. Adding the integration twice costs nothing, and it
+keeps a leaked channel key from becoming someone else's control of your house.
 
-The channel a gateway listens on is a boundary, not a preference. A command that
-arrives on any other channel is ignored without an answer: a stranger on a
-channel Hermes was not told to listen to gets silence, not a reply that would
-reveal a Home Assistant sitting behind that node.
+A command runs as Home Assistant itself, with no user and no confirmation, so
+the command list is the permission list. The sender never supplies a service, an
+entity or a template: the only thing a message contributes is the keyword and,
+where allowed, one number, parsed strictly and range checked.
 
-For the same reason a command that arrived as a direct message is always
-answered privately. Broadcasting the answer of a private exchange onto a channel
-would publish the state of the house to everyone listening on it, so a reply
-channel configured on a command deliberately does not override that.
-
-A command heard on a channel can be told to answer on a different one, which is
-useful to keep replies off a busy channel. The reply then goes only there.
-
-The whitelist should be configured in both cases anyway. For commands that
-control critical entities, prefer **DM with PKC** mode. Verify the behavior on
-the **firmware actually in use**: do not take it for granted.
+The [security section of the guide](docs/USER_GUIDE.md#security) covers the
+recommended settings, what not to put on a channel, key rotation after losing a
+node, and what Hermes stores.
 
 ## After updating
 

@@ -1952,7 +1952,7 @@ function t(t,e,n,i){var s,o=arguments.length,a=o<3?e:null===i?i=Object.getOwnPro
       </div>
     </div>
   `}(t,n,e))}
-  `}const ae="0.26.0";function re(t,e,n,i,s,o){if(!function(t){return St(t,$t).length>0}(t))return W`<div class="empty">${o("status.noIntegration")}</div>`;const a=Et(t),r=Lt(t,"commands_executed"),l=Lt(t,"last_command"),h=Lt(t,"last_error"),d=t=>t&&"unknown"!==t&&"unavailable"!==t?t:o("status.none");return W`
+  `}const ae="0.26.1";function re(t,e,n,i,s,o){if(!function(t){return St(t,$t).length>0}(t))return W`<div class="empty">${o("status.noIntegration")}</div>`;const a=Et(t),r=Lt(t,"commands_executed"),l=Lt(t,"last_command"),h=Lt(t,"last_error"),d=t=>t&&"unknown"!==t&&"unavailable"!==t?t:o("status.none");return W`
     <h2 class="screen-title">
       ${o("status.title")}
       ${i?W`<span class="hint">${o("status.updatedAt")} ${i}</span>`:""}
