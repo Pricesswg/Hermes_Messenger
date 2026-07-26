@@ -578,6 +578,49 @@ export const hermesLayout = css`
     margin-left: auto;
   }
 
+  button.btn.refresh {
+    margin-left: 10px;
+    padding: 4px 12px;
+    font-size: 0.72rem;
+    vertical-align: middle;
+  }
+
+  .channel-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 10px;
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+    border: 2px solid var(--accent);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  .channel-badge.small {
+    margin-left: 0;
+    font-size: 0.68rem;
+    padding: 2px 8px;
+  }
+
+  .note {
+    font-size: 0.78rem;
+    line-height: 1.45;
+    padding: 8px 10px;
+    border-left: 3px solid var(--accent);
+    background: var(--bg-sunken);
+    border-radius: var(--r-sm);
+    margin-bottom: 8px;
+  }
+
+  .note.warn {
+    border-left-color: var(--danger);
+  }
+
   .dot.bad {
     background: var(--danger);
   }

@@ -13,6 +13,7 @@ import {
 } from "../actions";
 import type {
   ActionDef,
+  HermesChannel,
   HermesCommand,
   HermesEntry,
   HermesPreset,
@@ -42,6 +43,7 @@ export interface MessagesCtx {
   onToggleAdvanced: () => void;
   onSave: () => void;
   onCancel: () => void;
+  channels: HermesChannel[];
   presets: HermesPreset[];
   editingPreset: HermesPreset | null;
   onPresetNew: () => void;
@@ -51,6 +53,18 @@ export interface MessagesCtx {
   onPresetSave: () => void;
   onPresetCancel: () => void;
   onPresetSend: (preset: HermesPreset) => void;
+}
+
+/** Readable name of the channel this gateway is listening on. */
+function channelLabel(
+  ctx: MessagesCtx,
+  entry: HermesEntry,
+  t: (k: string) => string
+): string {
+  if (entry.mode !== "channel") return t("messages.onDm");
+  const index = entry.channel_index ?? 0;
+  const known = ctx.channels.find((c) => c.index === index);
+  return known ? `${index}: ${known.name}` : `${t("settings.channel")} ${index}`;
 }
 
 export function renderMessages(
@@ -74,7 +88,12 @@ export function renderMessages(
     ctx.entries.find((e) => e.entry_id === ctx.selectedEntry) ?? ctx.entries[0];
 
   return html`
-    <h2 class="screen-title">${t("messages.title")}</h2>
+    <h2 class="screen-title">
+      ${t("messages.title")}
+      <span class="channel-badge" title=${t("messages.listeningHint")}>
+        ${t("messages.listening")} ${channelLabel(ctx, entry, t)}
+      </span>
+    </h2>
 
     ${ctx.entries.length > 1
       ? html`
@@ -103,7 +122,7 @@ export function renderMessages(
       ? renderForm(ctx, ctx.editing, t)
       : html`
           ${entry.commands.length
-            ? entry.commands.map((command) => renderRow(ctx, command, t))
+            ? entry.commands.map((command) => renderRow(ctx, command, entry, t))
             : html`<div class="empty">${t("messages.empty")}</div>`}
           <div class="actions">
             <button class="btn primary" @click=${ctx.onNew}>
@@ -219,9 +238,17 @@ function renderPresets(
 function renderRow(
   ctx: MessagesCtx,
   command: HermesCommand,
+  entry: HermesEntry,
   t: (k: string) => string
 ): TemplateResult {
   const summary = command.service || command.reply_template || "";
+  // Where this specific command answers: the channel it is heard on, or a DM
+  // back to whoever sent it.
+  const target =
+    command.reply_to === "sender_dm"
+      ? t("messages.onDm")
+      : channelLabel(ctx, entry, t);
+
   return html`
     <div class="list-row">
       <div class="meta">
@@ -229,6 +256,9 @@ function renderRow(
         <span class="sub">${summary}</span>
       </div>
       <div class="actions" style="margin:0">
+        <span class="channel-badge small" title=${t("messages.repliesOn")}>
+          ${target}
+        </span>
         <button class="btn" @click=${() => ctx.onEdit(command)}>
           ${t("common.edit")}
         </button>

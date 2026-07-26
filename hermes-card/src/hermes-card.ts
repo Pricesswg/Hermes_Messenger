@@ -12,6 +12,7 @@ import { renderSettings } from "./screens/settings";
 import { renderStatus } from "./screens/status";
 import type {
   HermesCardConfig,
+  HermesChannel,
   HermesCommand,
   HermesEntry,
   HermesLogEntry,
@@ -26,6 +27,8 @@ import { setCatalogue } from "./actions";
 import {
   clearHistory,
   fetchActions,
+  fetchChannels,
+  fetchRadioInfo,
   fetchEntries,
   fetchHistory,
   fetchNodes,
@@ -90,6 +93,11 @@ export class HermesCard extends LitElement {
   @state() private _logFilter = "";
   @state() private _testText = "";
   @state() private _sendingTest = false;
+  @state() private _channels: HermesChannel[] = [];
+  @state() private _firmware: string | null = null;
+  /** Set when loading the nodes failed, so an error is not shown as "none". */
+  @state() private _nodesError: string | null = null;
+  @state() private _refreshing = false;
 
   private _loaded = false;
 
@@ -154,8 +162,24 @@ export class HermesCard extends LitElement {
 
     try {
       this._nodes = await fetchNodes(this.hass);
+      this._nodesError = null;
     } catch (err) {
+      // Never silently show an empty list for a failed call: that reads as
+      // "you have no nodes" and sends the user looking in the wrong place.
+      this._nodesError = String((err as any)?.message ?? err);
       console.error("Hermes: failed to load nodes", err);
+    }
+
+    try {
+      this._channels = await fetchChannels(this.hass);
+    } catch (err) {
+      console.warn("Hermes: could not read the radio channels", err);
+    }
+
+    try {
+      this._firmware = (await fetchRadioInfo(this.hass)).firmware;
+    } catch {
+      this._firmware = null;
     }
 
     try {
@@ -347,6 +371,28 @@ export class HermesCard extends LitElement {
     this._mapRadiusKm = km;
   };
 
+  private _onRefresh = async (): Promise<void> => {
+    // Explicit reload: channels, node list and gateway options are all read
+    // from the radio and the registry, so a change made in the Meshtastic app
+    // shows up here without restarting Home Assistant.
+    this._refreshing = true;
+    try {
+      await this._load();
+    } finally {
+      this._refreshing = false;
+    }
+  };
+
+  private _onChannelChange = async (
+    entryId: string,
+    channel: number
+  ): Promise<void> => {
+    if (!this.hass) return;
+    await updateEntry(this.hass, entryId, { channel_index: channel });
+    this._flagSaved();
+    await this._load();
+  };
+
   private _onHeightChange = async (mode: string): Promise<void> => {
     if (!this.hass) return;
     // Persist straight away: a display preference the user has to set again on
@@ -414,6 +460,13 @@ export class HermesCard extends LitElement {
 
   private _select(tab: TabId): void {
     this._tab = tab;
+    // Refresh the volatile data when entering a tab that shows it. Loading only
+    // once was a real problem: if the Meshtastic devices were not in the
+    // registry yet when the card first loaded, the node lists stayed empty for
+    // the whole session with no way to retry short of reloading the page.
+    if (tab === "settings" || tab === "messages" || tab === "homeassistant") {
+      void this._load();
+    }
   }
 
   private _screen(t: (k: string) => string): TemplateResult {
@@ -470,6 +523,7 @@ export class HermesCard extends LitElement {
             onToggleAdvanced: this._onToggleAdvanced,
             onSave: this._onSaveCommand,
             onCancel: this._onCancel,
+            channels: this._channels,
             presets: this._presets,
             editingPreset: this._editingPreset,
             onPresetNew: this._onPresetNew,
@@ -501,6 +555,12 @@ export class HermesCard extends LitElement {
             settings: this._settings,
             entries: this._entries,
             nodes: this._nodes,
+            channels: this._channels,
+            firmware: this._firmware,
+            nodesError: this._nodesError,
+            refreshing: this._refreshing,
+            onRefresh: this._onRefresh,
+            onChannelChange: this._onChannelChange,
             saved: this._saved,
             loadError: this._loadError,
             draftGlobal: this._draftGlobal,

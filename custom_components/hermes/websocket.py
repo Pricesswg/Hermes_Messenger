@@ -20,6 +20,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 
 from .actions import ACTIONS_BY_TYPE, DOMAIN_TO_TYPE, GENERIC_ACTIONS
+from .meshtastic_api import async_get_channels, gateway_firmware
 from .const import (
     CMD_ID,
     CONF_AUTHORIZED_NODES,
@@ -59,6 +60,8 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_preset_send)
     websocket_api.async_register_command(hass, ws_history_list)
     websocket_api.async_register_command(hass, ws_history_clear)
+    websocket_api.async_register_command(hass, ws_channels_list)
+    websocket_api.async_register_command(hass, ws_radio_info)
 
 
 def _entry_payload(entry: Any) -> dict[str, Any]:
@@ -69,7 +72,9 @@ def _entry_payload(entry: Any) -> dict[str, Any]:
         "title": entry.title,
         "gateway_node_id": entry.data.get(CONF_GATEWAY_NODE_ID),
         "mode": entry.data.get(CONF_MODE),
-        "channel_index": entry.data.get(CONF_CHANNEL_INDEX),
+        "channel_index": options.get(
+            CONF_CHANNEL_INDEX, entry.data.get(CONF_CHANNEL_INDEX)
+        ),
         "authorized_nodes": options.get(
             CONF_AUTHORIZED_NODES, entry.data.get(CONF_AUTHORIZED_NODES, [])
         ),
@@ -137,7 +142,12 @@ def ws_entry_update(hass: HomeAssistant, connection, msg: dict) -> None:
         connection.send_error(msg["id"], "not_found", "Unknown Hermes entry")
         return
 
-    allowed = {CONF_AUTHORIZED_NODES, CONF_INITIAL_DELAY, CONF_PART_DELAY}
+    allowed = {
+        CONF_AUTHORIZED_NODES,
+        CONF_CHANNEL_INDEX,
+        CONF_INITIAL_DELAY,
+        CONF_PART_DELAY,
+    }
     patch = {k: v for k, v in msg["patch"].items() if k in allowed}
     options = {**entry.options, **patch}
     hass.config_entries.async_update_entry(entry, options=options)
@@ -355,3 +365,20 @@ async def ws_history_clear(hass: HomeAssistant, connection, msg: dict) -> None:
         return
     await store.async_clear_history()
     connection.send_result(msg["id"], {"cleared": True})
+
+
+# --- Radio: channels and firmware ------------------------------------------
+
+
+@websocket_api.websocket_command({vol.Required("type"): "hermes/channels/list"})
+@websocket_api.async_response
+async def ws_channels_list(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Channels configured on the radio, so the user picks one by name."""
+    connection.send_result(msg["id"], await async_get_channels(hass))
+
+
+@websocket_api.websocket_command({vol.Required("type"): "hermes/radio/info"})
+@callback
+def ws_radio_info(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Gateway firmware version, when the base integration knows it."""
+    connection.send_result(msg["id"], {"firmware": gateway_firmware(hass)})

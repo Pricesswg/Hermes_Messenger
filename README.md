@@ -87,7 +87,7 @@ Access Token.
 |-------|-------------|
 | **Gateway node** | Pick your gateway from the list of Meshtastic devices. No numeric id to look up. |
 | **Mode** | `Channel (broadcast)` or `Direct message (DM)`. |
-| **Channel index** | 0-7, used only in channel mode. |
+| **Channel** | Picked from the channels configured on the radio, by name. Used only in channel mode and changeable later from the card. |
 | **Authorized nodes** | Pick the allowed nodes from the Meshtastic device list. An optional field lets you add node ids for nodes HA has not seen yet. At least one required. |
 
 Node picking works because the base Meshtastic integration exposes each node as a
@@ -171,6 +171,24 @@ Under the config entry's device (native device page):
 The whitelist should be configured in both cases anyway. For commands that
 control critical entities, prefer **DM with PKC** mode. Verify the behavior on
 the **firmware actually in use**: do not take it for granted.
+
+## Firmware, before you blame the integration
+
+Two failure modes look like a bug in Hermes and are not.
+
+- **Keep the firmware aligned.** Every node and repeater should run the same
+  firmware version, or versions known to be compatible. Mixed versions produce
+  the confusing case where a message reaches one node and not another, and no
+  amount of configuration on the Home Assistant side fixes it.
+- **Direct messages need a recent firmware on both ends.** Since the move to
+  public key cryptography, a DM sent to or from a node running an older build
+  cannot be decrypted by the other end. The message never reaches Home
+  Assistant, so no entity changes state and nothing appears in the Hermes log.
+  If a node cannot be updated, use a channel for it instead of DMs.
+
+Home Assistant only learns the firmware version of the **gateway**, the node it
+is connected to. The Settings tab shows that one; the others have to be checked
+in the Meshtastic app.
 
 ## To tune/verify on real hardware
 

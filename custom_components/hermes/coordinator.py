@@ -104,7 +104,12 @@ class HermesCoordinator:
 
     @property
     def channel_index(self) -> int | None:
-        return self.entry.data.get(CONF_CHANNEL_INDEX)
+        # Options win over data, so the listening channel can be changed from
+        # the card without recreating the entry.
+        channel = self.entry.options.get(CONF_CHANNEL_INDEX)
+        if channel is None:
+            channel = self.entry.data.get(CONF_CHANNEL_INDEX)
+        return channel
 
     @property
     def default_authorized(self) -> set[int]:

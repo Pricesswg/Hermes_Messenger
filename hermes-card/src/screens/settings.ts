@@ -1,11 +1,22 @@
 import { html, type TemplateResult } from "lit";
 
-import type { HermesEntry, HermesSettings, NodeInfo } from "../types";
+import type {
+  HermesChannel,
+  HermesEntry,
+  HermesSettings,
+  NodeInfo,
+} from "../types";
 
 export interface SettingsCtx {
   settings: HermesSettings | null;
   entries: HermesEntry[];
   nodes: NodeInfo[];
+  channels: HermesChannel[];
+  firmware: string | null;
+  nodesError: string | null;
+  refreshing: boolean;
+  onRefresh: () => void;
+  onChannelChange: (entryId: string, channel: number) => void;
   saved: boolean;
   loadError: string | null;
   onGlobalInput: (key: keyof HermesSettings, value: unknown) => void;
@@ -29,8 +40,12 @@ function nodeChecklist(
   nodes: NodeInfo[],
   selected: number[],
   onChange: (values: number[]) => void,
-  emptyText: string
+  emptyText: string,
+  error: string | null = null
 ): TemplateResult {
+  if (error) {
+    return html`<div class="sub-error">${error}</div>`;
+  }
   if (!nodes.length) {
     return html`<div class="hint">${emptyText}</div>`;
   }
@@ -74,6 +89,14 @@ export function renderSettings(
   return html`
     <h2 class="screen-title">
       ${t("settings.title")}
+      <button
+        class="btn refresh"
+        ?disabled=${ctx.refreshing}
+        title=${t("settings.refreshHint")}
+        @click=${ctx.onRefresh}
+      >
+        ${ctx.refreshing ? t("common.loading") : t("settings.refresh")}
+      </button>
       ${ctx.saved ? html`<span class="toast">${t("common.saved")}</span>` : ""}
     </h2>
 
@@ -102,7 +125,8 @@ export function renderSettings(
             ctx.nodes,
             (globalValue("map_nodes") as number[]) ?? [],
             (values) => ctx.onGlobalInput("map_nodes", values),
-            t("settings.noNodes")
+            t("settings.noNodes"),
+            ctx.nodesError
           )}
           <span class="hint">${t("settings.mapNodesHint")}</span>
         </div>
@@ -112,6 +136,21 @@ export function renderSettings(
             ${t("common.save")}
           </button>
         </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">${t("settings.firmware")}</div>
+      <div class="panel">
+        ${ctx.firmware
+          ? html`<div class="row">
+              <span class="k">${t("settings.gatewayFirmware")}</span>
+              <span class="v">${ctx.firmware}</span>
+            </div>`
+          : ""}
+        <div class="note">${t("settings.firmwareSameNote")}</div>
+        <div class="note">${t("settings.firmwareDmNote")}</div>
+        <div class="hint">${t("settings.firmwareOnlyGateway")}</div>
       </div>
     </div>
 
@@ -147,13 +186,9 @@ function renderEntry(
             <span class="k">${t("settings.mode")}</span>
             <span class="v">${entry.mode}</span>
           </div>
-          ${entry.channel_index !== null && entry.channel_index !== undefined
-            ? html`<div class="row">
-                <span class="k">${t("settings.channel")}</span>
-                <span class="v">${entry.channel_index}</span>
-              </div>`
-            : ""}
         </div>
+
+        ${entry.mode === "channel" ? renderChannelPicker(ctx, entry, t) : ""}
 
         <div class="field" style="margin-top:12px">
           <label>${t("settings.initialDelay")}</label>
@@ -196,7 +231,8 @@ function renderEntry(
             (value("authorized_nodes", entry.authorized_nodes) as number[]) ?? [],
             (values) =>
               ctx.onEntryInput(entry.entry_id, "authorized_nodes", values),
-            t("settings.noNodes")
+            t("settings.noNodes"),
+            ctx.nodesError
           )}
           <span class="hint">${t("settings.authorizedHint")}</span>
         </div>
@@ -210,6 +246,62 @@ function renderEntry(
           </button>
         </div>
       </div>
+    </div>
+  `;
+}
+
+
+/**
+ * Which channel this gateway listens on, picked from the channels actually
+ * configured on the radio rather than typed as a bare index.
+ */
+function renderChannelPicker(
+  ctx: SettingsCtx,
+  entry: HermesEntry,
+  t: (k: string) => string
+): TemplateResult {
+  const current = entry.channel_index ?? 0;
+  const known = ctx.channels.find((c) => c.index === current);
+
+  return html`
+    <div class="field" style="margin-top:12px">
+      <label>${t("settings.channel")}</label>
+      ${ctx.channels.length
+        ? html`
+            <select
+              @change=${(e: Event) =>
+                ctx.onChannelChange(
+                  entry.entry_id,
+                  Number((e.target as HTMLSelectElement).value)
+                )}
+            >
+              ${ctx.channels.map(
+                (channel) => html`
+                  <option value=${channel.index} ?selected=${channel.index === current}>
+                    ${channel.index}: ${channel.name}
+                  </option>
+                `
+              )}
+            </select>
+          `
+        : html`
+            <input
+              type="number"
+              min="0"
+              max="7"
+              .value=${String(current)}
+              @change=${(e: Event) =>
+                ctx.onChannelChange(
+                  entry.entry_id,
+                  Number((e.target as HTMLInputElement).value)
+                )}
+            />
+            <span class="hint">${t("settings.channelsUnavailable")}</span>
+          `}
+      <span class="hint">${t("settings.channelHint")}</span>
+      ${known?.default_psk
+        ? html`<div class="note warn">${t("settings.defaultPskWarning")}</div>`
+        : ""}
     </div>
   `;
 }

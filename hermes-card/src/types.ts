@@ -74,6 +74,15 @@ export interface ActionDef {
   value?: ActionValueSpec;
 }
 
+/** A channel configured on the radio. */
+export interface HermesChannel {
+  index: number;
+  name: string;
+  role: string;
+  /** True when the channel still uses the well known default key. */
+  default_psk: boolean;
+}
+
 /** A ready made message the user fires with one click. */
 export interface HermesPreset {
   id?: string;

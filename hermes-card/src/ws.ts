@@ -1,6 +1,7 @@
 // Thin wrappers over the hermes/* websocket commands exposed by the backend.
 
 import type {
+  HermesChannel,
   HermesCommand,
   HermesLogEntry,
   HermesPreset,
@@ -105,4 +106,14 @@ export function fetchHistory(hass: HomeAssistant): Promise<HermesLogEntry[]> {
 
 export function clearHistory(hass: HomeAssistant): Promise<unknown> {
   return hass.callWS({ type: "hermes/history/clear" });
+}
+
+export function fetchChannels(hass: HomeAssistant): Promise<HermesChannel[]> {
+  return hass.callWS<HermesChannel[]>({ type: "hermes/channels/list" });
+}
+
+export function fetchRadioInfo(
+  hass: HomeAssistant
+): Promise<{ firmware: string | null }> {
+  return hass.callWS({ type: "hermes/radio/info" });
 }
