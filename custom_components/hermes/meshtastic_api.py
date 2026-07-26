@@ -15,6 +15,7 @@ import logging
 from typing import Any
 
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 
 from .const import MESHTASTIC_DOMAIN
 
@@ -109,7 +110,61 @@ async def async_get_channels(hass: HomeAssistant) -> list[dict[str, Any]]:
     unique: dict[int, dict[str, Any]] = {}
     for channel in out:
         unique.setdefault(channel["index"], channel)
-    return [unique[index] for index in sorted(unique)]
+
+    if unique:
+        return [unique[index] for index in sorted(unique)]
+
+    # The client had nothing to say, which happens while the node is still
+    # connecting or if its internals moved. Fall back to the public entities.
+    fallback = channels_from_entities(hass)
+    if fallback:
+        _LOGGER.debug("Hermes: channels read from the notify entities")
+    return fallback
+
+
+def channels_from_entities(hass: HomeAssistant) -> list[dict[str, Any]]:
+    """Channels as published by the base integration's own notify entities.
+
+    Fully public path: the base integration creates one notify entity per
+    channel and puts `gateways: {node_id: channel_index}` in its attributes, so
+    the index and the name can be read without touching its internals. Used when
+    the client is unavailable, for instance while the node is still connecting.
+
+    The channel key is not exposed this way, so a default key cannot be detected
+    through this path and is simply not flagged.
+    """
+    registry = er.async_get(hass)
+    found: dict[int, dict[str, Any]] = {}
+
+    for entry in registry.entities.values():
+        if entry.platform != MESHTASTIC_DOMAIN:
+            continue
+        if not entry.entity_id.startswith("notify."):
+            continue
+        state = hass.states.get(entry.entity_id)
+        if state is None:
+            continue
+
+        gateways = state.attributes.get("gateways")
+        if not isinstance(gateways, dict) or not gateways:
+            continue
+
+        name = str(state.attributes.get("friendly_name") or entry.entity_id)
+        # The base integration prefixes the channel name with "Channel".
+        if name.lower().startswith("channel "):
+            name = name[len("channel ") :].strip() or name
+
+        for index in gateways.values():
+            try:
+                idx = int(index)
+            except (TypeError, ValueError):
+                continue
+            found.setdefault(
+                idx,
+                {"index": idx, "name": name, "role": None, "default_psk": False},
+            )
+
+    return [found[index] for index in sorted(found)]
 
 
 def gateway_firmware(hass: HomeAssistant) -> str | None:

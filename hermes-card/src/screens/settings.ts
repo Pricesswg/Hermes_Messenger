@@ -165,6 +165,14 @@ export function renderSettings(
               <span class="v">${ctx.firmware}</span>
             </div>`
           : ""}
+        <div class="row">
+          <span class="k">${t("settings.channelsFound")}</span>
+          <span class="v">
+            ${ctx.channels.length
+              ? ctx.channels.map((c) => `${c.index}: ${c.name}`).join(", ")
+              : t("settings.channelsNone")}
+          </span>
+        </div>
         <div class="note">${t("settings.firmwareSameNote")}</div>
         <div class="note">${t("settings.firmwareDmNote")}</div>
         <div class="hint">${t("settings.firmwareOnlyGateway")}</div>
