@@ -80,6 +80,21 @@ export interface ActionDef {
   value?: ActionValueSpec;
 }
 
+/** What the gateway radio reports about itself. */
+export interface RadioInfo {
+  firmware: string | null;
+  connected: boolean | null;
+  node_num?: number | null;
+  long_name?: string | null;
+  short_name?: string | null;
+  hardware?: string | null;
+  role?: string | null;
+  region?: string | null;
+  modem_preset?: string | null;
+  hop_limit?: number | null;
+  tx_enabled?: boolean | null;
+}
+
 /** A channel configured on the radio. */
 export interface HermesChannel {
   index: number;

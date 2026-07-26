@@ -22,6 +22,7 @@ from homeassistant.helpers import device_registry as dr
 from .actions import ACTIONS_BY_TYPE, DOMAIN_TO_TYPE, GENERIC_ACTIONS
 from .meshtastic_api import (
     async_get_channels,
+    async_radio_details,
     gateway_firmware,
     is_radio_connected,
     node_num_from_device,
@@ -469,7 +470,7 @@ async def ws_channels_list(hass: HomeAssistant, connection, msg: dict) -> None:
 
 
 @websocket_api.websocket_command({vol.Required("type"): "hermes/radio/info"})
-@callback
-def ws_radio_info(hass: HomeAssistant, connection, msg: dict) -> None:
-    """Gateway firmware version, when the base integration knows it."""
-    connection.send_result(msg["id"], {"firmware": gateway_firmware(hass)})
+@websocket_api.async_response
+async def ws_radio_info(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Everything the card shows about the gateway radio itself."""
+    connection.send_result(msg["id"], await async_radio_details(hass))

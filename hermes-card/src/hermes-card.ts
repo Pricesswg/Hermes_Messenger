@@ -20,6 +20,7 @@ import type {
   HermesSettings,
   HomeAssistant,
   NodeInfo,
+  RadioInfo,
   TabId,
 } from "./types";
 import { VERSION } from "./version";
@@ -95,6 +96,7 @@ export class HermesCard extends LitElement {
   @state() private _sendingTest = false;
   @state() private _channels: HermesChannel[] = [];
   @state() private _firmware: string | null = null;
+  @state() private _radio: RadioInfo | null = null;
   /** Set when loading the nodes failed, so an error is not shown as "none". */
   @state() private _nodesError: string | null = null;
   @state() private _refreshing = false;
@@ -230,7 +232,9 @@ export class HermesCard extends LitElement {
     }
 
     try {
-      this._firmware = (await fetchRadioInfo(this.hass)).firmware;
+      const radio = await fetchRadioInfo(this.hass);
+      this._radio = radio;
+      this._firmware = radio.firmware;
     } catch {
       this._firmware = null;
     }
@@ -549,6 +553,7 @@ export class HermesCard extends LitElement {
           this._entries,
           this._onApplySeen,
           this._updatedAt,
+          this._radio,
           t
         );
       case "log":
@@ -666,6 +671,7 @@ export class HermesCard extends LitElement {
           this._entries,
           this._onApplySeen,
           this._updatedAt,
+          this._radio,
           t
         );
     }

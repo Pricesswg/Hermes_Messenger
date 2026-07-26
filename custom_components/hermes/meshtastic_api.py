@@ -194,6 +194,50 @@ def channels_from_entities(hass: HomeAssistant) -> list[dict[str, Any]]:
     return [found[index] for index in sorted(found)]
 
 
+async def async_radio_details(hass: HomeAssistant) -> dict[str, Any]:
+    """Describe the gateway radio: identity, hardware and LoRa settings.
+
+    Written against the Meshtastic protobuf shapes and the base integration's
+    client, which is MIT licensed. Field names follow protobuf JSON conversion,
+    which is camelCase, and every read is guarded: this is another
+    integration's internal surface and it may move.
+    """
+    details: dict[str, Any] = {
+        "firmware": gateway_firmware(hass),
+        "connected": is_radio_connected(hass),
+    }
+
+    for client in _clients(hass):
+        try:
+            own = await client.async_get_own_node()
+        except Exception:  # noqa: BLE001 - diagnostics must never break setup
+            own = None
+        if own:
+            user = own.get("user") or {}
+            details.setdefault("node_num", own.get("num"))
+            details.setdefault("long_name", user.get("longName"))
+            details.setdefault("short_name", user.get("shortName"))
+            details.setdefault("hardware", user.get("hwModel"))
+            details.setdefault("role", user.get("role"))
+
+        try:
+            config = await client.async_get_node_local_config()
+        except Exception:  # noqa: BLE001
+            config = None
+        if config:
+            lora = config.get("lora") or {}
+            details.setdefault("region", lora.get("region"))
+            details.setdefault("modem_preset", lora.get("modemPreset"))
+            details.setdefault("hop_limit", lora.get("hopLimit"))
+            # A node that repeats traffic for others says so here.
+            details.setdefault("tx_enabled", lora.get("txEnabled"))
+
+        if details.get("node_num") is not None:
+            break
+
+    return details
+
+
 def gateway_firmware(hass: HomeAssistant) -> str | None:
     """Firmware version of the connected gateway, when known.
 

@@ -262,6 +262,35 @@ export function hermesEntities(hass: HomeAssistant): HassEntityState[] {
   return out.sort((a, b) => a.entity_id.localeCompare(b.entity_id));
 }
 
+/**
+ * The metrics worth showing first for a node, matched by the key the base
+ * integration uses in its entity ids. Anything not listed still shows, just
+ * below these, so a new sensor on their side is never hidden.
+ */
+const HEADLINE_METRICS = [
+  "battery",
+  "voltage",
+  "snr",
+  "hops",
+  "last_heard",
+  "utilization",
+  "uptime",
+];
+
+export function splitMetrics(
+  values: Record<string, HassEntityState>
+): { headline: [string, HassEntityState][]; rest: [string, HassEntityState][] } {
+  const entries = Object.entries(values);
+  const score = (key: string) =>
+    HEADLINE_METRICS.findIndex((m) => key.toLowerCase().includes(m));
+
+  const headline = entries
+    .filter(([key]) => score(key) >= 0)
+    .sort((a, b) => score(a[0]) - score(b[0]));
+  const rest = entries.filter(([key]) => score(key) < 0);
+  return { headline, rest };
+}
+
 /** State plus unit, ready to print. */
 export function displayValue(state: HassEntityState): string {
   const unit = state.attributes?.unit_of_measurement;

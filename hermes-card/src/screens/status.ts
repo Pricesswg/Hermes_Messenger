@@ -1,6 +1,6 @@
 import { html, type TemplateResult } from "lit";
 
-import type { HermesEntry, HomeAssistant } from "../types";
+import type { HermesEntry, HomeAssistant, RadioInfo } from "../types";
 import { VERSION } from "../version";
 import { hasHermes, hermesSensor, meshNodes } from "../utils";
 
@@ -10,6 +10,7 @@ export function renderStatus(
   entries: HermesEntry[],
   onApplySeen: (entry: HermesEntry) => void,
   updatedAt: string,
+  radio: RadioInfo | null,
   t: (k: string) => string
 ): TemplateResult {
   if (!hasHermes(hass)) {
@@ -51,6 +52,8 @@ export function renderStatus(
         <div class="value small">${asText(lastError?.state)}</div>
       </div>
     </div>
+
+    ${radio ? renderRadio(radio, t) : ""}
 
     ${entries.map((entry) => renderReception(entry, onApplySeen, t))}
   `;
@@ -183,6 +186,43 @@ function renderReception(
                 : ""}
             `
           : ""}
+      </div>
+    </div>
+  `;
+}
+
+/** The gateway radio itself: identity, hardware and LoRa settings. */
+function renderRadio(radio: RadioInfo, t: (k: string) => string): TemplateResult {
+  const rows: [string, unknown][] = [
+    ["radio.name", radio.long_name],
+    ["radio.short", radio.short_name],
+    ["radio.hardware", radio.hardware],
+    ["radio.role", radio.role],
+    ["radio.firmware", radio.firmware],
+    ["radio.region", radio.region],
+    ["radio.preset", radio.modem_preset],
+    ["radio.hops", radio.hop_limit],
+  ];
+
+  const shown = rows.filter(
+    ([, value]) => value !== null && value !== undefined && value !== ""
+  );
+  if (!shown.length) return html``;
+
+  return html`
+    <div class="section" style="margin-top:18px">
+      <div class="section-title">${t("radio.title")}</div>
+      <div class="panel">
+        <div class="rows">
+          ${shown.map(
+            ([key, value]) => html`
+              <div class="row">
+                <span class="k">${t(key)}</span>
+                <span class="v">${String(value)}</span>
+              </div>
+            `
+          )}
+        </div>
       </div>
     </div>
   `;

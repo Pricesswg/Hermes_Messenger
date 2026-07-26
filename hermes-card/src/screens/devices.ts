@@ -1,7 +1,7 @@
 import { html, type TemplateResult } from "lit";
 
-import type { HomeAssistant } from "../types";
-import { displayValue, meshNodes } from "../utils";
+import type { HassEntityState, HomeAssistant } from "../types";
+import { displayValue, meshNodes, splitMetrics } from "../utils";
 
 /**
  * Devices screen: one block per Meshtastic node with the values that node
@@ -30,16 +30,30 @@ export function renderDevices(
                 >${node.nodeNum ?? t("devices.unknown")}</span
               >
             </div>
-            <div class="rows">
-              ${Object.entries(node.values).map(
-                ([key, state]) => html`
-                  <div class="row">
-                    <span class="k">${key}</span>
-                    <span class="v">${displayValue(state)}</span>
-                  </div>
-                `
-              )}
-            </div>
+            ${renderMetrics(node.values)}
+          </div>
+        `
+      )}
+    </div>
+  `;
+}
+
+/**
+ * The metrics that describe the health of a link come first: battery, signal
+ * and how long ago the node was heard. Everything else follows, so nothing the
+ * base integration publishes is lost.
+ */
+function renderMetrics(
+  values: Record<string, HassEntityState>
+): TemplateResult {
+  const { headline, rest } = splitMetrics(values);
+  return html`
+    <div class="rows">
+      ${[...headline, ...rest].map(
+        ([key, state]) => html`
+          <div class="row">
+            <span class="k">${key}</span>
+            <span class="v">${displayValue(state)}</span>
           </div>
         `
       )}
