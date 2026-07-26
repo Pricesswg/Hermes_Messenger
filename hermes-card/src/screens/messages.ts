@@ -492,15 +492,12 @@ function renderForm(
         </select>
       </div>
 
-      ${dmGateway
-        ? html`<div class="note">${t("messages.dmGatewayNote")}</div>`
-        : ""}
-
-      ${draft.reply_to === "channel" && !dmGateway
+      ${draft.reply_to === "channel"
         ? html`
             <div class="field indented">
               <label>${t("messages.replyChannel")}</label>
               <select
+                ?disabled=${dmGateway}
                 @change=${(e: Event) => {
                   const raw = (e.target as HTMLSelectElement).value;
                   ctx.onDraftInput(
@@ -527,7 +524,11 @@ function renderForm(
                   `
                 )}
               </select>
-              <span class="hint">${t("messages.replyChannelHint")}</span>
+              <span class="hint">
+                ${dmGateway
+                  ? t("messages.dmGatewayNote")
+                  : t("messages.replyChannelHint")}
+              </span>
             </div>
           `
         : ""}
