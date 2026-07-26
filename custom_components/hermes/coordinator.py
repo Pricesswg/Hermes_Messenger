@@ -187,8 +187,17 @@ class HermesCoordinator:
         # Real schema (verified): fields are nested under ["data"] and `to` is
         # an object {node, channel}. Defensive code: if the base changes we just
         # ignore, we do not blow up.
+        # Counted before anything else. Returning here without recording made
+        # "the event never arrived" and "the event arrived in a shape I did not
+        # expect" produce the same empty diagnostics, which are opposite
+        # problems: one is upstream, the other is mine.
+        self._count("received")
+
         data = event.data.get("data")
         if not isinstance(data, dict):
+            self._count("malformed")
+            _LOGGER.debug("Hermes: unexpected event payload %s", event.data)
+            self._notify_sensors()
             return
 
         # The base integration always reports the node it is connected to as
@@ -300,10 +309,15 @@ class HermesCoordinator:
         await self._send_parts(split_message(text, DEFAULT_BYTE_LIMIT), base)
 
     @callback
+    def _count(self, reason: str) -> None:
+        """Tally one reception outcome."""
+        self.seen_counts[reason] = self.seen_counts.get(reason, 0) + 1
+
+    @callback
     def _note_seen(self, data: dict[str, Any], reason: str) -> None:
         """Remember the last mesh message and what this entry made of it."""
         to = data.get("to") or {}
-        self.seen_counts[reason] = self.seen_counts.get(reason, 0) + 1
+        self._count(reason)
         self.last_seen = {
             "gateway": data.get("gateway"),
             "channel": to.get("channel"),

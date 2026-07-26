@@ -61,7 +61,8 @@ function renderReception(
 ): TemplateResult {
   const seen = entry.last_seen;
   const counts = entry.seen_counts ?? {};
-  const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
+  // "received" is the raw total, so it must not be added to the outcomes.
+  const total = counts.received ?? 0;
   const mismatch = total > 0 && !counts.accepted;
 
   return html`
