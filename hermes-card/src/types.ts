@@ -145,6 +145,8 @@ export interface HermesEntry {
   help_keyword: string;
   case_sensitive: boolean;
   last_seen: HermesLastSeen | null;
+  /** Count of text messages per outcome, since Home Assistant started. */
+  seen_counts: Record<string, number>;
 }
 
 /** The last text message this entry saw on the mesh, before any filtering. */

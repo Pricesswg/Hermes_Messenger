@@ -60,7 +60,9 @@ function renderReception(
   t: (k: string) => string
 ): TemplateResult {
   const seen = entry.last_seen;
-  const mismatch = seen !== null && seen.reason !== "accepted";
+  const counts = entry.seen_counts ?? {};
+  const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
+  const mismatch = total > 0 && !counts.accepted;
 
   return html`
     <div class="section" style="margin-top:18px">
@@ -99,6 +101,17 @@ function renderReception(
                 <div class="row">
                   <span class="k">${t("status.seenResult")}</span>
                   <span class="v">${t(`status.reason.${seen.reason}`)}</span>
+                </div>
+                <div class="row">
+                  <span class="k">${t("status.tally")}</span>
+                  <span class="v">
+                    ${Object.entries(counts)
+                      .map(
+                        ([reason, n]) =>
+                          `${n} ${t(`status.reason.${reason}`)}`
+                      )
+                      .join(", ")}
+                  </span>
                 </div>
               `
             : html`<div class="row">

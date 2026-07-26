@@ -100,6 +100,12 @@ def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
         "rate_limit": options.get(CONF_RATE_LIMIT, DEFAULT_RATE_LIMIT),
         "help_keyword": options.get(CONF_HELP_KEYWORD, DEFAULT_HELP_KEYWORD),
         "last_seen": _last_seen(hass, entry.entry_id),
+        "seen_counts": dict(
+            getattr(
+                hass.data.get(DOMAIN, {}).get(entry.entry_id), "seen_counts", {}
+            )
+            or {}
+        ),
         "case_sensitive": options.get(
             CONF_CASE_SENSITIVE, DEFAULT_CASE_SENSITIVE
         ),

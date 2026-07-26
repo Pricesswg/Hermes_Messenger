@@ -84,6 +84,10 @@ class HermesCoordinator:
         # Last text message that crossed the mesh, recorded before any filter
         # so a gateway or channel mismatch can be seen instead of guessed.
         self.last_seen: dict[str, Any] | None = None
+        # How many text messages reached this entry and what became of them.
+        # One sample cannot tell "nothing arrives" from "everything arrives on
+        # the wrong channel", which are opposite problems.
+        self.seen_counts: dict[str, int] = {}
         self.commands_executed = 0
         self.last_reset = dt_util.utcnow()
 
@@ -299,6 +303,7 @@ class HermesCoordinator:
     def _note_seen(self, data: dict[str, Any], reason: str) -> None:
         """Remember the last mesh message and what this entry made of it."""
         to = data.get("to") or {}
+        self.seen_counts[reason] = self.seen_counts.get(reason, 0) + 1
         self.last_seen = {
             "gateway": data.get("gateway"),
             "channel": to.get("channel"),
