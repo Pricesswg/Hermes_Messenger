@@ -168,6 +168,21 @@ Under the config entry's device (native device page):
   identity is guaranteed **at the protocol level** before the message even
   reaches Home Assistant. The whitelist here is **reliable**.
 
+### Where a reply can go
+
+The channel a gateway listens on is a boundary, not a preference. A command that
+arrives on any other channel is ignored without an answer: a stranger on a
+channel Hermes was not told to listen to gets silence, not a reply that would
+reveal a Home Assistant sitting behind that node.
+
+For the same reason a command that arrived as a direct message is always
+answered privately. Broadcasting the answer of a private exchange onto a channel
+would publish the state of the house to everyone listening on it, so a reply
+channel configured on a command deliberately does not override that.
+
+A command heard on a channel can be told to answer on a different one, which is
+useful to keep replies off a busy channel. The reply then goes only there.
+
 The whitelist should be configured in both cases anyway. For commands that
 control critical entities, prefer **DM with PKC** mode. Verify the behavior on
 the **firmware actually in use**: do not take it for granted.

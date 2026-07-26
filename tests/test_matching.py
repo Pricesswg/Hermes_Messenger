@@ -132,3 +132,61 @@ def test_empty_help_keyword_never_matches():
 def test_normalize():
     assert normalize(" AbC ") == "abc"
     assert normalize(" AbC ", case_sensitive=True) == "AbC"
+
+
+# --- the security gate ------------------------------------------------------
+#
+# A gateway must act only on the traffic it was configured for. Everything else
+# has to be met with silence, because a reply tells a stranger that a Home
+# Assistant is listening behind that node.
+
+accepts_message = matching.accepts_message
+
+CH = "channel"
+DM = "direct_message"
+
+
+def test_channel_mode_accepts_its_own_channel():
+    assert accepts_message({"node": None, "channel": 1}, CH, 1, 999) is True
+
+
+def test_channel_mode_rejects_another_channel():
+    # The core of it: a command shouted on a channel we do not listen to must
+    # never be acted on, and must never be answered.
+    assert accepts_message({"node": None, "channel": 2}, CH, 1, 999) is False
+    assert accepts_message({"node": None, "channel": 0}, CH, 1, 999) is False
+
+
+def test_channel_mode_rejects_direct_messages():
+    assert accepts_message({"node": 999, "channel": None}, CH, 1, 999) is False
+
+
+def test_channel_zero_is_a_real_channel_not_a_missing_one():
+    # Channel 0 is the primary channel: it must not be confused with "unset".
+    assert accepts_message({"node": None, "channel": 0}, CH, 0, 999) is True
+
+
+def test_channel_mode_without_a_configured_channel_accepts_nothing():
+    assert accepts_message({"node": None, "channel": 0}, CH, None, 999) is False
+    assert accepts_message({"node": None, "channel": None}, CH, None, 999) is False
+    assert accepts_message({"node": 999, "channel": None}, CH, None, 999) is False
+
+
+def test_dm_mode_accepts_a_message_to_this_gateway():
+    assert accepts_message({"node": 999, "channel": None}, DM, None, 999) is True
+
+
+def test_dm_mode_rejects_a_message_to_another_node():
+    assert accepts_message({"node": 1234, "channel": None}, DM, None, 999) is False
+
+
+def test_dm_mode_rejects_channel_traffic():
+    assert accepts_message({"node": None, "channel": 0}, DM, None, 999) is False
+
+
+def test_malformed_target_is_rejected():
+    # Defensive: the base integration could change shape under us.
+    assert accepts_message(None, CH, 1, 999) is False
+    assert accepts_message({}, CH, 1, 999) is False
+    assert accepts_message("nonsense", CH, 1, 999) is False
+    assert accepts_message({}, DM, None, 999) is False

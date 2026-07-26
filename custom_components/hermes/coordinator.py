@@ -57,7 +57,7 @@ from .const import (
     SERVICE_SEND_TEXT,
 )
 from .actions import entity_bounds, value_spec
-from .matching import match_command, matches_keyword
+from .matching import accepts_message, match_command, matches_keyword
 from .message import split_message
 from .rate_limit import allow as rate_allow, forget_idle
 from .tokens import apply_argument, parse_actions, parse_argument, strip_actions
@@ -273,12 +273,9 @@ class HermesCoordinator:
 
     def _matches_mode(self, to: dict[str, Any]) -> bool:
         """Filter channel vs DM against the real `to` schema."""
-        node = to.get("node")
-        channel = to.get("channel")
-        if self.mode == MODE_CHANNEL:
-            return node is None and channel == self.channel_index
-        # DM: the message is addressed to our gateway as a node.
-        return channel is None and node == self.gateway_node_id
+        return accepts_message(
+            to, self.mode, self.channel_index, self.gateway_node_id
+        )
 
     def _match_command(self, text: str) -> dict[str, Any] | None:
         """Match against the configured commands, honouring the case setting."""
@@ -407,15 +404,14 @@ class HermesCoordinator:
         reply_to = command.get(CMD_REPLY_TO, REPLY_CHANNEL)
         explicit = command.get(CMD_REPLY_CHANNEL)
 
-        if reply_to == REPLY_SENDER_DM:
+        if reply_to == REPLY_SENDER_DM or self.mode == MODE_DIRECT:
+            # A command that arrived privately is answered privately, always.
+            # Broadcasting the answer of a direct exchange onto a channel would
+            # publish the state of the house to everyone listening on it, so a
+            # configured reply channel deliberately does not override this.
             base["to"] = sender
         elif explicit is not None:
-            # The command names its own channel, which wins even on a DM
-            # gateway: answering somewhere specific was an explicit choice.
             base["channel"] = int(explicit)
-        elif self.mode == MODE_DIRECT:
-            # A DM gateway has no channel of its own to answer on.
-            base["to"] = sender
         else:
             base["channel"] = self.channel_index
 

@@ -439,6 +439,9 @@ function renderForm(
   draft: HermesCommand,
   t: (k: string) => string
 ): TemplateResult {
+  const entry =
+    ctx.entries.find((e) => e.entry_id === ctx.selectedEntry) ?? ctx.entries[0];
+  const dmGateway = entry?.mode === "direct_message";
   const bind =
     (key: keyof HermesCommand) =>
     (e: Event): void =>
@@ -489,7 +492,11 @@ function renderForm(
         </select>
       </div>
 
-      ${draft.reply_to === "channel"
+      ${dmGateway
+        ? html`<div class="note">${t("messages.dmGatewayNote")}</div>`
+        : ""}
+
+      ${draft.reply_to === "channel" && !dmGateway
         ? html`
             <div class="field indented">
               <label>${t("messages.replyChannel")}</label>
