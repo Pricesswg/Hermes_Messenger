@@ -23,6 +23,7 @@ from .actions import ACTIONS_BY_TYPE, DOMAIN_TO_TYPE, GENERIC_ACTIONS
 from .meshtastic_api import (
     async_get_channels,
     gateway_firmware,
+    is_radio_connected,
     node_num_from_device,
 )
 from .const import (
@@ -116,6 +117,8 @@ def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
         # like a listener that receives nothing.
         "backend_version": _running_version(hass),
         "listening": DATA_LISTENER in hass.data,
+        # None when it cannot be read, which is not the same as disconnected.
+        "radio_connected": is_radio_connected(hass),
         "seen_counts": dict(
             getattr(
                 hass.data.get(DOMAIN, {}).get(entry.entry_id), "seen_counts", {}

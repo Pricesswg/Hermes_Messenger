@@ -49,6 +49,33 @@ def node_num_from_device(device: Any) -> int | None:
     return None
 
 
+def is_radio_connected(hass: HomeAssistant) -> bool | None:
+    """Whether the base integration currently has a live link to its node.
+
+    Everything Hermes does depends on that link. When it is down no packet
+    stream runs, so no text event is ever emitted and sending raises
+    "Not connected", which from inside Hermes looks like a listener that was
+    never called: the exact reading that sends the diagnosis into the
+    integration instead of at the radio link.
+
+    None means the state could not be read, which is not the same as down.
+    """
+    clients = _clients(hass)
+    if not clients:
+        return None
+
+    states: list[bool] = []
+    for client in clients:
+        interface = getattr(client, "_interface", None)
+        running = getattr(interface, "is_running", None)
+        if isinstance(running, bool):
+            states.append(running)
+
+    if not states:
+        return None
+    return any(states)
+
+
 def _clients(hass: HomeAssistant) -> list[Any]:
     """Every Meshtastic API client currently loaded."""
     found = []

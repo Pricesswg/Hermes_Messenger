@@ -162,6 +162,8 @@ export interface HermesEntry {
   backend_version: string;
   /** Whether the shared mesh subscription is in place. */
   listening: boolean;
+  /** Live link between the base Meshtastic integration and its node. */
+  radio_connected: boolean | null;
 }
 
 /** The last text message this entry saw on the mesh, before any filtering. */

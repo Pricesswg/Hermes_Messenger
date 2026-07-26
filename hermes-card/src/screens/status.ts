@@ -71,6 +71,9 @@ function renderReception(
   const seen = entry.last_seen;
   const counts = entry.seen_counts ?? {};
   const notRunning = entry.loaded === false;
+  // The radio link comes first: with it down nothing else can possibly work,
+  // and every other reading on this panel is a consequence of it.
+  const offline = entry.radio_connected === false;
   // "received" is the raw total, so it must not be added to the outcomes.
   const total = counts.received ?? 0;
   const mismatch = total > 0 && !counts.accepted;
@@ -79,13 +82,18 @@ function renderReception(
     <div class="section" style="margin-top:18px">
       <div class="section-title">
         ${t("status.reception")}
-        ${notRunning
+        ${offline
+          ? html`<span class="warn-badge">${t("status.radioOfflineBadge")}</span>`
+          : notRunning
           ? html`<span class="warn-badge">${t("status.notRunning")}</span>`
           : mismatch
             ? html`<span class="warn-badge">${t("status.mismatch")}</span>`
             : ""}
       </div>
       <div class="panel">
+        ${offline
+          ? html`<div class="note warn">${t("status.radioOffline")}</div>`
+          : ""}
         ${notRunning
           ? html`<div class="note warn">
               ${t("status.notRunningHint")}
