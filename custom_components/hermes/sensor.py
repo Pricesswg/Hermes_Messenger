@@ -84,7 +84,7 @@ class LastCommandSensor(_HermesSensorBase):
         last = self._coordinator.last_command
         if not last:
             return {}
-        return {"node": last["node"], "timestamp": last["time"].isoformat()}
+        return {"node": last.get("node"), "timestamp": last.get("time")}
 
 
 class CommandsExecutedSensor(_HermesSensorBase):
@@ -130,5 +130,5 @@ class LastErrorSensor(_HermesSensorBase):
         return {
             "node": err.get("node"),
             "text": err.get("text"),
-            "timestamp": err["time"].isoformat(),
+            "timestamp": err.get("time"),
         }

@@ -80,9 +80,8 @@ class HermesCoordinator:
         self.hass = hass
         self.entry = entry
 
-        # Diagnostic state exposed to the sensors (native device page).
-        self.last_command: dict[str, Any] | None = None
-        self.last_error: dict[str, Any] | None = None
+        # Diagnostic state exposed to the sensors. Held in the store rather
+        # than here, so a restart does not turn every diagnostic to unknown.
         # Last text message that crossed the mesh, recorded before any filter
         # so a gateway or channel mismatch can be seen instead of guessed.
         self.last_seen: dict[str, Any] | None = None
@@ -336,6 +335,16 @@ class HermesCoordinator:
 
         await asyncio.sleep(self.initial_delay)
         await self._send_parts(split_message(text, DEFAULT_BYTE_LIMIT), base)
+
+    @property
+    def last_command(self) -> dict[str, Any] | None:
+        store = self.hass.data.get(DATA_STORE)
+        return store.get_marker(self.entry.entry_id, "last_command") if store else None
+
+    @property
+    def last_error(self) -> dict[str, Any] | None:
+        store = self.hass.data.get(DATA_STORE)
+        return store.get_marker(self.entry.entry_id, "last_error") if store else None
 
     @property
     def commands_executed(self) -> int:
@@ -638,20 +647,28 @@ class HermesCoordinator:
 
     @callback
     def _record_command(self, text: str, sender: int) -> None:
-        self.last_command = {
-            "text": text,
-            "node": sender,
-            "time": dt_util.utcnow(),
-        }
+        store = self.hass.data.get(DATA_STORE)
+        if store is not None:
+            store.async_set_marker(
+                self.entry.entry_id,
+                "last_command",
+                {"text": text, "node": sender, "time": dt_util.utcnow().isoformat()},
+            )
 
     @callback
     def _record_error(self, reason: str, sender: int | None, text: str) -> None:
-        self.last_error = {
-            "reason": reason,
-            "node": sender,
-            "text": text,
-            "time": dt_util.utcnow(),
-        }
+        store = self.hass.data.get(DATA_STORE)
+        if store is not None:
+            store.async_set_marker(
+                self.entry.entry_id,
+                "last_error",
+                {
+                    "reason": reason,
+                    "node": sender,
+                    "text": text,
+                    "time": dt_util.utcnow().isoformat(),
+                },
+            )
 
     @callback
     def _reset_counter(self, now: Any = None) -> None:

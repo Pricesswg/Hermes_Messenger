@@ -92,20 +92,33 @@ export class HermesMap extends LitElement {
         background: #4aa3ff;
         box-shadow: 0 0 0 3px rgba(74, 163, 255, 0.30);
       }
+      /* A halo was not enough: over a busy map the text still landed on tiles
+       * and other labels. An opaque chip on its own stacking level reads in
+       * every case, and a long name is cut rather than covering a neighbour. */
       .pin .tag {
         position: absolute;
         left: 50%;
         transform: translateX(-50%);
         top: 100%;
-        margin-top: 3px;
+        margin-top: 4px;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
         font-size: 10px;
         font-weight: 700;
+        line-height: 1.4;
+        padding: 1px 5px;
+        border-radius: 4px;
         color: var(--text);
-        text-shadow:
-          0 0 3px var(--surface),
-          0 0 3px var(--surface);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
         pointer-events: none;
+      }
+      /* Labels above every marker, so one pin never sits on another's name. */
+      .leaflet-marker-icon:hover {
+        z-index: 500 !important;
       }
     `,
   ];

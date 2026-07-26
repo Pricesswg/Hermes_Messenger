@@ -415,10 +415,15 @@ export const hermesLayout = css`
     text-overflow: ellipsis;
   }
 
+  /* Next to the button that caused it, vertically centred on the same row:
+   * in a title it could scroll out of view while the button stayed visible. */
   .toast {
+    display: inline-flex;
+    align-items: center;
     font-size: 0.78rem;
     font-weight: 700;
     color: var(--ok);
+    white-space: nowrap;
   }
 
   .palette {

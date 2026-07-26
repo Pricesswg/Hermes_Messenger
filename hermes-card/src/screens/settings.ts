@@ -196,6 +196,7 @@ export function renderSettings(
           <button class="btn primary" @click=${ctx.onSaveGlobal}>
             ${t("common.save")}
           </button>
+          ${ctx.saved ? html`<span class="toast">${t("common.saved")}</span>` : ""}
         </div>
       </div>
     </div>
@@ -433,6 +434,7 @@ function renderEntry(
           >
             ${t("common.save")}
           </button>
+          ${ctx.saved ? html`<span class="toast">${t("common.saved")}</span>` : ""}
         </div>
       </div>
     </div>

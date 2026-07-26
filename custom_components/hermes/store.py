@@ -143,10 +143,29 @@ class HermesStore:
         record = self.counters.get(entry_id) or {}
         return int(record.get("count", 0)) if record.get("day") == day else 0
 
+    def get_marker(self, entry_id: str, kind: str) -> dict[str, Any] | None:
+        """Last command or last error recorded for an entry."""
+        return (self.counters.get(entry_id) or {}).get(kind)
+
+    def async_set_marker(
+        self, entry_id: str, kind: str, value: dict[str, Any]
+    ) -> None:
+        """Record the last command or error so it survives a restart.
+
+        These feed diagnostic sensors, and a sensor that forgets everything
+        whenever Home Assistant restarts reads as "unknown" far more often than
+        it reads as useful, which is the opposite of what a diagnostic is for.
+        """
+        record = self.counters.setdefault(entry_id, {})
+        record[kind] = value
+        self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
+
     def async_bump_counter(self, entry_id: str, day: str) -> int:
         """Add one to today's count and persist it, returning the new value."""
         current = self.get_counter(entry_id, day) + 1
-        self.counters[entry_id] = {"day": day, "count": current}
+        record = self.counters.setdefault(entry_id, {})
+        record["day"] = day
+        record["count"] = current
         self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
         return current
 

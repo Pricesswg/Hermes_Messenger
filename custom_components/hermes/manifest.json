@@ -1,7 +1,7 @@
 {
   "domain": "hermes",
   "name": "Hermes",
-  "version": "0.25.0",
+  "version": "0.26.0",
   "documentation": "https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md",
   "issue_tracker": "https://github.com/Pricesswg/Hermes_Messenger/issues",
   "codeowners": [

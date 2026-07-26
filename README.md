@@ -35,16 +35,39 @@ Greek-deity naming line.
 
 ## What it does
 
-- **Commands to actions with a reply.** An authorized node sends a keyword on the
-  channel/DM; Hermes runs the mapped Home Assistant service and sends a reply
-  back over the mesh (for example `status` returns home state or sensor readings).
-- **Home Assistant to mesh notifications.** The `hermes.broadcast` and
-  `hermes.send_direct` services let any automation (including scheduled ones)
-  push messages onto the mesh: alarms, events, reminders.
-- **Byte-safe by design.** Every outgoing message is split to fit the 200-byte
-  Meshtastic payload, never cutting a multi-byte character.
-- **Secure-by-default posture.** A node whitelist gates commands; unauthorized
-  senders are dropped silently (see *Security*).
+**Commands from the mesh.** An authorized node sends a keyword, Hermes runs the
+Home Assistant action mapped to it and replies over the mesh. Commands are built
+by picking an entity and clicking buttons, never by typing a service name, and
+values are offered within the range your device actually accepts.
+
+**Notifications onto the mesh.** `hermes.broadcast` and `hermes.send_direct` can
+be called from any automation, including scheduled ones, so alarms, events and
+reminders reach people with no phone signal.
+
+**A dashboard for the mesh.** One card with everything: reception diagnostics,
+conversations you can read and reply to, the nodes and their health, a map, and
+the radio's own configuration. It runs on top of the official Meshtastic
+integration, so nothing opens a second connection to your node.
+
+### The card
+
+| Tab | What it holds |
+|-----|---------------|
+| **Status** | Whether messages are getting through and why not, the gateway radio, counters |
+| **Chat** | Conversations by channel and by node, with replies sent from here |
+| **Log** | What Hermes decided about each message, including the ones it ignored |
+| **Devices** | Every node with battery, signal, hops and last heard |
+| **Map** | Chosen nodes as points, optionally the whole mesh, with a radius filter |
+| **Messages** | Building commands, and quick send presets |
+| **Home Assistant** | Which entities your commands use, and whether they still exist |
+| **Settings** | Everything configurable, including the radio itself |
+
+**Byte-safe by design.** Every outgoing message is split to fit the Meshtastic
+payload, with a `(1/3)` header, never cutting a multi-byte character in half.
+
+**Silence by default.** A node whitelist gates commands, and unauthorized
+senders get no reply at all, since answering would confirm that a Home Assistant
+is listening.
 
 ## Requirements
 
@@ -73,17 +96,20 @@ changes on a restart and the card is cached by the browser.
 ## Configuration
 
 Everything is configured from the card, with no YAML. Pick the gateway node, the
-mode (a channel or direct messages), the channel, and which nodes are allowed to
-send commands.
+mode (a channel or direct messages), the channel, and which nodes may send
+commands. All of it can be changed later without recreating anything.
 
 Commands are built by picking an entity and clicking buttons: **Read** buttons
-insert a live value into the reply, **Do** buttons run something. You never type
-a service name, and values are offered within the range your device actually
-accepts.
+insert a live value into the reply, **Do** buttons run something.
+
+Settings can also configure the radio itself: region, modem preset, hop limit,
+transmit power, node role. Those are written to the node, so they sit in their
+own section with their own save button and a warning, since most of them restart
+it and a wrong region cuts it off from the mesh.
 
 The [user guide](docs/USER_GUIDE.md) walks through all of it, with worked
-examples for a toggle, a status reply, and a command that takes a number from the
-message.
+examples and a troubleshooting section ordered so each step rules out the ones
+below it.
 
 ## Services (for automations, including scheduled ones)
 

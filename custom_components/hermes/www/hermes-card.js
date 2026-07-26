@@ -404,10 +404,15 @@ function t(t,e,n,i){var s,o=arguments.length,a=o<3?e:null===i?i=Object.getOwnPro
     text-overflow: ellipsis;
   }
 
+  /* Next to the button that caused it, vertically centred on the same row:
+   * in a title it could scroll out of view while the button stayed visible. */
   .toast {
+    display: inline-flex;
+    align-items: center;
     font-size: 0.78rem;
     font-weight: 700;
     color: var(--ok);
+    white-space: nowrap;
   }
 
   .palette {
@@ -1060,20 +1065,33 @@ function t(t,e,n,i){var s,o=arguments.length,a=o<3?e:null===i?i=Object.getOwnPro
         background: #4aa3ff;
         box-shadow: 0 0 0 3px rgba(74, 163, 255, 0.30);
       }
+      /* A halo was not enough: over a busy map the text still landed on tiles
+       * and other labels. An opaque chip on its own stacking level reads in
+       * every case, and a long name is cut rather than covering a neighbour. */
       .pin .tag {
         position: absolute;
         left: 50%;
         transform: translateX(-50%);
         top: 100%;
-        margin-top: 3px;
+        margin-top: 4px;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
         font-size: 10px;
         font-weight: 700;
+        line-height: 1.4;
+        padding: 1px 5px;
+        border-radius: 4px;
         color: var(--text);
-        text-shadow:
-          0 0 3px var(--surface),
-          0 0 3px var(--surface);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
         pointer-events: none;
+      }
+      /* Labels above every marker, so one pin never sits on another's name. */
+      .leaflet-marker-icon:hover {
+        z-index: 500 !important;
       }
     `],t([mt({attribute:!1})],Ft.prototype,"hass",void 0),t([mt({attribute:!1})],Ft.prototype,"nodes",void 0),t([mt()],Ft.prototype,"owmKey",void 0),t([mt({type:Number})],Ft.prototype,"zoom",void 0),t([mt({type:Number})],Ft.prototype,"radiusKm",void 0),t([mt({attribute:!1})],Ft.prototype,"center",void 0),t([mt()],Ft.prototype,"heightMode",void 0),t([mt()],Ft.prototype,"pinSize",void 0),t([mt({type:Boolean})],Ft.prototype,"labels",void 0),t([gt()],Ft.prototype,"_owmLayer",void 0),Ft=t([ct("hermes-map")],Ft);const Wt=["auto","mobile","tablet","desktop"];function Ut(t,e){const n=t.settings?.map_nodes??[],i=function(t,e,n=!1,i=120,s=[]){const o=new Set((e??[]).map(Number)),a=new Set((s??[]).map(Number));if(!n&&!o.size)return[];const r=new Map,l=new Map;for(const e of St(t,Pt)){const t=e.device_id;t&&(e.entity_id.startsWith("device_tracker.")?r.set(t,e.entity_id):e.entity_id.includes("last_heard")&&l.set(t,e.entity_id))}const h=[];for(const e of Object.values(t.devices??{})){const s=Tt(t,e.id);if(null===s)continue;const d=o.has(s);if(!n&&!d)continue;const c=r.get(e.id),u=c?t.states[c]:void 0,p=u?.attributes?.latitude,m=u?.attributes?.longitude,g=u?.attributes?.battery_level;h.push({nodeNum:s,name:e.name_by_user||e.name||u?.attributes?.friendly_name||String(s),latitude:"number"==typeof p?p:null,longitude:"number"==typeof m?m:null,battery:"number"==typeof g?g:null,lastSeen:u?.last_changed?new Date(u.last_changed).toLocaleString():"",connected:At(t,l.get(e.id),i),selected:d,authorized:a.has(s)})}return h.sort((t,e)=>t.name.localeCompare(e.name))}(t.hass,n,t.showAll,t.settings?.reachable_minutes??120,t.authorized),s=function(t){const e=t.find(t=>t.selected&&null!==t.latitude)??t.find(t=>null!==t.latitude);return e&&null!==e.latitude&&null!==e.longitude?[e.latitude,e.longitude]:null}(i),o=t.radiusOn&&null!==s&&t.radiusKm>0,a=o?i.filter(e=>null===e.latitude||null===e.longitude||function(t,e,n,i){const s=t=>t*Math.PI/180,o=s(n-t),a=s(i-e),r=Math.sin(o/2)**2+Math.cos(s(t))*Math.cos(s(n))*Math.sin(a/2)**2;return 12742*Math.asin(Math.sqrt(r))}(s[0],s[1],e.latitude,e.longitude)<=t.radiusKm):i,r=a.filter(t=>null!==t.latitude&&null!==t.longitude),l=i.some(t=>null!==t.latitude);return W`
     <h2 class="screen-title">${e("tab.map")}</h2>
@@ -1685,6 +1703,7 @@ function t(t,e,n,i){var s,o=arguments.length,a=o<3?e:null===i?i=Object.getOwnPro
           <button class="btn primary" @click=${t.onSaveGlobal}>
             ${e("common.save")}
           </button>
+          ${t.saved?W`<span class="toast">${e("common.saved")}</span>`:""}
         </div>
       </div>
     </div>
@@ -1928,11 +1947,12 @@ function t(t,e,n,i){var s,o=arguments.length,a=o<3?e:null===i?i=Object.getOwnPro
           >
             ${n("common.save")}
           </button>
+          ${t.saved?W`<span class="toast">${n("common.saved")}</span>`:""}
         </div>
       </div>
     </div>
   `}(t,n,e))}
-  `}const ae="0.25.0";function re(t,e,n,i,s,o){if(!function(t){return St(t,$t).length>0}(t))return W`<div class="empty">${o("status.noIntegration")}</div>`;const a=Et(t),r=Lt(t,"commands_executed"),l=Lt(t,"last_command"),h=Lt(t,"last_error"),d=t=>t&&"unknown"!==t&&"unavailable"!==t?t:o("status.none");return W`
+  `}const ae="0.26.0";function re(t,e,n,i,s,o){if(!function(t){return St(t,$t).length>0}(t))return W`<div class="empty">${o("status.noIntegration")}</div>`;const a=Et(t),r=Lt(t,"commands_executed"),l=Lt(t,"last_command"),h=Lt(t,"last_error"),d=t=>t&&"unknown"!==t&&"unavailable"!==t?t:o("status.none");return W`
     <h2 class="screen-title">
       ${o("status.title")}
       ${i?W`<span class="hint">${o("status.updatedAt")} ${i}</span>`:""}
