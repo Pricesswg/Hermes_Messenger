@@ -77,13 +77,15 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_radio_info)
 
 
-def _entry_payload(entry: Any) -> dict[str, Any]:
+def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
     """Serialize a Hermes config entry for the card."""
     options = entry.options
     return {
         "entry_id": entry.entry_id,
         "title": entry.title,
-        "gateway_node_id": entry.data.get(CONF_GATEWAY_NODE_ID),
+        "gateway_node_id": options.get(
+            CONF_GATEWAY_NODE_ID, entry.data.get(CONF_GATEWAY_NODE_ID)
+        ),
         "mode": options.get(CONF_MODE) or entry.data.get(CONF_MODE),
         "channel_index": options.get(
             CONF_CHANNEL_INDEX, entry.data.get(CONF_CHANNEL_INDEX)
@@ -97,10 +99,27 @@ def _entry_payload(entry: Any) -> dict[str, Any]:
         "require_ack": options.get(CONF_REQUIRE_ACK, DEFAULT_REQUIRE_ACK),
         "rate_limit": options.get(CONF_RATE_LIMIT, DEFAULT_RATE_LIMIT),
         "help_keyword": options.get(CONF_HELP_KEYWORD, DEFAULT_HELP_KEYWORD),
+        "last_seen": _last_seen(hass, entry.entry_id),
         "case_sensitive": options.get(
             CONF_CASE_SENSITIVE, DEFAULT_CASE_SENSITIVE
         ),
     }
+
+
+def _last_seen(hass: HomeAssistant, entry_id: str) -> dict[str, Any] | None:
+    """Diagnostics: the last mesh message this entry saw, filtered or not.
+
+    Without it a gateway or channel mismatch is invisible, because both are
+    dropped before anything reaches the log.
+    """
+    coordinator = hass.data.get(DOMAIN, {}).get(entry_id)
+    seen = getattr(coordinator, "last_seen", None)
+    if not seen:
+        return None
+    payload = dict(seen)
+    moment = payload.get("time")
+    payload["time"] = moment.isoformat() if hasattr(moment, "isoformat") else None
+    return payload
 
 
 def _get_entry(hass: HomeAssistant, entry_id: str) -> Any | None:
@@ -141,7 +160,7 @@ async def ws_settings_update(hass: HomeAssistant, connection, msg: dict) -> None
 @callback
 def ws_entries_list(hass: HomeAssistant, connection, msg: dict) -> None:
     """List every configured Hermes gateway with its options."""
-    entries = [_entry_payload(e) for e in hass.config_entries.async_entries(DOMAIN)]
+    entries = [_entry_payload(hass, e) for e in hass.config_entries.async_entries(DOMAIN)]
     connection.send_result(msg["id"], entries)
 
 
@@ -163,9 +182,10 @@ def ws_entry_update(hass: HomeAssistant, connection, msg: dict) -> None:
 
     allowed = {
         CONF_AUTHORIZED_NODES,
-        CONF_CHANNEL_INDEX,
         CONF_CASE_SENSITIVE,
-    CONF_HELP_KEYWORD,
+        CONF_CHANNEL_INDEX,
+        CONF_GATEWAY_NODE_ID,
+        CONF_HELP_KEYWORD,
         CONF_INITIAL_DELAY,
         CONF_MODE,
         CONF_PART_DELAY,
@@ -183,7 +203,7 @@ def ws_entry_update(hass: HomeAssistant, connection, msg: dict) -> None:
         options[CONF_CHANNEL_INDEX] = 0
 
     # Keep the title honest: it names the mode and channel.
-    gateway = entry.data.get(CONF_GATEWAY_NODE_ID)
+    gateway = options.get(CONF_GATEWAY_NODE_ID, entry.data.get(CONF_GATEWAY_NODE_ID))
     mode = options.get(CONF_MODE) or entry.data.get(CONF_MODE)
     if mode == MODE_CHANNEL:
         channel = options.get(CONF_CHANNEL_INDEX, entry.data.get(CONF_CHANNEL_INDEX))
@@ -192,7 +212,7 @@ def ws_entry_update(hass: HomeAssistant, connection, msg: dict) -> None:
         title = f"Hermes · DM · gw {gateway}"
 
     hass.config_entries.async_update_entry(entry, options=options, title=title)
-    connection.send_result(msg["id"], _entry_payload(entry))
+    connection.send_result(msg["id"], _entry_payload(hass, entry))
 
 
 @websocket_api.require_admin

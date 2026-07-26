@@ -1,11 +1,12 @@
 import { html, type TemplateResult } from "lit";
 
-import type { HomeAssistant } from "../types";
+import type { HermesEntry, HomeAssistant } from "../types";
 import { hasHermes, hermesSensor, meshNodes } from "../utils";
 
 /** Status screen: a compact overview, no long lists. */
 export function renderStatus(
   hass: HomeAssistant,
+  entries: HermesEntry[],
   t: (k: string) => string
 ): TemplateResult {
   if (!hasHermes(hass)) {
@@ -40,6 +41,78 @@ export function renderStatus(
       <div class="panel stat">
         <div class="label">${t("status.lastError")}</div>
         <div class="value small">${asText(lastError?.state)}</div>
+      </div>
+    </div>
+
+    ${entries.map((entry) => renderReception(entry, t))}
+  `;
+}
+
+/**
+ * What this gateway expects against what actually crossed the mesh.
+ *
+ * A message on another gateway or another channel is dropped before anything
+ * reaches the log, so without this the two most common misconfigurations look
+ * exactly like nothing happening at all.
+ */
+function renderReception(
+  entry: HermesEntry,
+  t: (k: string) => string
+): TemplateResult {
+  const seen = entry.last_seen;
+  const mismatch = seen !== null && seen.reason !== "accepted";
+
+  return html`
+    <div class="section" style="margin-top:18px">
+      <div class="section-title">
+        ${t("status.reception")}
+        ${mismatch
+          ? html`<span class="warn-badge">${t("status.mismatch")}</span>`
+          : ""}
+      </div>
+      <div class="panel">
+        <div class="rows">
+          <div class="row">
+            <span class="k">${t("status.expects")}</span>
+            <span class="v">
+              ${t("settings.gateway")} ${entry.gateway_node_id ?? "-"},
+              ${entry.mode === "channel"
+                ? `${t("settings.channel")} ${entry.channel_index ?? 0}`
+                : t("messages.onDm")}
+            </span>
+          </div>
+          ${seen
+            ? html`
+                <div class="row">
+                  <span class="k">${t("status.lastSeen")}</span>
+                  <span class="v">
+                    ${t("settings.gateway")} ${seen.gateway ?? "-"},
+                    ${seen.channel !== null && seen.channel !== undefined
+                      ? `${t("settings.channel")} ${seen.channel}`
+                      : t("messages.onDm")}
+                  </span>
+                </div>
+                <div class="row">
+                  <span class="k">${t("status.seenFrom")}</span>
+                  <span class="v">${seen.from ?? "-"}</span>
+                </div>
+                <div class="row">
+                  <span class="k">${t("status.seenResult")}</span>
+                  <span class="v">${t(`status.reason.${seen.reason}`)}</span>
+                </div>
+              `
+            : html`<div class="row">
+                <span class="k">${t("status.lastSeen")}</span>
+                <span class="v">${t("status.nothingSeen")}</span>
+              </div>`}
+        </div>
+        ${mismatch
+          ? html`<div class="note warn" style="margin-top:10px">
+              ${seen?.reason === "other_gateway"
+                ? t("status.hintGateway")
+                : t("status.hintTarget")}
+            </div>`
+          : ""}
       </div>
     </div>
   `;

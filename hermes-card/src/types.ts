@@ -144,6 +144,18 @@ export interface HermesEntry {
   rate_limit: number;
   help_keyword: string;
   case_sensitive: boolean;
+  last_seen: HermesLastSeen | null;
+}
+
+/** The last text message this entry saw on the mesh, before any filtering. */
+export interface HermesLastSeen {
+  gateway: number | null;
+  channel: number | null;
+  node: number | null;
+  from: number | null;
+  /** accepted, other_gateway or other_target. */
+  reason: string;
+  time: string | null;
 }
 
 /** A Meshtastic node as reported by the backend. */

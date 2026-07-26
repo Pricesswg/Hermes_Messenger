@@ -81,6 +81,9 @@ class HermesCoordinator:
         # Diagnostic state exposed to the sensors (native device page).
         self.last_command: dict[str, Any] | None = None
         self.last_error: dict[str, Any] | None = None
+        # Last text message that crossed the mesh, recorded before any filter
+        # so a gateway or channel mismatch can be seen instead of guessed.
+        self.last_seen: dict[str, Any] | None = None
         self.commands_executed = 0
         self.last_reset = dt_util.utcnow()
 
@@ -110,7 +113,12 @@ class HermesCoordinator:
 
     @property
     def gateway_node_id(self) -> int:
-        return self.entry.data[CONF_GATEWAY_NODE_ID]
+        # Options win, so a gateway picked by mistake can be corrected without
+        # deleting the entry and starting over.
+        gateway = self.entry.options.get(CONF_GATEWAY_NODE_ID)
+        if gateway is None:
+            gateway = self.entry.data[CONF_GATEWAY_NODE_ID]
+        return int(gateway)
 
     @property
     def mode(self) -> str:
@@ -179,12 +187,33 @@ class HermesCoordinator:
         if not isinstance(data, dict):
             return
 
+        # The base integration always reports the node it is connected to as
+        # the gateway. Picking any other node in the configuration means
+        # nothing will ever match, which is why the mismatch is recorded rather
+        # than dropped in silence.
         if data.get("gateway") != self.gateway_node_id:
+            self._note_seen(data, "other_gateway")
+            _LOGGER.debug(
+                "Hermes: message via gateway %s, this entry listens to %s",
+                data.get("gateway"),
+                self.gateway_node_id,
+            )
+            self._notify_sensors()
             return
 
         to = data.get("to") or {}
         if not self._matches_mode(to):
+            self._note_seen(data, "other_target")
+            _LOGGER.debug(
+                "Hermes: message for %s, this entry listens on mode=%s channel=%s",
+                to,
+                self.mode,
+                self.channel_index,
+            )
+            self._notify_sensors()
             return
+
+        self._note_seen(data, "accepted")
 
         sender = data.get("from")
         text = data.get("message") or ""
@@ -265,6 +294,19 @@ class HermesCoordinator:
 
         await asyncio.sleep(self.initial_delay)
         await self._send_parts(split_message(text, DEFAULT_BYTE_LIMIT), base)
+
+    @callback
+    def _note_seen(self, data: dict[str, Any], reason: str) -> None:
+        """Remember the last mesh message and what this entry made of it."""
+        to = data.get("to") or {}
+        self.last_seen = {
+            "gateway": data.get("gateway"),
+            "channel": to.get("channel"),
+            "node": to.get("node"),
+            "from": data.get("from"),
+            "reason": reason,
+            "time": dt_util.utcnow(),
+        }
 
     @callback
     def _log(self, direction: str, text: str, node: int | None, outcome: str) -> None:

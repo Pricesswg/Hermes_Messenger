@@ -202,14 +202,40 @@ function renderEntry(
       <div class="section-title">${entry.title}</div>
       <div class="panel">
         <div class="rows">
-          <div class="row">
-            <span class="k">${t("settings.gateway")}</span>
-            <span class="v">${entry.gateway_node_id ?? "-"}</span>
-          </div>
+
 
         </div>
 
         <div class="field" style="margin-top:12px">
+          <label>${t("settings.gateway")}</label>
+          ${ctx.nodes.length
+            ? html`
+                <select
+                  @change=${(e: Event) =>
+                    ctx.onEntryInput(
+                      entry.entry_id,
+                      "gateway_node_id",
+                      Number((e.target as HTMLSelectElement).value)
+                    )}
+                >
+                  ${ctx.nodes.map(
+                    (node) => html`
+                      <option
+                        value=${node.node_num}
+                        ?selected=${value("gateway_node_id", entry.gateway_node_id) ===
+                        node.node_num}
+                      >
+                        ${node.name} (${node.node_num})
+                      </option>
+                    `
+                  )}
+                </select>
+              `
+            : html`<div class="hint">${t("settings.noNodes")}</div>`}
+          <span class="hint">${t("settings.gatewayHint")}</span>
+        </div>
+
+        <div class="field">
           <label>${t("settings.mode")}</label>
           <select
             @change=${(e: Event) =>

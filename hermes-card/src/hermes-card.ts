@@ -463,7 +463,7 @@ export class HermesCard extends LitElement {
     const hass = this.hass!;
     switch (this._tab) {
       case "status":
-        return renderStatus(hass, t);
+        return renderStatus(hass, this._entries, t);
       case "log":
         return renderLog(
           {
@@ -562,7 +562,7 @@ export class HermesCard extends LitElement {
           t
         );
       default:
-        return renderStatus(hass, t);
+        return renderStatus(hass, this._entries, t);
     }
   }
 
