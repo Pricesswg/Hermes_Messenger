@@ -371,6 +371,28 @@ export class HermesCard extends LitElement {
     this._mapRadiusKm = km;
   };
 
+  private _onApplySeen = async (entry: HermesEntry): Promise<void> => {
+    const seen = entry.last_seen;
+    if (!this.hass || !seen) return;
+
+    // Take the reception straight from a message that really arrived, which
+    // removes the guesswork about which node is the gateway and which channel
+    // the traffic is on.
+    const patch: Record<string, unknown> = {};
+    if (seen.gateway !== null) patch.gateway_node_id = seen.gateway;
+    if (seen.channel !== null && seen.channel !== undefined) {
+      patch.mode = "channel";
+      patch.channel_index = seen.channel;
+    } else if (seen.node !== null && seen.node !== undefined) {
+      patch.mode = "direct_message";
+    }
+    if (!Object.keys(patch).length) return;
+
+    await updateEntry(this.hass, entry.entry_id, patch);
+    this._flagSaved();
+    await this._load();
+  };
+
   private _onRefresh = async (): Promise<void> => {
     // Explicit reload: channels, node list and gateway options are all read
     // from the radio and the registry, so a change made in the Meshtastic app
@@ -463,7 +485,7 @@ export class HermesCard extends LitElement {
     const hass = this.hass!;
     switch (this._tab) {
       case "status":
-        return renderStatus(hass, this._entries, t);
+        return renderStatus(hass, this._entries, this._onApplySeen, t);
       case "log":
         return renderLog(
           {
@@ -562,7 +584,7 @@ export class HermesCard extends LitElement {
           t
         );
       default:
-        return renderStatus(hass, this._entries, t);
+        return renderStatus(hass, this._entries, this._onApplySeen, t);
     }
   }
 

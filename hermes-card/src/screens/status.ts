@@ -7,6 +7,7 @@ import { hasHermes, hermesSensor, meshNodes } from "../utils";
 export function renderStatus(
   hass: HomeAssistant,
   entries: HermesEntry[],
+  onApplySeen: (entry: HermesEntry) => void,
   t: (k: string) => string
 ): TemplateResult {
   if (!hasHermes(hass)) {
@@ -44,7 +45,7 @@ export function renderStatus(
       </div>
     </div>
 
-    ${entries.map((entry) => renderReception(entry, t))}
+    ${entries.map((entry) => renderReception(entry, onApplySeen, t))}
   `;
 }
 
@@ -57,6 +58,7 @@ export function renderStatus(
  */
 function renderReception(
   entry: HermesEntry,
+  onApplySeen: (entry: HermesEntry) => void,
   t: (k: string) => string
 ): TemplateResult {
   const seen = entry.last_seen;
@@ -121,11 +123,26 @@ function renderReception(
               </div>`}
         </div>
         ${mismatch
-          ? html`<div class="note warn" style="margin-top:10px">
-              ${seen?.reason === "other_gateway"
-                ? t("status.hintGateway")
-                : t("status.hintTarget")}
-            </div>`
+          ? html`
+              <div class="note warn" style="margin-top:10px">
+                ${seen?.reason === "other_gateway"
+                  ? t("status.hintGateway")
+                  : t("status.hintTarget")}
+              </div>
+              ${seen
+                ? html`
+                    <div class="actions">
+                      <button
+                        class="btn primary"
+                        @click=${() => onApplySeen(entry)}
+                      >
+                        ${t("status.applySeen")}
+                      </button>
+                    </div>
+                    <span class="hint">${t("status.applySeenHint")}</span>
+                  `
+                : ""}
+            `
           : ""}
       </div>
     </div>
