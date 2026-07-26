@@ -33,6 +33,10 @@ CONF_REQUIRE_ACK = "require_ack"
 CONF_RATE_LIMIT = "rate_limit"
 # Keyword that replies with the list of available commands. Empty disables it.
 CONF_HELP_KEYWORD = "help_keyword"
+# Match keywords exactly as typed. Off by default: phone keyboards and the
+# Meshtastic app capitalise on their own, so strict matching drops valid
+# commands for reasons the sender cannot see.
+CONF_CASE_SENSITIVE = "case_sensitive"
 
 # Keys of a single command (object in CONF_COMMANDS).
 CMD_ID = "id"
@@ -110,3 +114,4 @@ DEFAULT_REQUIRE_ACK = False
 # ever trips on a node that is malfunctioning or repeating packets.
 DEFAULT_RATE_LIMIT = 6
 DEFAULT_HELP_KEYWORD = ""
+DEFAULT_CASE_SENSITIVE = False

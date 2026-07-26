@@ -290,6 +290,23 @@ function renderEntry(
         </div>
 
         <div class="field">
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${Boolean(value("case_sensitive", entry.case_sensitive))}
+              @change=${(e: Event) =>
+                ctx.onEntryInput(
+                  entry.entry_id,
+                  "case_sensitive",
+                  (e.target as HTMLInputElement).checked
+                )}
+            />
+            <span>${t("settings.caseSensitive")}</span>
+          </label>
+          <span class="hint">${t("settings.caseSensitiveHint")}</span>
+        </div>
+
+        <div class="field">
           <label>${t("settings.helpKeyword")}</label>
           <input
             placeholder="help"

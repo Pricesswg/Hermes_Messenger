@@ -33,12 +33,14 @@ from .const import (
     CONF_GATEWAY_NODE_ID,
     CONF_INITIAL_DELAY,
     CONF_MODE,
+    CONF_CASE_SENSITIVE,
     CONF_HELP_KEYWORD,
     CONF_PART_DELAY,
     CONF_RATE_LIMIT,
     CONF_REQUIRE_ACK,
     DATA_STORE,
     DEFAULT_BYTE_LIMIT,
+    DEFAULT_CASE_SENSITIVE,
     DEFAULT_HELP_KEYWORD,
     DEFAULT_INITIAL_DELAY,
     DEFAULT_PART_DELAY,
@@ -54,6 +56,7 @@ from .const import (
     SERVICE_SEND_TEXT,
 )
 from .actions import entity_bounds, value_spec
+from .matching import match_command, matches_keyword
 from .message import split_message
 from .rate_limit import allow as rate_allow, forget_idle
 from .tokens import apply_argument, parse_actions, parse_argument, strip_actions
@@ -151,6 +154,12 @@ class HermesCoordinator:
         return int(self.entry.options.get(CONF_RATE_LIMIT, DEFAULT_RATE_LIMIT))
 
     @property
+    def case_sensitive(self) -> bool:
+        return bool(
+            self.entry.options.get(CONF_CASE_SENSITIVE, DEFAULT_CASE_SENSITIVE)
+        )
+
+    @property
     def help_keyword(self) -> str:
         return str(
             self.entry.options.get(CONF_HELP_KEYWORD, DEFAULT_HELP_KEYWORD) or ""
@@ -234,8 +243,7 @@ class HermesCoordinator:
         return rate_allow(self._rate_history, int(sender), now, self.rate_limit)
 
     def _is_help(self, text: str) -> bool:
-        keyword = self.help_keyword.casefold()
-        return bool(keyword) and text.strip().casefold() == keyword
+        return matches_keyword(text, self.help_keyword, self.case_sensitive)
 
     async def _send_help(self, sender: int) -> None:
         """Reply with the configured keywords, for people without access to HA."""
@@ -272,18 +280,8 @@ class HermesCoordinator:
         return channel is None and node == self.gateway_node_id
 
     def _match_command(self, text: str) -> dict[str, Any] | None:
-        """Case-insensitive, trimmed match against the configured commands."""
-        norm = text.strip().casefold()
-        for cmd in self.commands:
-            keyword = (cmd.get(CMD_KEYWORD) or "").strip().casefold()
-            if not keyword:
-                continue
-            match_type = cmd.get(CMD_MATCH_TYPE, MATCH_EXACT)
-            if match_type == MATCH_STARTSWITH and norm.startswith(keyword):
-                return cmd
-            if match_type == MATCH_EXACT and norm == keyword:
-                return cmd
-        return None
+        """Match against the configured commands, honouring the case setting."""
+        return match_command(text, self.commands, self.case_sensitive)
 
     def _is_authorized(self, sender: int, command: dict[str, Any]) -> bool:
         """Effective whitelist: command override if present, else the default."""

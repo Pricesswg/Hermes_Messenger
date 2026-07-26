@@ -139,6 +139,7 @@ export interface HermesEntry {
   require_ack: boolean;
   rate_limit: number;
   help_keyword: string;
+  case_sensitive: boolean;
 }
 
 /** A Meshtastic node as reported by the backend. */

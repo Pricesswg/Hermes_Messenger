@@ -27,6 +27,7 @@ from .const import (
     CONF_CHANNEL_INDEX,
     CONF_COMMANDS,
     CONF_GATEWAY_NODE_ID,
+    CONF_CASE_SENSITIVE,
     CONF_HELP_KEYWORD,
     CONF_INITIAL_DELAY,
     CONF_MODE,
@@ -35,6 +36,7 @@ from .const import (
     CONF_REQUIRE_ACK,
     DATA_STORE,
     DATA_WS_REGISTERED,
+    DEFAULT_CASE_SENSITIVE,
     DEFAULT_HELP_KEYWORD,
     DEFAULT_INITIAL_DELAY,
     DEFAULT_PART_DELAY,
@@ -90,6 +92,9 @@ def _entry_payload(entry: Any) -> dict[str, Any]:
         "require_ack": options.get(CONF_REQUIRE_ACK, DEFAULT_REQUIRE_ACK),
         "rate_limit": options.get(CONF_RATE_LIMIT, DEFAULT_RATE_LIMIT),
         "help_keyword": options.get(CONF_HELP_KEYWORD, DEFAULT_HELP_KEYWORD),
+        "case_sensitive": options.get(
+            CONF_CASE_SENSITIVE, DEFAULT_CASE_SENSITIVE
+        ),
     }
 
 
@@ -154,7 +159,8 @@ def ws_entry_update(hass: HomeAssistant, connection, msg: dict) -> None:
     allowed = {
         CONF_AUTHORIZED_NODES,
         CONF_CHANNEL_INDEX,
-        CONF_HELP_KEYWORD,
+        CONF_CASE_SENSITIVE,
+    CONF_HELP_KEYWORD,
         CONF_INITIAL_DELAY,
         CONF_PART_DELAY,
         CONF_RATE_LIMIT,
