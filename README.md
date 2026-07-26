@@ -69,7 +69,30 @@ payload, with a `(1/3)` header, never cutting a multi-byte character in half.
 senders get no reply at all, since answering would confirm that a Home Assistant
 is listening.
 
-## Requirements
+## Installation
+
+### Through HACS (recommended)
+
+[![Add to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Pricesswg&repository=Hermes_Messenger&category=integration)
+
+1. Click the badge above to open HACS with this repository pre-filled, then click **Add**
+2. Search for "Hermes" in HACS, click **Download**
+3. Restart Home Assistant
+4. Click the badge below to add the integration:
+
+[![Add Hermes integration](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=hermes)
+
+5. Add the card to any dashboard: **Edit dashboard**, **Add card**, search for **Hermes**
+
+The card registers itself, so there is no Lovelace resource to add by hand. A
+**Panel (1 card)** view suits it best, since it fills the screen.
+
+### Before you install
+
+The official [Meshtastic integration](https://my.home-assistant.io/redirect/config_flow_start/?domain=meshtastic)
+has to be installed and connected first: it owns the connection to your radio
+and Hermes works on top of it. Only one integration can hold that connection, so
+do not run a second one against the same node.
 
 - A recent Home Assistant (config flow, modern options flow, `TargetSelector`).
 - **The official Meshtastic integration already installed and configured**
@@ -77,21 +100,6 @@ is listening.
   its `meshtastic_api_text_message` event and its `meshtastic.send_text` service.
 - Meshtastic firmware with PKC (≥ 2.5) if you want to use DMs as a trustworthy
   channel (see *Security*).
-
-## Installation
-
-Through HACS:
-
-1. HACS, ⋮ menu, **Custom repositories**.
-2. Add `https://github.com/Pricesswg/Hermes_Messenger`, category **Integration**.
-3. Install Hermes, restart Home Assistant.
-4. **Settings, Devices and Services, Add Integration, Hermes**.
-
-The Lovelace card registers itself, so there is no resource to add by hand. Add
-it to a dashboard from **Add card**, searching for **Hermes**.
-
-After any update, restart Home Assistant and hard refresh the page: Python only
-changes on a restart and the card is cached by the browser.
 
 ## Configuration
 
