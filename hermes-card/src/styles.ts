@@ -670,6 +670,14 @@ export const hermesLayout = css`
     letter-spacing: 0;
   }
 
+  .chip .count {
+    margin-left: 6px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    opacity: 0.7;
+    font-variant-numeric: tabular-nums;
+  }
+
   .chat-log {
     display: flex;
     flex-direction: column;
