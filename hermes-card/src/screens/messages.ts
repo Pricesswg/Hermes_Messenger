@@ -35,6 +35,7 @@ export interface MessagesCtx {
   onSelectEntry: (entryId: string) => void;
   onNew: () => void;
   onEdit: (command: HermesCommand) => void;
+  onDuplicate: (command: HermesCommand) => void;
   onDelete: (command: HermesCommand) => void;
   onDraftInput: (key: keyof HermesCommand, value: unknown) => void;
   onPaletteEntity: (entityId: string) => void;
@@ -297,6 +298,9 @@ function renderRow(
         </span>
         <button class="btn" @click=${() => ctx.onEdit(command)}>
           ${t("common.edit")}
+        </button>
+        <button class="btn" @click=${() => ctx.onDuplicate(command)}>
+          ${t("common.duplicate")}
         </button>
         <button class="btn danger" @click=${() => ctx.onDelete(command)}>
           ${t("common.delete")}

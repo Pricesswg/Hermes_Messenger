@@ -88,7 +88,6 @@ class HermesCoordinator:
         # One sample cannot tell "nothing arrives" from "everything arrives on
         # the wrong channel", which are opposite problems.
         self.seen_counts: dict[str, int] = {}
-        self.commands_executed = 0
         self.last_reset = dt_util.utcnow()
 
         # Sliding window of matched commands per node, for the rate limit.
@@ -326,6 +325,18 @@ class HermesCoordinator:
         await asyncio.sleep(self.initial_delay)
         await self._send_parts(split_message(text, DEFAULT_BYTE_LIMIT), base)
 
+    @property
+    def commands_executed(self) -> int:
+        """Commands run today, read from the store so a reload cannot reset it."""
+        store = self.hass.data.get(DATA_STORE)
+        if store is None:
+            return 0
+        return store.get_counter(self.entry.entry_id, self._today())
+
+    @staticmethod
+    def _today() -> str:
+        return dt_util.utcnow().date().isoformat()
+
     @callback
     def _count(self, reason: str) -> None:
         """Tally one reception outcome."""
@@ -397,7 +408,9 @@ class HermesCoordinator:
                     blocking=True,
                     target=target,
                 )
-            self.commands_executed += 1
+            store = self.hass.data.get(DATA_STORE)
+            if store is not None:
+                store.async_bump_counter(self.entry.entry_id, self._today())
             self._record_command(text, sender)
         except Exception as err:  # noqa: BLE001 - runtime robustness: never let the listener die
             self._record_error(f"service execution: {err}", sender, text)
@@ -593,7 +606,7 @@ class HermesCoordinator:
 
     @callback
     def _reset_counter(self, now: Any = None) -> None:
-        """Daily reset of the command counter (at midnight)."""
-        self.commands_executed = 0
+        """Midnight tick. The count is keyed by day, so this only refreshes
+        the sensors: the rollover itself needs no bookkeeping."""
         self.last_reset = dt_util.utcnow()
         self._notify_sensors()

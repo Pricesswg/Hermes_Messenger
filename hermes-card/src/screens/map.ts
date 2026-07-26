@@ -7,6 +7,8 @@ import { distanceKm, mapNodes } from "../utils";
 export interface MapCtx {
   hass: HomeAssistant;
   settings: HermesSettings | null;
+  /** Nodes allowed to send commands, across every gateway. */
+  authorized: number[];
   /** Show every mesh node, not only the ones picked in Settings. */
   showAll: boolean;
   /** Restrict the nodes to a circle around the reference point. */
@@ -39,7 +41,8 @@ export function renderMap(
     ctx.hass,
     selected,
     ctx.showAll,
-    ctx.settings?.reachable_minutes ?? 120
+    ctx.settings?.reachable_minutes ?? 120,
+    ctx.authorized
   );
 
   const center = referencePoint(allNodes);
@@ -129,6 +132,7 @@ export function renderMap(
     <div class="legend">
       <span class="dot on"></span>${t("map.connected")}
       <span class="dot off"></span>${t("map.notConnected")}
+      <span class="dot relay"></span>${t("map.relay")}
     </div>
 
     ${!selected.length && !ctx.showAll
@@ -148,6 +152,8 @@ export function renderMap(
               .radiusKm=${ctx.radiusOn ? ctx.radiusKm : 0}
               .center=${center}
               .heightMode=${ctx.settings?.map_height ?? "auto"}
+              .pinSize=${ctx.settings?.map_pin_size ?? "medium"}
+              .labels=${ctx.settings?.map_labels ?? false}
             ></hermes-map>
           `}
 
@@ -158,7 +164,13 @@ export function renderMap(
               (node) => html`
                 <div class="row">
                   <span class="k">
-                    <span class="dot ${node.connected ? "on" : "off"}"></span>
+                    <span
+                      class="dot ${!node.authorized
+                        ? "relay"
+                        : node.connected
+                          ? "on"
+                          : "off"}"
+                    ></span>
                     ${node.name}
                   </span>
                   <span class="v">

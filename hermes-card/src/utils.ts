@@ -108,9 +108,11 @@ export function mapNodes(
   hass: HomeAssistant,
   selected: number[],
   includeAll = false,
-  reachableMinutes = 120
+  reachableMinutes = 120,
+  authorized: number[] = []
 ): MapNode[] {
   const wanted = new Set((selected ?? []).map(Number));
+  const trusted = new Set((authorized ?? []).map(Number));
   if (!includeAll && !wanted.size) return [];
 
   // Group the per node entities by device. Position comes from the tracker and
@@ -158,6 +160,7 @@ export function mapNodes(
         : "",
       connected: isReachable(hass, lastHeard.get(device.id), reachableMinutes),
       selected: isSelected,
+      authorized: trusted.has(nodeNum),
     });
   }
 

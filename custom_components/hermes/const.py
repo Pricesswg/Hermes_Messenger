@@ -73,6 +73,9 @@ SETTING_MAP_ZOOM = "map_zoom"
 SETTING_MAP_HEIGHT = "map_height"
 # How recently a node must have been heard to count as reachable on the map.
 SETTING_REACHABLE_MINUTES = "reachable_minutes"
+# Map appearance.
+SETTING_MAP_PIN_SIZE = "map_pin_size"
+SETTING_MAP_LABELS = "map_labels"
 
 DEFAULT_SETTINGS = {
     SETTING_OPENWEATHER_KEY: "",
@@ -81,6 +84,8 @@ DEFAULT_SETTINGS = {
     SETTING_MAP_ZOOM: 10,
     SETTING_MAP_HEIGHT: "auto",
     SETTING_REACHABLE_MINUTES: 120,
+    SETTING_MAP_PIN_SIZE: "medium",
+    SETTING_MAP_LABELS: False,
 }
 
 # Quick send presets, the equivalent of the canned messages in the Meshtastic
@@ -90,6 +95,10 @@ STORE_PRESETS = "presets"
 # Log of received and sent traffic. Capped so the store cannot grow without
 # bound, and clearable from the card: it holds the text of channel messages.
 STORE_HISTORY = "history"
+# Per entry counters. They live in the store because the coordinator is rebuilt
+# on every reload, and a reload runs each time a setting is saved, which used to
+# reset the executed count to zero behind the user's back.
+STORE_COUNTERS = "counters"
 HISTORY_MAX_ENTRIES = 200
 # Debounce writes: a busy channel would otherwise hit the disk per message.
 HISTORY_SAVE_DELAY = 15

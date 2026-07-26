@@ -20,6 +20,7 @@ from .const import (
     HISTORY_SAVE_DELAY,
     STORAGE_KEY,
     STORAGE_VERSION,
+    STORE_COUNTERS,
     STORE_HISTORY,
     STORE_PRESETS,
 )
@@ -34,6 +35,7 @@ class HermesStore:
         self.settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
         self.presets: list[dict[str, Any]] = []
         self.history: list[dict[str, Any]] = []
+        self.counters: dict[str, dict[str, Any]] = {}
 
     async def async_load(self) -> None:
         """Load persisted data, filling in defaults for anything missing."""
@@ -46,12 +48,14 @@ class HermesStore:
         self.settings = {**DEFAULT_SETTINGS, **stored_settings}
         self.presets = list(data.get(STORE_PRESETS) or [])
         self.history = list(data.get(STORE_HISTORY) or [])
+        self.counters = dict(data.get(STORE_COUNTERS) or {})
 
     def _snapshot(self) -> dict[str, Any]:
         return {
             **self.settings,
             STORE_PRESETS: self.presets,
             STORE_HISTORY: self.history,
+            STORE_COUNTERS: self.counters,
         }
 
     async def _async_save(self) -> None:
@@ -121,6 +125,20 @@ class HermesStore:
         )
         del self.history[HISTORY_MAX_ENTRIES:]
         self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
+
+    # --- Per entry counters ------------------------------------------------
+
+    def get_counter(self, entry_id: str, day: str) -> int:
+        """Executed count for today, zero once the stored day rolls over."""
+        record = self.counters.get(entry_id) or {}
+        return int(record.get("count", 0)) if record.get("day") == day else 0
+
+    def async_bump_counter(self, entry_id: str, day: str) -> int:
+        """Add one to today's count and persist it, returning the new value."""
+        current = self.get_counter(entry_id, day) + 1
+        self.counters[entry_id] = {"day": day, "count": current}
+        self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
+        return current
 
     async def async_clear_history(self) -> None:
         """Empty the log."""

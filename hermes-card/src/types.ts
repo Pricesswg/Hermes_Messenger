@@ -118,6 +118,10 @@ export interface HermesSettings {
   map_height: string;
   /** Minutes within which a node must have been heard to count as reachable. */
   reachable_minutes: number;
+  /** small, medium or large. */
+  map_pin_size: string;
+  /** Draw the node name beside each pin. */
+  map_labels: boolean;
 }
 
 /** One configured command, as stored in the config entry options. */
@@ -196,6 +200,8 @@ export interface MapNode {
   connected: boolean;
   /** True when the node is one the user explicitly picked in Settings. */
   selected: boolean;
+  /** True when the node may send commands, so a relay stands out from a peer. */
+  authorized: boolean;
 }
 
 /** A Meshtastic node as seen through the Home Assistant device registry. */

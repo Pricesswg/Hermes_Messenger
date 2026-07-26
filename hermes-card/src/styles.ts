@@ -364,16 +364,35 @@ export const hermesLayout = css`
     color: var(--danger);
   }
 
+  /* Wraps instead of overflowing: in a narrow column the buttons used to fall
+   * out of line with the text they belong to. */
   .list-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 10px;
     padding: 10px 12px;
     border: 1px solid var(--border);
     border-radius: var(--r-md);
     background: var(--surface);
     margin-bottom: 8px;
+  }
+
+  .list-row .meta {
+    flex: 1 1 220px;
+  }
+
+  .list-row .actions {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+  }
+
+  @media (max-width: 520px) {
+    .list-row .actions {
+      flex: 1 1 100%;
+      flex-wrap: wrap;
+    }
   }
 
   .list-row .meta {
@@ -554,6 +573,10 @@ export const hermesLayout = css`
 
   .dot.off {
     background: #ffd60a;
+  }
+
+  .dot.relay {
+    background: #4aa3ff;
   }
 
   .checklist {

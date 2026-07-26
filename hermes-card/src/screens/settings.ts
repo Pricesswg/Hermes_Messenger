@@ -147,6 +147,44 @@ export function renderSettings(
           <span class="hint">${t("settings.reachableHint")}</span>
         </div>
 
+        <div class="field">
+          <label>${t("settings.pinSize")}</label>
+          <select
+            @change=${(e: Event) =>
+              ctx.onGlobalInput(
+                "map_pin_size",
+                (e.target as HTMLSelectElement).value
+              )}
+          >
+            ${["small", "medium", "large"].map(
+              (size) => html`
+                <option
+                  value=${size}
+                  ?selected=${(globalValue("map_pin_size") ?? "medium") === size}
+                >
+                  ${t(`settings.pinSize.${size}`)}
+                </option>
+              `
+            )}
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${Boolean(globalValue("map_labels"))}
+              @change=${(e: Event) =>
+                ctx.onGlobalInput(
+                  "map_labels",
+                  (e.target as HTMLInputElement).checked
+                )}
+            />
+            <span>${t("settings.mapLabels")}</span>
+          </label>
+          <span class="hint">${t("settings.mapLabelsHint")}</span>
+        </div>
+
         <div class="actions">
           <button class="btn primary" @click=${ctx.onSaveGlobal}>
             ${t("common.save")}

@@ -317,6 +317,14 @@ export class HermesCard extends LitElement {
     this._editing = { ...command };
   };
 
+  private _onDuplicate = (command: HermesCommand): void => {
+    // Opened as an unsaved copy rather than written straight away: a duplicate
+    // is nearly always the starting point for an edit, and two commands sharing
+    // a keyword would both match the same message.
+    const { id, ...rest } = command;
+    this._editing = { ...rest, keyword: `${command.keyword} 2` };
+  };
+
   private _onDraftInput = (key: keyof HermesCommand, value: unknown): void => {
     if (!this._editing) return;
     this._editing = { ...this._editing, [key]: value } as HermesCommand;
@@ -566,6 +574,11 @@ export class HermesCard extends LitElement {
           {
             hass,
             settings: this._settings,
+            // Trust is per gateway; the map is one view, so a node trusted by
+            // any gateway counts as trusted on it.
+            authorized: [
+              ...new Set(this._entries.flatMap((e) => e.authorized_nodes ?? [])),
+            ],
             showAll: this._mapShowAll,
             radiusOn: this._mapRadiusOn,
             radiusKm: this._mapRadiusKm,
@@ -590,6 +603,7 @@ export class HermesCard extends LitElement {
             onSelectEntry: this._onSelectEntry,
             onNew: this._onNew,
             onEdit: this._onEdit,
+            onDuplicate: this._onDuplicate,
             onDelete: this._onDeleteCommand,
             onDraftInput: this._onDraftInput,
             onPaletteEntity: this._onPaletteEntity,

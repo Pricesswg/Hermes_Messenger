@@ -85,6 +85,28 @@ export class HermesMap extends LitElement {
         background: #ffd60a;
         box-shadow: 0 0 0 3px rgba(255, 214, 10, 0.35);
       }
+      /* A node that may not send commands is a relay as far as Hermes is
+       * concerned: it carries traffic but is not a peer, so it reads as a
+       * different kind of thing rather than a different state. */
+      .pin div.relay {
+        background: #4aa3ff;
+        box-shadow: 0 0 0 3px rgba(74, 163, 255, 0.30);
+      }
+      .pin .tag {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        top: 100%;
+        margin-top: 3px;
+        white-space: nowrap;
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--text);
+        text-shadow:
+          0 0 3px var(--surface),
+          0 0 3px var(--surface);
+        pointer-events: none;
+      }
     `,
   ];
 
@@ -96,6 +118,8 @@ export class HermesMap extends LitElement {
   @property({ type: Number }) public radiusKm = 0;
   @property({ attribute: false }) public center: [number, number] | null = null;
   @property() public heightMode = "auto";
+  @property() public pinSize = "medium";
+  @property({ type: Boolean }) public labels = false;
 
   @state() private _owmLayer = "";
 
@@ -145,9 +169,17 @@ export class HermesMap extends LitElement {
     // the centre tuple on every render, so an identity check would redraw and
     // re-fit the view continuously, making the map impossible to pan.
     const signature = JSON.stringify([
-      this.nodes.map((n) => [n.nodeNum, n.latitude, n.longitude, n.connected]),
+      this.nodes.map((n) => [
+        n.nodeNum,
+        n.latitude,
+        n.longitude,
+        n.connected,
+        n.authorized,
+      ]),
       this.radiusKm,
       this.center,
+      this.pinSize,
+      this.labels,
     ]);
     if (signature !== this._signature) {
       this._signature = signature;
@@ -193,14 +225,25 @@ export class HermesMap extends LitElement {
       const position: L.LatLngExpression = [node.latitude, node.longitude];
       points.push(position);
 
+      const sizes: Record<string, number> = { small: 12, medium: 16, large: 22 };
+      const px = sizes[this.pinSize] ?? sizes.medium;
+      // Blue marks a node that cannot send commands. Among the ones that can,
+      // green and yellow say whether it was heard recently.
+      const kind = !node.authorized
+        ? "relay"
+        : node.connected
+          ? "on"
+          : "off";
+      const tag = this.labels
+        ? `<span class="tag">${node.name}</span>`
+        : "";
+
       const marker = L.marker(position, {
         icon: L.divIcon({
           className: "pin",
-          // Green when the node was heard recently, yellow when it was not, so
-          // the state of the mesh reads at a glance.
-          html: `<div class="${node.connected ? "on" : "off"}"></div>`,
-          iconSize: [16, 16],
-          iconAnchor: [8, 8],
+          html: `<div class="${kind}" style="width:${px}px;height:${px}px"></div>${tag}`,
+          iconSize: [px, px],
+          iconAnchor: [px / 2, px / 2],
         }),
         title: node.name,
       }).addTo(this._map);
