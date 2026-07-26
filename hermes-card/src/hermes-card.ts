@@ -100,6 +100,7 @@ export class HermesCard extends LitElement {
   @state() private _refreshing = false;
 
   private _loaded = false;
+  private _pollTimer?: number;
 
   public setConfig(config: HermesCardConfig): void {
     this._config = config;
@@ -110,6 +111,32 @@ export class HermesCard extends LitElement {
 
   public getCardSize(): number {
     return 12;
+  }
+
+  public connectedCallback(): void {
+    super.connectedCallback();
+    // Status and Log are watched while testing from a node in the other hand,
+    // so they poll. Only the two cheap calls, and only on those tabs.
+    this._pollTimer = window.setInterval(() => void this._poll(), 10000);
+  }
+
+  public disconnectedCallback(): void {
+    super.disconnectedCallback();
+    if (this._pollTimer) {
+      window.clearInterval(this._pollTimer);
+      this._pollTimer = undefined;
+    }
+  }
+
+  private async _poll(): Promise<void> {
+    if (!this.hass || !this._loaded) return;
+    if (this._tab !== "status" && this._tab !== "log") return;
+    try {
+      this._entries = await fetchEntries(this.hass);
+      this._history = await fetchHistory(this.hass);
+    } catch {
+      // Transient: the next tick retries, and _load already reports failures.
+    }
   }
 
   protected firstUpdated(): void {
@@ -472,13 +499,11 @@ export class HermesCard extends LitElement {
 
   private _select(tab: TabId): void {
     this._tab = tab;
-    // Refresh the volatile data when entering a tab that shows it. Loading only
-    // once was a real problem: if the Meshtastic devices were not in the
-    // registry yet when the card first loaded, the node lists stayed empty for
-    // the whole session with no way to retry short of reloading the page.
-    if (tab === "settings" || tab === "messages" || tab === "homeassistant") {
-      void this._load();
-    }
+    // Every tab shows backend data by now, so entering one always refreshes.
+    // Status and Log used to be excluded, which meant the two monitoring tabs
+    // showed a snapshot from page load forever: messages were received and
+    // logged while the card kept saying nothing had arrived.
+    void this._load();
   }
 
   private _screen(t: (k: string) => string): TemplateResult {
