@@ -65,6 +65,8 @@ const en: Dict = {
 
   "status.reception": "Reception",
   "status.mismatch": "nothing is getting through",
+  "status.notRunning": "not running",
+  "status.notRunningHint": "This gateway is configured but the integration is not running, so nothing is listening for messages. The settings below are read from storage and look fine either way. Check Settings, Devices and Services for an error on Hermes, and the Home Assistant log.",
   "status.expects": "This gateway listens to",
   "status.lastSeen": "Last message on the mesh",
   "status.seenFrom": "Sent by node",
@@ -249,6 +251,8 @@ const it: Dict = {
 
   "status.reception": "Ricezione",
   "status.mismatch": "non passa niente",
+  "status.notRunning": "non in esecuzione",
+  "status.notRunningHint": "Questo gateway e' configurato ma l'integrazione non e' in esecuzione, quindi non c'e' nulla in ascolto dei messaggi. Le impostazioni qui sotto vengono lette dallo storage e sembrano corrette comunque. Controlla in Impostazioni, Dispositivi e servizi se Hermes e' in errore, e il log di Home Assistant.",
   "status.expects": "Questo gateway ascolta",
   "status.lastSeen": "Ultimo messaggio sulla mesh",
   "status.seenFrom": "Inviato dal nodo",
@@ -433,6 +437,8 @@ const es: Dict = {
 
   "status.reception": "Recepcion",
   "status.mismatch": "no pasa nada",
+  "status.notRunning": "no en ejecucion",
+  "status.notRunningHint": "Esta puerta de enlace esta configurada pero la integracion no esta en ejecucion, asi que no hay nada escuchando mensajes. Los ajustes de abajo se leen del almacenamiento y parecen correctos igualmente. Revisa en Ajustes, Dispositivos y servicios si Hermes esta en error, y el registro de Home Assistant.",
   "status.expects": "Esta puerta de enlace escucha",
   "status.lastSeen": "Ultimo mensaje en la malla",
   "status.seenFrom": "Enviado por el nodo",
@@ -617,6 +623,8 @@ const fr: Dict = {
 
   "status.reception": "Reception",
   "status.mismatch": "rien ne passe",
+  "status.notRunning": "pas en cours d execution",
+  "status.notRunningHint": "Cette passerelle est configuree mais l integration ne tourne pas, rien n ecoute donc les messages. Les parametres ci-dessous sont lus depuis le stockage et paraissent corrects de toute facon. Verifiez dans Parametres, Appareils et services si Hermes est en erreur, ainsi que le journal de Home Assistant.",
   "status.expects": "Cette passerelle ecoute",
   "status.lastSeen": "Dernier message sur le maillage",
   "status.seenFrom": "Envoye par le nœud",
@@ -801,6 +809,8 @@ const de: Dict = {
 
   "status.reception": "Empfang",
   "status.mismatch": "es kommt nichts an",
+  "status.notRunning": "laeuft nicht",
+  "status.notRunningHint": "Dieses Gateway ist konfiguriert, aber die Integration laeuft nicht, es hoert also nichts auf Nachrichten. Die Einstellungen unten stammen aus dem Speicher und sehen ohnehin korrekt aus. Pruefe unter Einstellungen, Geraete und Dienste, ob Hermes einen Fehler zeigt, und das Home-Assistant-Log.",
   "status.expects": "Dieses Gateway empfaengt",
   "status.lastSeen": "Letzte Nachricht im Mesh",
   "status.seenFrom": "Gesendet von Node",

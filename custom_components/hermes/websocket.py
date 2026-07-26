@@ -99,6 +99,12 @@ def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
         "require_ack": options.get(CONF_REQUIRE_ACK, DEFAULT_REQUIRE_ACK),
         "rate_limit": options.get(CONF_RATE_LIMIT, DEFAULT_RATE_LIMIT),
         "help_keyword": options.get(CONF_HELP_KEYWORD, DEFAULT_HELP_KEYWORD),
+        # Settings come from config entry storage, which reads fine even when
+        # the entry failed to load. Without this the card would show a perfect
+        # configuration for an integration that is not running and therefore
+        # has no event listener at all.
+        "loaded": entry.entry_id in hass.data.get(DOMAIN, {}),
+        "state": str(getattr(entry, "state", "")),
         "last_seen": _last_seen(hass, entry.entry_id),
         "seen_counts": dict(
             getattr(

@@ -144,6 +144,9 @@ export interface HermesEntry {
   rate_limit: number;
   help_keyword: string;
   case_sensitive: boolean;
+  /** False when the integration is not running, so nothing is listening. */
+  loaded: boolean;
+  state: string;
   last_seen: HermesLastSeen | null;
   /** Count of text messages per outcome, since Home Assistant started. */
   seen_counts: Record<string, number>;

@@ -63,6 +63,7 @@ function renderReception(
 ): TemplateResult {
   const seen = entry.last_seen;
   const counts = entry.seen_counts ?? {};
+  const notRunning = entry.loaded === false;
   // "received" is the raw total, so it must not be added to the outcomes.
   const total = counts.received ?? 0;
   const mismatch = total > 0 && !counts.accepted;
@@ -71,11 +72,19 @@ function renderReception(
     <div class="section" style="margin-top:18px">
       <div class="section-title">
         ${t("status.reception")}
-        ${mismatch
-          ? html`<span class="warn-badge">${t("status.mismatch")}</span>`
-          : ""}
+        ${notRunning
+          ? html`<span class="warn-badge">${t("status.notRunning")}</span>`
+          : mismatch
+            ? html`<span class="warn-badge">${t("status.mismatch")}</span>`
+            : ""}
       </div>
       <div class="panel">
+        ${notRunning
+          ? html`<div class="note warn">
+              ${t("status.notRunningHint")}
+              ${entry.state ? html`<br /><code>${entry.state}</code>` : ""}
+            </div>`
+          : ""}
         <div class="rows">
           <div class="row">
             <span class="k">${t("status.expects")}</span>
