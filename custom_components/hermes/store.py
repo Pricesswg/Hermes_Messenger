@@ -15,11 +15,14 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CHAT_MAX_PER_THREAD,
+    CHAT_MAX_THREADS,
     DEFAULT_SETTINGS,
     HISTORY_MAX_ENTRIES,
     HISTORY_SAVE_DELAY,
     STORAGE_KEY,
     STORAGE_VERSION,
+    STORE_CHATS,
     STORE_COUNTERS,
     STORE_HISTORY,
     STORE_PRESETS,
@@ -36,6 +39,8 @@ class HermesStore:
         self.presets: list[dict[str, Any]] = []
         self.history: list[dict[str, Any]] = []
         self.counters: dict[str, dict[str, Any]] = {}
+        # thread key -> messages, newest last so a view reads top to bottom.
+        self.chats: dict[str, list[dict[str, Any]]] = {}
 
     async def async_load(self) -> None:
         """Load persisted data, filling in defaults for anything missing."""
@@ -49,6 +54,10 @@ class HermesStore:
         self.presets = list(data.get(STORE_PRESETS) or [])
         self.history = list(data.get(STORE_HISTORY) or [])
         self.counters = dict(data.get(STORE_COUNTERS) or {})
+        self.chats = {
+            key: list(value)
+            for key, value in (data.get(STORE_CHATS) or {}).items()
+        }
 
     def _snapshot(self) -> dict[str, Any]:
         return {
@@ -56,6 +65,7 @@ class HermesStore:
             STORE_PRESETS: self.presets,
             STORE_HISTORY: self.history,
             STORE_COUNTERS: self.counters,
+            STORE_CHATS: self.chats,
         }
 
     async def _async_save(self) -> None:
@@ -139,6 +149,49 @@ class HermesStore:
         self.counters[entry_id] = {"day": day, "count": current}
         self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
         return current
+
+    # --- Conversations -----------------------------------------------------
+
+    def async_add_chat(
+        self,
+        thread: str,
+        text: str,
+        node: int | None,
+        outgoing: bool,
+        name: str = "",
+    ) -> None:
+        """Record one message in a conversation, oldest first.
+
+        Capped per thread and in the number of threads: a mesh that talks a lot
+        would otherwise grow the store without limit. When the cap on threads is
+        reached the quietest one goes, which is the one nobody is reading.
+        """
+        messages = self.chats.setdefault(thread, [])
+        messages.append(
+            {
+                "ts": dt_util.utcnow().isoformat(),
+                "text": text,
+                "node": node,
+                "name": name,
+                "outgoing": outgoing,
+            }
+        )
+        del messages[:-CHAT_MAX_PER_THREAD]
+
+        if len(self.chats) > CHAT_MAX_THREADS:
+            quietest = min(
+                self.chats,
+                key=lambda key: (self.chats[key][-1]["ts"] if self.chats[key] else ""),
+            )
+            if quietest != thread:
+                del self.chats[quietest]
+
+        self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
+
+    async def async_clear_chat(self, thread: str) -> None:
+        """Forget one conversation."""
+        self.chats.pop(thread, None)
+        await self._async_save()
 
     async def async_clear_history(self) -> None:
         """Empty the log."""

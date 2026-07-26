@@ -79,6 +79,9 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_history_clear)
     websocket_api.async_register_command(hass, ws_channels_list)
     websocket_api.async_register_command(hass, ws_radio_info)
+    websocket_api.async_register_command(hass, ws_chats_list)
+    websocket_api.async_register_command(hass, ws_chat_send)
+    websocket_api.async_register_command(hass, ws_chat_clear)
 
 
 def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
@@ -474,3 +477,72 @@ async def ws_channels_list(hass: HomeAssistant, connection, msg: dict) -> None:
 async def ws_radio_info(hass: HomeAssistant, connection, msg: dict) -> None:
     """Everything the card shows about the gateway radio itself."""
     connection.send_result(msg["id"], await async_radio_details(hass))
+
+
+# --- Conversations ---------------------------------------------------------
+
+
+@websocket_api.websocket_command({vol.Required("type"): "hermes/chats/list"})
+@callback
+def ws_chats_list(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Every conversation, keyed by channel or by node."""
+    store = hass.data.get(DATA_STORE)
+    connection.send_result(msg["id"], store.chats if store else {})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hermes/chats/send",
+        vol.Required("entry_id"): str,
+        vol.Required("thread"): str,
+        vol.Required("message"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_chat_send(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Send into a conversation, reusing the existing send services.
+
+    The thread key carries the destination, so nothing here has to decide how
+    to reach it: `channel:<index>` broadcasts, `node:<num>` is a direct message.
+    """
+    entry = _get_entry(hass, msg["entry_id"])
+    if entry is None:
+        connection.send_error(msg["id"], "not_found", "Unknown Hermes entry")
+        return
+
+    thread: str = msg["thread"]
+    data = {"config_entry_id": entry.entry_id, "message": msg["message"]}
+    try:
+        kind, value = thread.split(":", 1)
+        if kind == "node":
+            await hass.services.async_call(
+                DOMAIN, "send_direct", {**data, "node_id": int(value)}, blocking=True
+            )
+        else:
+            await hass.services.async_call(
+                DOMAIN, "broadcast", {**data, "channel": int(value)}, blocking=True
+            )
+    except (ValueError, KeyError):
+        connection.send_error(msg["id"], "bad_thread", f"Unusable thread {thread}")
+        return
+
+    connection.send_result(msg["id"], {"sent": thread})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hermes/chats/clear",
+        vol.Required("thread"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_chat_clear(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Forget one conversation."""
+    store = hass.data.get(DATA_STORE)
+    if store is None:
+        connection.send_error(msg["id"], "not_ready", "Hermes store not loaded")
+        return
+    await store.async_clear_chat(msg["thread"])
+    connection.send_result(msg["id"], {"cleared": msg["thread"]})

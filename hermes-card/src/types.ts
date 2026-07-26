@@ -53,6 +53,7 @@ export interface HermesCardConfig {
 
 export type TabId =
   | "status"
+  | "chat"
   | "log"
   | "devices"
   | "map"
@@ -78,6 +79,15 @@ export interface ActionDef {
   label: string;
   service: string;
   value?: ActionValueSpec;
+}
+
+/** One message in a conversation. */
+export interface ChatMessage {
+  ts: string;
+  text: string;
+  node: number | null;
+  name: string;
+  outgoing: boolean;
 }
 
 /** What the gateway radio reports about itself. */

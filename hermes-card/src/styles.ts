@@ -670,6 +670,64 @@ export const hermesLayout = css`
     letter-spacing: 0;
   }
 
+  .chat-log {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 50vh;
+    overflow-y: auto;
+    padding: 12px;
+    background: var(--bg-sunken);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+  }
+
+  .bubble {
+    max-width: 80%;
+    padding: 8px 11px;
+    border-radius: var(--r-md);
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  /* Ours sit on the right with the accent edge, theirs on the left, which is
+   * the arrangement every messaging app has taught people to read. */
+  .bubble.out {
+    align-self: flex-end;
+    border-color: var(--accent);
+    box-shadow: inset -3px 0 0 var(--accent);
+  }
+
+  .bubble .who {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+
+  .bubble .text {
+    font-size: 0.86rem;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+
+  .bubble .when {
+    font-size: 0.66rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    margin-top: 3px;
+  }
+
+  .chat-send {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .chat-send input {
+    flex: 1;
+  }
+
   .log-row {
     display: flex;
     gap: 10px;

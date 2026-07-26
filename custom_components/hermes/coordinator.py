@@ -15,6 +15,7 @@ from typing import Any, Callable
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.util import dt as dt_util
 
@@ -58,6 +59,7 @@ from .const import (
 )
 from .actions import entity_bounds, value_spec
 from .matching import accepts_message, match_command, matches_keyword
+from .meshtastic_api import node_num_from_device
 from .message import split_message
 from .rate_limit import allow as rate_allow, forget_idle
 from .tokens import apply_argument, parse_actions, parse_argument, strip_actions
@@ -236,6 +238,11 @@ class HermesCoordinator:
             self._notify_sensors()
             return
 
+        # Recorded before the channel filter: the conversation view shows the
+        # traffic on every channel this gateway hears, which is a different
+        # question from which channel Hermes takes orders on.
+        self._remember_chat(data)
+
         to = data.get("to") or {}
         if not self._matches_mode(to):
             self._note_seen(data, "other_target")
@@ -341,6 +348,32 @@ class HermesCoordinator:
     @staticmethod
     def _today() -> str:
         return dt_util.utcnow().date().isoformat()
+
+    @callback
+    def _remember_chat(self, data: dict[str, Any]) -> None:
+        """File an incoming message under its channel or its sender."""
+        store = self.hass.data.get(DATA_STORE)
+        text = data.get("message") or ""
+        sender = data.get("from")
+        if store is None or not text or sender is None:
+            return
+
+        to = data.get("to") or {}
+        channel = to.get("channel")
+        thread = (
+            f"channel:{channel}" if channel is not None else f"node:{int(sender)}"
+        )
+        store.async_add_chat(
+            thread, text, int(sender), False, self._node_name(int(sender))
+        )
+
+    def _node_name(self, node: int) -> str:
+        """Readable name of a node, falling back to its number."""
+        registry = dr.async_get(self.hass)
+        for device in registry.devices.values():
+            if node_num_from_device(device) == node:
+                return device.name_by_user or device.name or str(node)
+        return str(node)
 
     @callback
     def _count(self, reason: str) -> None:
@@ -531,7 +564,18 @@ class HermesCoordinator:
 
     async def _send_parts(self, parts: list[str], base: dict[str, Any]) -> None:
         """Send the parts in sequence with an intermediate pause."""
-        self._log("out", " ".join(parts), base.get("to"), "sent")
+        text = " ".join(parts)
+        self._log("out", text, base.get("to"), "sent")
+
+        store = self.hass.data.get(DATA_STORE)
+        if store is not None:
+            target = base.get("to")
+            thread = (
+                f"node:{int(target)}"
+                if target is not None
+                else f"channel:{base.get('channel')}"
+            )
+            store.async_add_chat(thread, text, None, True)
         for index, part in enumerate(parts):
             if index:
                 await asyncio.sleep(self.part_delay)

@@ -99,6 +99,12 @@ STORE_HISTORY = "history"
 # on every reload, and a reload runs each time a setting is saved, which used to
 # reset the executed count to zero behind the user's back.
 STORE_COUNTERS = "counters"
+# Conversations, kept apart from the diagnostic log: that one answers "what did
+# Hermes decide", this one is the traffic itself, which is a different question
+# and a different lifetime.
+STORE_CHATS = "chats"
+CHAT_MAX_PER_THREAD = 200
+CHAT_MAX_THREADS = 40
 HISTORY_MAX_ENTRIES = 200
 # Debounce writes: a busy channel would otherwise hit the disk per message.
 HISTORY_SAVE_DELAY = 15

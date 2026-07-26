@@ -13,6 +13,13 @@ const en: Dict = {
   "tab.homeassistant": "Home Assistant",
   "tab.settings": "Settings",
   "tab.log": "Log",
+  "tab.chat": "Chat",
+
+  "chat.empty": "No message yet. Anything this gateway hears will appear here.",
+  "chat.placeholder": "Write a message",
+  "chat.send": "Send",
+  "chat.clear": "Clear this conversation",
+  "chat.note": "Conversations are grouped by channel and by node, and cover every channel this gateway hears, not only the one commands arrive on.",
 
   "ha.shared": "Hermes entities",
   "ha.noEntities": "No Hermes entity yet. Add the integration first.",
@@ -231,6 +238,13 @@ const it: Dict = {
   "tab.homeassistant": "Home Assistant",
   "tab.settings": "Impostazioni",
   "tab.log": "Log",
+  "tab.chat": "Chat",
+
+  "chat.empty": "Ancora nessun messaggio. Qui compare tutto quello che questo gateway sente.",
+  "chat.placeholder": "Scrivi un messaggio",
+  "chat.send": "Invia",
+  "chat.clear": "Svuota questa conversazione",
+  "chat.note": "Le conversazioni sono raggruppate per canale e per nodo, e coprono tutti i canali che il gateway sente, non solo quello da cui arrivano i comandi.",
 
   "ha.shared": "Entità di Hermes",
   "ha.noEntities": "Nessuna entità Hermes. Aggiungi prima l'integrazione.",
@@ -449,6 +463,13 @@ const es: Dict = {
   "tab.homeassistant": "Home Assistant",
   "tab.settings": "Ajustes",
   "tab.log": "Registro",
+  "tab.chat": "Chat",
+
+  "chat.empty": "Todavia ningun mensaje. Aqui aparece todo lo que oye esta puerta de enlace.",
+  "chat.placeholder": "Escribe un mensaje",
+  "chat.send": "Enviar",
+  "chat.clear": "Vaciar esta conversacion",
+  "chat.note": "Las conversaciones se agrupan por canal y por nodo, y cubren todos los canales que oye la puerta de enlace, no solo aquel por el que llegan los comandos.",
 
   "ha.shared": "Entidades de Hermes",
   "ha.noEntities": "Todavía no hay entidades de Hermes. Añade primero la integración.",
@@ -667,6 +688,13 @@ const fr: Dict = {
   "tab.homeassistant": "Home Assistant",
   "tab.settings": "Paramètres",
   "tab.log": "Journal",
+  "tab.chat": "Chat",
+
+  "chat.empty": "Aucun message pour le moment. Tout ce que cette passerelle entend apparaitra ici.",
+  "chat.placeholder": "Ecrire un message",
+  "chat.send": "Envoyer",
+  "chat.clear": "Vider cette conversation",
+  "chat.note": "Les conversations sont regroupees par canal et par nœud, et couvrent tous les canaux que la passerelle entend, pas seulement celui des commandes.",
 
   "ha.shared": "Entités de Hermes",
   "ha.noEntities": "Aucune entité Hermes. Ajoutez d'abord l'intégration.",
@@ -885,6 +913,13 @@ const de: Dict = {
   "tab.homeassistant": "Home Assistant",
   "tab.settings": "Einstellungen",
   "tab.log": "Protokoll",
+  "tab.chat": "Chat",
+
+  "chat.empty": "Noch keine Nachricht. Hier erscheint alles, was dieses Gateway hoert.",
+  "chat.placeholder": "Nachricht schreiben",
+  "chat.send": "Senden",
+  "chat.clear": "Diese Unterhaltung leeren",
+  "chat.note": "Unterhaltungen sind nach Kanal und Node gruppiert und umfassen alle Kanaele, die das Gateway hoert, nicht nur den der Befehle.",
 
   "ha.shared": "Hermes-Entitäten",
   "ha.noEntities": "Noch keine Hermes-Entität. Füge zuerst die Integration hinzu.",

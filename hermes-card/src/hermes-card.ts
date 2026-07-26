@@ -3,6 +3,7 @@ import { customElement, property, state } from "lit/decorators.js";
 
 import { translator } from "./i18n";
 import { hermesLayout, hermesTokens } from "./styles";
+import { renderChat } from "./screens/chat";
 import { renderDevices } from "./screens/devices";
 import { renderHomeAssistant } from "./screens/homeassistant";
 import { renderLog } from "./screens/log";
@@ -11,6 +12,7 @@ import { renderMessages } from "./screens/messages";
 import { renderSettings } from "./screens/settings";
 import { renderStatus } from "./screens/status";
 import type {
+  ChatMessage,
   HermesCardConfig,
   HermesChannel,
   HermesCommand,
@@ -26,9 +28,11 @@ import type {
 import { VERSION } from "./version";
 import { setCatalogue } from "./actions";
 import {
+  clearChat,
   clearHistory,
   fetchActions,
   fetchChannels,
+  fetchChats,
   fetchRadioInfo,
   fetchEntries,
   fetchHistory,
@@ -39,6 +43,7 @@ import {
   removePreset,
   saveCommand,
   savePreset,
+  sendChat,
   sendPreset,
   updateEntry,
   updateSettings,
@@ -46,6 +51,7 @@ import {
 
 const TABS: TabId[] = [
   "status",
+  "chat",
   "log",
   "devices",
   "map",
@@ -102,6 +108,10 @@ export class HermesCard extends LitElement {
   @state() private _refreshing = false;
   /** Clock time of the last successful refresh, shown so it is not guesswork. */
   @state() private _updatedAt = "";
+  @state() private _chats: Record<string, ChatMessage[]> = {};
+  @state() private _chatThread: string | null = null;
+  @state() private _chatDraft = "";
+  @state() private _chatSending = false;
 
   private _loaded = false;
   private _pollTimer?: number;
@@ -157,10 +167,18 @@ export class HermesCard extends LitElement {
   /** Refresh the monitoring data. `force` ignores which tab is open. */
   private async _poll(force = false): Promise<void> {
     if (!this.hass || !this._loaded) return;
-    if (!force && this._tab !== "status" && this._tab !== "log") return;
+    if (
+      !force &&
+      this._tab !== "status" &&
+      this._tab !== "log" &&
+      this._tab !== "chat"
+    ) {
+      return;
+    }
     try {
       this._entries = await fetchEntries(this.hass);
       this._history = await fetchHistory(this.hass);
+      this._chats = await fetchChats(this.hass);
       this._updatedAt = new Date().toLocaleTimeString();
     } catch (err) {
       console.warn("Hermes: refresh failed", err);
@@ -256,6 +274,12 @@ export class HermesCard extends LitElement {
       this._history = await fetchHistory(this.hass);
     } catch (err) {
       console.error("Hermes: failed to load the log", err);
+    }
+
+    try {
+      this._chats = await fetchChats(this.hass);
+    } catch (err) {
+      console.error("Hermes: failed to load the conversations", err);
     }
 
     try {
@@ -414,6 +438,37 @@ export class HermesCard extends LitElement {
     }
   };
 
+  private _onChatSelect = (thread: string): void => {
+    this._chatThread = thread;
+  };
+
+  private _onChatDraft = (text: string): void => {
+    this._chatDraft = text;
+  };
+
+  private _onChatSend = async (): Promise<void> => {
+    const entryId = this._selectedEntry ?? this._entries[0]?.entry_id;
+    const thread = this._chatThread ?? Object.keys(this._chats)[0];
+    if (!this.hass || !entryId || !thread || !this._chatDraft.trim()) return;
+
+    this._chatSending = true;
+    try {
+      await sendChat(this.hass, entryId, thread, this._chatDraft.trim());
+      this._chatDraft = "";
+      this._chats = await fetchChats(this.hass);
+    } catch (err) {
+      console.error("Hermes: could not send the message", err);
+    } finally {
+      this._chatSending = false;
+    }
+  };
+
+  private _onChatClear = async (thread: string): Promise<void> => {
+    if (!this.hass) return;
+    await clearChat(this.hass, thread);
+    this._chats = await fetchChats(this.hass);
+  };
+
   private _onLogFilter = (value: string): void => {
     this._logFilter = value;
   };
@@ -554,6 +609,22 @@ export class HermesCard extends LitElement {
           this._onApplySeen,
           this._updatedAt,
           this._radio,
+          t
+        );
+      case "chat":
+        return renderChat(
+          {
+            chats: this._chats,
+            channels: this._channels,
+            nodes: this._nodes,
+            thread: this._chatThread,
+            draft: this._chatDraft,
+            sending: this._chatSending,
+            onSelect: this._onChatSelect,
+            onDraft: this._onChatDraft,
+            onSend: this._onChatSend,
+            onClear: this._onChatClear,
+          },
           t
         );
       case "log":
