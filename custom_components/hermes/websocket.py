@@ -48,6 +48,7 @@ from .const import (
     DEFAULT_REQUIRE_ACK,
     DOMAIN,
     MESHTASTIC_DOMAIN,
+    MODE_CHANNEL,
 )
 
 
@@ -83,7 +84,7 @@ def _entry_payload(entry: Any) -> dict[str, Any]:
         "entry_id": entry.entry_id,
         "title": entry.title,
         "gateway_node_id": entry.data.get(CONF_GATEWAY_NODE_ID),
-        "mode": entry.data.get(CONF_MODE),
+        "mode": options.get(CONF_MODE) or entry.data.get(CONF_MODE),
         "channel_index": options.get(
             CONF_CHANNEL_INDEX, entry.data.get(CONF_CHANNEL_INDEX)
         ),
@@ -166,13 +167,31 @@ def ws_entry_update(hass: HomeAssistant, connection, msg: dict) -> None:
         CONF_CASE_SENSITIVE,
     CONF_HELP_KEYWORD,
         CONF_INITIAL_DELAY,
+        CONF_MODE,
         CONF_PART_DELAY,
         CONF_RATE_LIMIT,
         CONF_REQUIRE_ACK,
     }
     patch = {k: v for k, v in msg["patch"].items() if k in allowed}
     options = {**entry.options, **patch}
-    hass.config_entries.async_update_entry(entry, options=options)
+
+    # Switching to channel mode needs a channel to work with: without one the
+    # gateway would listen to nothing at all.
+    if options.get(CONF_MODE) == MODE_CHANNEL and options.get(
+        CONF_CHANNEL_INDEX, entry.data.get(CONF_CHANNEL_INDEX)
+    ) is None:
+        options[CONF_CHANNEL_INDEX] = 0
+
+    # Keep the title honest: it names the mode and channel.
+    gateway = entry.data.get(CONF_GATEWAY_NODE_ID)
+    mode = options.get(CONF_MODE) or entry.data.get(CONF_MODE)
+    if mode == MODE_CHANNEL:
+        channel = options.get(CONF_CHANNEL_INDEX, entry.data.get(CONF_CHANNEL_INDEX))
+        title = f"Hermes · channel {channel} · gw {gateway}"
+    else:
+        title = f"Hermes · DM · gw {gateway}"
+
+    hass.config_entries.async_update_entry(entry, options=options, title=title)
     connection.send_result(msg["id"], _entry_payload(entry))
 
 

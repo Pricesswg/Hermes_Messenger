@@ -16,7 +16,6 @@ export interface SettingsCtx {
   nodesError: string | null;
   refreshing: boolean;
   onRefresh: () => void;
-  onChannelChange: (entryId: string, channel: number) => void;
   saved: boolean;
   loadError: string | null;
   onGlobalInput: (key: keyof HermesSettings, value: unknown) => void;
@@ -207,13 +206,38 @@ function renderEntry(
             <span class="k">${t("settings.gateway")}</span>
             <span class="v">${entry.gateway_node_id ?? "-"}</span>
           </div>
-          <div class="row">
-            <span class="k">${t("settings.mode")}</span>
-            <span class="v">${entry.mode}</span>
-          </div>
+
         </div>
 
-        ${entry.mode === "channel" ? renderChannelPicker(ctx, entry, t) : ""}
+        <div class="field" style="margin-top:12px">
+          <label>${t("settings.mode")}</label>
+          <select
+            @change=${(e: Event) =>
+              ctx.onEntryInput(
+                entry.entry_id,
+                "mode",
+                (e.target as HTMLSelectElement).value
+              )}
+          >
+            <option
+              value="channel"
+              ?selected=${value("mode", entry.mode) === "channel"}
+            >
+              ${t("settings.modeChannel")}
+            </option>
+            <option
+              value="direct_message"
+              ?selected=${value("mode", entry.mode) === "direct_message"}
+            >
+              ${t("settings.modeDm")}
+            </option>
+          </select>
+          <span class="hint">${t("settings.modeHint")}</span>
+        </div>
+
+        ${value("mode", entry.mode) === "channel"
+          ? renderChannelPicker(ctx, entry, t)
+          : ""}
 
         <div class="field" style="margin-top:12px">
           <label>${t("settings.initialDelay")}</label>
@@ -352,7 +376,8 @@ function renderChannelPicker(
   entry: HermesEntry,
   t: (k: string) => string
 ): TemplateResult {
-  const current = entry.channel_index ?? 0;
+  const draft = ctx.draftEntries[entry.entry_id] ?? {};
+  const current = (draft.channel_index ?? entry.channel_index ?? 0) as number;
   const known = ctx.channels.find((c) => c.index === current);
 
   return html`
@@ -362,8 +387,9 @@ function renderChannelPicker(
         ? html`
             <select
               @change=${(e: Event) =>
-                ctx.onChannelChange(
+                ctx.onEntryInput(
                   entry.entry_id,
+                  "channel_index",
                   Number((e.target as HTMLSelectElement).value)
                 )}
             >
@@ -383,8 +409,9 @@ function renderChannelPicker(
               max="7"
               .value=${String(current)}
               @change=${(e: Event) =>
-                ctx.onChannelChange(
+                ctx.onEntryInput(
                   entry.entry_id,
+                  "channel_index",
                   Number((e.target as HTMLInputElement).value)
                 )}
             />

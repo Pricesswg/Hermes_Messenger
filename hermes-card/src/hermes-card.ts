@@ -383,16 +383,6 @@ export class HermesCard extends LitElement {
     }
   };
 
-  private _onChannelChange = async (
-    entryId: string,
-    channel: number
-  ): Promise<void> => {
-    if (!this.hass) return;
-    await updateEntry(this.hass, entryId, { channel_index: channel });
-    this._flagSaved();
-    await this._load();
-  };
-
   private _onHeightChange = async (mode: string): Promise<void> => {
     if (!this.hass) return;
     // Persist straight away: a display preference the user has to set again on
@@ -560,7 +550,6 @@ export class HermesCard extends LitElement {
             nodesError: this._nodesError,
             refreshing: this._refreshing,
             onRefresh: this._onRefresh,
-            onChannelChange: this._onChannelChange,
             saved: this._saved,
             loadError: this._loadError,
             draftGlobal: this._draftGlobal,

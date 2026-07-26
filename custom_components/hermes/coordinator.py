@@ -114,7 +114,9 @@ class HermesCoordinator:
 
     @property
     def mode(self) -> str:
-        return self.entry.data[CONF_MODE]
+        # Options win over data, like the channel, so the gateway can be
+        # switched between channel and direct message without being recreated.
+        return self.entry.options.get(CONF_MODE) or self.entry.data[CONF_MODE]
 
     @property
     def channel_index(self) -> int | None:
