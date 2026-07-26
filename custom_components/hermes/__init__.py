@@ -98,18 +98,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def _async_register_frontend_card(hass: HomeAssistant) -> None:
     """Make the Hermes Lovelace card available without manual setup.
 
-    Two complementary steps, mirroring what Chronos Scheduler does:
-      1. copy the bundle to /config/www so it is reachable at /local/,
-         which is what a user would otherwise add as a resource by hand;
-      2. serve it from /hermes_static/ and inject it with add_extra_js_url,
-         which registers the custom element at the frontend level.
+    The bundle is copied to /config/www and served from there, not from inside
+    the integration folder. That matters during an update: HACS deletes and
+    rewrites custom_components/hermes, so a URL pointing inside it answers 404
+    for as long as the swap lasts, the module never loads and Lovelace reports
+    the custom element as missing. The copy lives outside anything HACS touches,
+    so the worst case becomes serving the previous working bundle until Home
+    Assistant restarts, instead of serving nothing.
+
+    The copy is refreshed on every setup, while the URL registration can only
+    happen once per run.
+
     Failures here must never break the integration setup, so everything is
     guarded and only logged.
     """
-    if hass.data.get(DATA_CARD_REGISTERED):
-        return
-    hass.data[DATA_CARD_REGISTERED] = True
-
     src = Path(__file__).parent / "www" / CARD_FILENAME
     if not await hass.async_add_executor_job(src.is_file):
         _LOGGER.warning(
@@ -118,30 +120,45 @@ async def _async_register_frontend_card(hass: HomeAssistant) -> None:
         )
         return
 
-    def _copy_to_www() -> None:
-        dst_dir = Path(hass.config.path("www"))
-        dst_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(src, dst_dir / CARD_FILENAME)
+    dst = Path(hass.config.path("www")) / CARD_FILENAME
 
+    def _copy_to_www() -> bool:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, dst)
+        return True
+
+    served = src
     try:
-        await hass.async_add_executor_job(_copy_to_www)
+        if await hass.async_add_executor_job(_copy_to_www):
+            served = dst
     except OSError:
+        # Serving from the integration folder still works until the next update
+        # swaps it, so this is a degraded mode rather than a failure.
         _LOGGER.warning("Hermes: could not copy the card to /config/www", exc_info=True)
+
+    if hass.data.get(DATA_CARD_REGISTERED):
+        return
 
     # Version query string for cache busting: without it browsers keep serving
     # the previously cached bundle after an update. Read from the manifest so
     # there is no second place to keep the version in sync.
     integration = await async_get_integration(hass, DOMAIN)
-    card_url = f"{CARD_URL}?v={integration.version or '0'}"
+    version = integration.version or "0"
+    card_url = f"{CARD_URL}?v={version}"
 
     try:
         await hass.http.async_register_static_paths(
-            [StaticPathConfig(CARD_URL, str(src), False)]
+            [StaticPathConfig(CARD_URL, str(served), False)]
         )
         add_extra_js_url(hass, card_url)
-        _LOGGER.info("Hermes: Lovelace card registered at %s", card_url)
     except (RuntimeError, ValueError):
         _LOGGER.warning("Hermes: could not register the card static path", exc_info=True)
+        return
+
+    # Only now: a failed registration has to be retried by the next entry
+    # instead of being remembered as done.
+    hass.data[DATA_CARD_REGISTERED] = True
+    _LOGGER.info("Hermes: Lovelace card %s served from %s", version, served)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

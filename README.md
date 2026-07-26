@@ -187,6 +187,21 @@ The whitelist should be configured in both cases anyway. For commands that
 control critical entities, prefer **DM with PKC** mode. Verify the behavior on
 the **firmware actually in use**: do not take it for granted.
 
+## After updating
+
+Restart Home Assistant, then reload the browser page with a hard refresh
+(Ctrl+Shift+R, or Cmd+Shift+R on a Mac).
+
+The reason is that the card is a JavaScript module the browser caches, and the
+running Home Assistant keeps advertising the URL it was given at startup. Until
+it restarts it cannot announce the new one, so the browser has no reason to
+fetch the new bundle. Hermes serves the card from a copy in `/config/www` rather
+than from inside its own folder, precisely because HACS deletes and rewrites
+that folder during an update: the copy keeps the last working bundle available
+instead of answering 404 while the files are being swapped. If the card still
+reports itself as an unknown element, the console shows which version was
+loaded, printed as `HERMES-CARD <version>`.
+
 ## Firmware, before you blame the integration
 
 Two failure modes look like a bug in Hermes and are not.
