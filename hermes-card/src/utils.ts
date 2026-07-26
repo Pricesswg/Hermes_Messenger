@@ -107,7 +107,8 @@ export function meshNodes(hass: HomeAssistant): MeshNode[] {
 export function mapNodes(
   hass: HomeAssistant,
   selected: number[],
-  includeAll = false
+  includeAll = false,
+  reachableMinutes = 120
 ): MapNode[] {
   const wanted = new Set((selected ?? []).map(Number));
   if (!includeAll && !wanted.size) return [];
@@ -155,7 +156,7 @@ export function mapNodes(
       lastSeen: state?.last_changed
         ? new Date(state.last_changed).toLocaleString()
         : "",
-      connected: isReachable(hass, lastHeard.get(device.id)),
+      connected: isReachable(hass, lastHeard.get(device.id), reachableMinutes),
       selected: isSelected,
     });
   }
@@ -166,12 +167,14 @@ export function mapNodes(
 /**
  * A node counts as reachable when it was heard within the threshold, which is
  * how the Meshtastic clients themselves decide whether to show a node as
- * active. Without a last heard sensor we fall back to the entity simply not
- * being unavailable.
+ * active. The window is configurable: two hours suits a fixed installation,
+ * while a much shorter one is more meaningful in the field.
  */
-export const REACHABLE_WITHIN_MS = 2 * 60 * 60 * 1000;
-
-function isReachable(hass: HomeAssistant, lastHeardId?: string): boolean {
+function isReachable(
+  hass: HomeAssistant,
+  lastHeardId?: string,
+  minutes = 120
+): boolean {
   if (!lastHeardId) return false;
   const state = hass.states[lastHeardId];
   if (!state || state.state === "unavailable" || state.state === "unknown") {
@@ -179,7 +182,7 @@ function isReachable(hass: HomeAssistant, lastHeardId?: string): boolean {
   }
   const heard = Date.parse(state.state);
   if (Number.isNaN(heard)) return false;
-  return Date.now() - heard <= REACHABLE_WITHIN_MS;
+  return Date.now() - heard <= minutes * 60 * 1000;
 }
 
 /** Great circle distance in kilometres, for the radius filter. */

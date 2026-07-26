@@ -131,6 +131,23 @@ export function renderSettings(
           <span class="hint">${t("settings.mapNodesHint")}</span>
         </div>
 
+        <div class="field">
+          <label>${t("settings.reachable")}</label>
+          <input
+            type="number"
+            min="1"
+            max="1440"
+            step="5"
+            .value=${String(globalValue("reachable_minutes") ?? 120)}
+            @input=${(e: Event) =>
+              ctx.onGlobalInput(
+                "reachable_minutes",
+                Number((e.target as HTMLInputElement).value)
+              )}
+          />
+          <span class="hint">${t("settings.reachableHint")}</span>
+        </div>
+
         <div class="actions">
           <button class="btn primary" @click=${ctx.onSaveGlobal}>
             ${t("common.save")}
@@ -235,6 +252,56 @@ function renderEntry(
             ctx.nodesError
           )}
           <span class="hint">${t("settings.authorizedHint")}</span>
+        </div>
+
+        <div class="field">
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${Boolean(value("require_ack", entry.require_ack))}
+              @change=${(e: Event) =>
+                ctx.onEntryInput(
+                  entry.entry_id,
+                  "require_ack",
+                  (e.target as HTMLInputElement).checked
+                )}
+            />
+            <span>${t("settings.requireAck")}</span>
+          </label>
+          <span class="hint">${t("settings.requireAckHint")}</span>
+        </div>
+
+        <div class="field">
+          <label>${t("settings.rateLimit")}</label>
+          <input
+            type="number"
+            min="0"
+            max="60"
+            step="1"
+            .value=${String(value("rate_limit", entry.rate_limit))}
+            @input=${(e: Event) =>
+              ctx.onEntryInput(
+                entry.entry_id,
+                "rate_limit",
+                Number((e.target as HTMLInputElement).value)
+              )}
+          />
+          <span class="hint">${t("settings.rateLimitHint")}</span>
+        </div>
+
+        <div class="field">
+          <label>${t("settings.helpKeyword")}</label>
+          <input
+            placeholder="help"
+            .value=${String(value("help_keyword", entry.help_keyword) ?? "")}
+            @input=${(e: Event) =>
+              ctx.onEntryInput(
+                entry.entry_id,
+                "help_keyword",
+                (e.target as HTMLInputElement).value
+              )}
+          />
+          <span class="hint">${t("settings.helpKeywordHint")}</span>
         </div>
 
         <div class="actions">

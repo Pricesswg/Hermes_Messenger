@@ -26,6 +26,13 @@ MODES = [MODE_CHANNEL, MODE_DIRECT]
 CONF_COMMANDS = "commands"
 CONF_INITIAL_DELAY = "initial_delay"
 CONF_PART_DELAY = "part_delay"
+# Ask the radio for a delivery acknowledgement. Off by default: an ACK costs a
+# return packet per message, which on a busy mesh is real airtime.
+CONF_REQUIRE_ACK = "require_ack"
+# Matched commands allowed per node per minute. 0 disables the limit.
+CONF_RATE_LIMIT = "rate_limit"
+# Keyword that replies with the list of available commands. Empty disables it.
+CONF_HELP_KEYWORD = "help_keyword"
 
 # Keys of a single command (object in CONF_COMMANDS).
 CMD_ID = "id"
@@ -57,6 +64,8 @@ SETTING_MAP_NODES = "map_nodes"
 SETTING_MAP_ZOOM = "map_zoom"
 # auto, mobile, tablet or desktop. "auto" scales with the viewport.
 SETTING_MAP_HEIGHT = "map_height"
+# How recently a node must have been heard to count as reachable on the map.
+SETTING_REACHABLE_MINUTES = "reachable_minutes"
 
 DEFAULT_SETTINGS = {
     SETTING_OPENWEATHER_KEY: "",
@@ -64,6 +73,7 @@ DEFAULT_SETTINGS = {
     SETTING_MAP_NODES: [],
     SETTING_MAP_ZOOM: 10,
     SETTING_MAP_HEIGHT: "auto",
+    SETTING_REACHABLE_MINUTES: 120,
 }
 
 # Quick send presets, the equivalent of the canned messages in the Meshtastic
@@ -95,3 +105,8 @@ DEFAULT_BYTE_LIMIT = 200
 DEFAULT_INITIAL_DELAY = 5
 # Pause between subsequent parts to avoid congesting the mesh.
 DEFAULT_PART_DELAY = 2
+DEFAULT_REQUIRE_ACK = False
+# Six commands a minute is far above human texting speed over LoRa, so it only
+# ever trips on a node that is malfunctioning or repeating packets.
+DEFAULT_RATE_LIMIT = 6
+DEFAULT_HELP_KEYWORD = ""

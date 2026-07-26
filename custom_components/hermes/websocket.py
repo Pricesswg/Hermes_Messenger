@@ -27,13 +27,19 @@ from .const import (
     CONF_CHANNEL_INDEX,
     CONF_COMMANDS,
     CONF_GATEWAY_NODE_ID,
+    CONF_HELP_KEYWORD,
     CONF_INITIAL_DELAY,
     CONF_MODE,
     CONF_PART_DELAY,
+    CONF_RATE_LIMIT,
+    CONF_REQUIRE_ACK,
     DATA_STORE,
     DATA_WS_REGISTERED,
+    DEFAULT_HELP_KEYWORD,
     DEFAULT_INITIAL_DELAY,
     DEFAULT_PART_DELAY,
+    DEFAULT_RATE_LIMIT,
+    DEFAULT_REQUIRE_ACK,
     DOMAIN,
     MESHTASTIC_DOMAIN,
 )
@@ -81,6 +87,9 @@ def _entry_payload(entry: Any) -> dict[str, Any]:
         "commands": options.get(CONF_COMMANDS, []),
         "initial_delay": options.get(CONF_INITIAL_DELAY, DEFAULT_INITIAL_DELAY),
         "part_delay": options.get(CONF_PART_DELAY, DEFAULT_PART_DELAY),
+        "require_ack": options.get(CONF_REQUIRE_ACK, DEFAULT_REQUIRE_ACK),
+        "rate_limit": options.get(CONF_RATE_LIMIT, DEFAULT_RATE_LIMIT),
+        "help_keyword": options.get(CONF_HELP_KEYWORD, DEFAULT_HELP_KEYWORD),
     }
 
 
@@ -145,8 +154,11 @@ def ws_entry_update(hass: HomeAssistant, connection, msg: dict) -> None:
     allowed = {
         CONF_AUTHORIZED_NODES,
         CONF_CHANNEL_INDEX,
+        CONF_HELP_KEYWORD,
         CONF_INITIAL_DELAY,
         CONF_PART_DELAY,
+        CONF_RATE_LIMIT,
+        CONF_REQUIRE_ACK,
     }
     patch = {k: v for k, v in msg["patch"].items() if k in allowed}
     options = {**entry.options, **patch}

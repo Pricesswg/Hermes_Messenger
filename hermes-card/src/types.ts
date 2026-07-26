@@ -108,6 +108,8 @@ export interface HermesSettings {
   map_zoom: number;
   /** auto, mobile, tablet or desktop. */
   map_height: string;
+  /** Minutes within which a node must have been heard to count as reachable. */
+  reachable_minutes: number;
 }
 
 /** One configured command, as stored in the config entry options. */
@@ -134,6 +136,9 @@ export interface HermesEntry {
   commands: HermesCommand[];
   initial_delay: number;
   part_delay: number;
+  require_ack: boolean;
+  rate_limit: number;
+  help_keyword: string;
 }
 
 /** A Meshtastic node as reported by the backend. */

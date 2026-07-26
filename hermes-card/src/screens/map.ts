@@ -35,7 +35,12 @@ export function renderMap(
   t: (k: string) => string
 ): TemplateResult {
   const selected = ctx.settings?.map_nodes ?? [];
-  const allNodes = mapNodes(ctx.hass, selected, ctx.showAll);
+  const allNodes = mapNodes(
+    ctx.hass,
+    selected,
+    ctx.showAll,
+    ctx.settings?.reachable_minutes ?? 120
+  );
 
   const center = referencePoint(allNodes);
   const radiusActive = ctx.radiusOn && center !== null && ctx.radiusKm > 0;

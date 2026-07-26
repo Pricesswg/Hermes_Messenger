@@ -33,11 +33,17 @@ from .const import (
     CONF_GATEWAY_NODE_ID,
     CONF_INITIAL_DELAY,
     CONF_MODE,
+    CONF_HELP_KEYWORD,
     CONF_PART_DELAY,
+    CONF_RATE_LIMIT,
+    CONF_REQUIRE_ACK,
     DATA_STORE,
     DEFAULT_BYTE_LIMIT,
+    DEFAULT_HELP_KEYWORD,
     DEFAULT_INITIAL_DELAY,
     DEFAULT_PART_DELAY,
+    DEFAULT_RATE_LIMIT,
+    DEFAULT_REQUIRE_ACK,
     MATCH_EXACT,
     MATCH_STARTSWITH,
     MESHTASTIC_DOMAIN,
@@ -49,6 +55,7 @@ from .const import (
 )
 from .actions import entity_bounds, value_spec
 from .message import split_message
+from .rate_limit import allow as rate_allow, forget_idle
 from .tokens import apply_argument, parse_actions, parse_argument, strip_actions
 
 _LOGGER = logging.getLogger(__name__)
@@ -72,6 +79,9 @@ class HermesCoordinator:
         self.last_error: dict[str, Any] | None = None
         self.commands_executed = 0
         self.last_reset = dt_util.utcnow()
+
+        # Sliding window of matched commands per node, for the rate limit.
+        self._rate_history: dict[int, list[float]] = {}
 
         self._sensor_listeners: list[CALLBACK_TYPE] = []
         self._unsub_midnight: CALLBACK_TYPE | None = None
@@ -132,6 +142,20 @@ class HermesCoordinator:
     def part_delay(self) -> float:
         return self.entry.options.get(CONF_PART_DELAY, DEFAULT_PART_DELAY)
 
+    @property
+    def require_ack(self) -> bool:
+        return bool(self.entry.options.get(CONF_REQUIRE_ACK, DEFAULT_REQUIRE_ACK))
+
+    @property
+    def rate_limit(self) -> int:
+        return int(self.entry.options.get(CONF_RATE_LIMIT, DEFAULT_RATE_LIMIT))
+
+    @property
+    def help_keyword(self) -> str:
+        return str(
+            self.entry.options.get(CONF_HELP_KEYWORD, DEFAULT_HELP_KEYWORD) or ""
+        ).strip()
+
     # --- Incoming event handling -------------------------------------------
 
     async def async_handle_event(self, event: Event) -> None:
@@ -161,6 +185,18 @@ class HermesCoordinator:
         # below).
         command = self._match_command(text)
         if command is None:
+            # The help keyword is not a configured command, so it is handled
+            # here, and only for senders on the default whitelist: replying to
+            # anyone would advertise the command list to the whole channel.
+            if self._is_help(text):
+                if int(sender) in self.default_authorized:
+                    self._log("in", text, sender, "help")
+                    self.entry.async_create_background_task(
+                        self.hass, self._send_help(sender), name="hermes_help"
+                    )
+                else:
+                    self._log("in", text, sender, "unauthorized")
+                return
             self._log("in", text, sender, "no_match")
             return
 
@@ -175,8 +211,49 @@ class HermesCoordinator:
             self._notify_sensors()
             return
 
+        if not self._allow_rate(sender):
+            # Refused after authorization on purpose: the cheap checks have
+            # already run, and what this protects is service execution.
+            self._record_error("rate limit reached", sender, text)
+            self._log("in", text, sender, "rate_limited")
+            _LOGGER.warning(
+                "Hermes: node %s over the rate limit of %s per minute, dropping",
+                sender,
+                self.rate_limit,
+            )
+            self._notify_sensors()
+            return
+
         self._log("in", text, sender, "matched")
         await self._execute(command, sender, text)
+
+    def _allow_rate(self, sender: int) -> bool:
+        """Whether this node is still within its per minute allowance."""
+        now = self.hass.loop.time()
+        forget_idle(self._rate_history, now)
+        return rate_allow(self._rate_history, int(sender), now, self.rate_limit)
+
+    def _is_help(self, text: str) -> bool:
+        keyword = self.help_keyword.casefold()
+        return bool(keyword) and text.strip().casefold() == keyword
+
+    async def _send_help(self, sender: int) -> None:
+        """Reply with the configured keywords, for people without access to HA."""
+        keywords = [
+            (cmd.get(CMD_KEYWORD) or "").strip()
+            for cmd in self.commands
+            if (cmd.get(CMD_KEYWORD) or "").strip()
+        ]
+        text = ", ".join(keywords) if keywords else "no commands configured"
+
+        base = {"from": self.gateway_node_id, "ack": self.require_ack}
+        if self.mode == MODE_DIRECT:
+            base["to"] = sender
+        else:
+            base["channel"] = self.channel_index
+
+        await asyncio.sleep(self.initial_delay)
+        await self._send_parts(split_message(text, DEFAULT_BYTE_LIMIT), base)
 
     @callback
     def _log(self, direction: str, text: str, node: int | None, outcome: str) -> None:
@@ -327,7 +404,7 @@ class HermesCoordinator:
         if not parts:
             return
 
-        base = {"from": self.gateway_node_id, "ack": False}
+        base = {"from": self.gateway_node_id, "ack": self.require_ack}
         reply_to = command.get(CMD_REPLY_TO, REPLY_CHANNEL)
         if self.mode == MODE_DIRECT or reply_to == REPLY_SENDER_DM:
             base["to"] = sender
@@ -359,7 +436,7 @@ class HermesCoordinator:
         parts = split_message(message, DEFAULT_BYTE_LIMIT)
         if not parts:
             return
-        base = {"from": self.gateway_node_id, "ack": False}
+        base = {"from": self.gateway_node_id, "ack": self.require_ack}
         if self.mode == MODE_CHANNEL and self.channel_index is not None:
             base["channel"] = self.channel_index
         await self._send_parts(parts, base)
@@ -369,7 +446,11 @@ class HermesCoordinator:
         parts = split_message(message, DEFAULT_BYTE_LIMIT)
         if not parts:
             return
-        base = {"from": self.gateway_node_id, "to": int(node_id), "ack": False}
+        base = {
+            "from": self.gateway_node_id,
+            "to": int(node_id),
+            "ack": self.require_ack,
+        }
         await self._send_parts(parts, base)
 
     # --- Diagnostic state + observer for the sensors -----------------------
