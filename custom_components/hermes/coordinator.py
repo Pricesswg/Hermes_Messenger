@@ -183,7 +183,25 @@ class HermesCoordinator:
     # --- Incoming event handling -------------------------------------------
 
     async def async_handle_event(self, event: Event) -> None:
-        """Entry point for every `meshtastic_api_text_message`."""
+        """Entry point for every `meshtastic_api_text_message`.
+
+        Wrapped whole: an exception in here is caught by Home Assistant and
+        written to its log, where nothing in this integration can see it. From
+        the card that is indistinguishable from never having been called, which
+        sent the diagnosis looking in the wrong place. The failure is recorded
+        where the user is already looking instead.
+        """
+        try:
+            await self._handle(event)
+        except Exception as err:  # noqa: BLE001 - a listener must never die
+            self._count("error")
+            self._record_error(f"handler failed: {err}", None, "")
+            self._log("in", str(event.data.get("data", "")), None, "error")
+            _LOGGER.exception("Hermes: failed handling a mesh message")
+            self._notify_sensors()
+
+    async def _handle(self, event: Event) -> None:
+        """The real work, so the wrapper above stays readable."""
         # Real schema (verified): fields are nested under ["data"] and `to` is
         # an object {node, channel}. Defensive code: if the base changes we just
         # ignore, we do not blow up.

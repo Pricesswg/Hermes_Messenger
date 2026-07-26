@@ -4,6 +4,8 @@ import type { HermesLogEntry } from "../types";
 
 export interface LogCtx {
   entries: HermesLogEntry[];
+  /** Reception tallies per gateway, so an empty log can be explained. */
+  entries_meta: { title: string; counts: Record<string, number> }[];
   /** "", "in" or "out". */
   filter: string;
   updatedAt: string;
@@ -31,6 +33,19 @@ export function renderLog(
         ? html`<span class="hint">${t("status.updatedAt")} ${ctx.updatedAt}</span>`
         : ""}
     </h2>
+
+    ${ctx.entries_meta.map(
+      (meta) => html`
+        <div class="note">
+          <b>${meta.title}</b>:
+          ${Object.keys(meta.counts).length
+            ? Object.entries(meta.counts)
+                .map(([reason, n]) => `${n} ${t(`status.reason.${reason}`)}`)
+                .join(", ")
+            : t("log.nothingReceived")}
+        </div>
+      `
+    )}
 
     <div class="map-controls">
       ${["", "in", "out"].map(

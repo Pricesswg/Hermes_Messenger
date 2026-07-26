@@ -75,6 +75,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(
         hass.bus.async_listen(EVENT_TEXT_MESSAGE, coordinator.async_handle_event)
     )
+    # Logged at info so the Home Assistant log alone can confirm that this entry
+    # is listening and for what, without turning on debug for the domain.
+    _LOGGER.info(
+        "Hermes: listening for %s, gateway=%s mode=%s channel=%s",
+        EVENT_TEXT_MESSAGE,
+        coordinator.gateway_node_id,
+        coordinator.mode,
+        coordinator.channel_index,
+    )
     entry.async_on_unload(coordinator.async_shutdown)
 
     # Reload the entry when options change (command/whitelist CRUD): this way UI

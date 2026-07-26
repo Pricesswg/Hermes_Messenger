@@ -547,6 +547,10 @@ export class HermesCard extends LitElement {
         return renderLog(
           {
             entries: this._history,
+            entries_meta: this._entries.map((e) => ({
+              title: e.title,
+              counts: e.seen_counts ?? {},
+            })),
             filter: this._logFilter,
             updatedAt: this._updatedAt,
             onFilter: this._onLogFilter,
