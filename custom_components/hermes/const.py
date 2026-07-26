@@ -96,6 +96,11 @@ HISTORY_SAVE_DELAY = 15
 
 DATA_STORE = f"{DOMAIN}_store"
 DATA_WS_REGISTERED = f"{DOMAIN}_ws_registered"
+# The mesh listener is registered once for the whole integration, not per entry.
+DATA_LISTENER = f"{DOMAIN}_listener"
+# Raw count of mesh events seen on the bus, independent of any entry, so an
+# entry receiving nothing can be told apart from nothing being emitted at all.
+DATA_BUS_EVENTS = f"{DOMAIN}_bus_events"
 
 # --- Lovelace card ---------------------------------------------------------
 # The bundle is built from `hermes-card/` (rollup) into this integration's

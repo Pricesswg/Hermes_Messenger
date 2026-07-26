@@ -38,6 +38,7 @@ from .const import (
     CONF_PART_DELAY,
     CONF_RATE_LIMIT,
     CONF_REQUIRE_ACK,
+    DATA_BUS_EVENTS,
     DATA_STORE,
     DATA_WS_REGISTERED,
     DEFAULT_CASE_SENSITIVE,
@@ -106,6 +107,8 @@ def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
         "loaded": entry.entry_id in hass.data.get(DOMAIN, {}),
         "state": str(getattr(entry, "state", "")),
         "last_seen": _last_seen(hass, entry.entry_id),
+        # Counted by the shared listener, so it is independent of this entry.
+        "bus_events": hass.data.get(DATA_BUS_EVENTS, 0),
         "seen_counts": dict(
             getattr(
                 hass.data.get(DOMAIN, {}).get(entry.entry_id), "seen_counts", {}

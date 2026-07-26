@@ -16,7 +16,7 @@ import voluptuous as vol
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.loader import async_get_integration
@@ -25,7 +25,9 @@ from . import websocket as hermes_websocket
 from .const import (
     CARD_FILENAME,
     CARD_URL,
+    DATA_BUS_EVENTS,
     DATA_CARD_REGISTERED,
+    DATA_LISTENER,
     DATA_STORE,
     DOMAIN,
     EVENT_TEXT_MESSAGE,
@@ -72,9 +74,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Listener on the base Meshtastic event. `async_on_unload` guarantees clean
     # removal on unload/reload.
-    entry.async_on_unload(
-        hass.bus.async_listen(EVENT_TEXT_MESSAGE, coordinator.async_handle_event)
-    )
+    _async_register_mesh_listener(hass)
     # Logged at info so the Home Assistant log alone can confirm that this entry
     # is listening and for what, without turning on debug for the domain.
     _LOGGER.info(
@@ -102,6 +102,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
+
+@callback
+def _async_register_mesh_listener(hass: HomeAssistant) -> None:
+    """Subscribe to the mesh text events once, for the whole integration.
+
+    Previously each entry subscribed for itself and unsubscribed on unload. A
+    reload runs on every saved setting, so the subscription was torn down and
+    rebuilt constantly, and any hiccup in that cycle left nothing listening
+    while the entry still looked perfectly healthy. Registering once removes
+    that entire class of failure.
+
+    The listener is a plain callback that hands the work to a task rather than a
+    coroutine listener, which is the more predictable of the two on the event
+    bus, and it counts every event before dispatching so an entry that receives
+    nothing can be told apart from nothing being emitted.
+    """
+    if DATA_LISTENER in hass.data:
+        return
+
+    @callback
+    def _dispatch(event: Event) -> None:
+        hass.data[DATA_BUS_EVENTS] = hass.data.get(DATA_BUS_EVENTS, 0) + 1
+        for coordinator in list(hass.data.get(DOMAIN, {}).values()):
+            hass.async_create_task(coordinator.async_handle_event(event))
+
+    hass.data[DATA_LISTENER] = hass.bus.async_listen(EVENT_TEXT_MESSAGE, _dispatch)
 
 
 async def _async_register_frontend_card(hass: HomeAssistant) -> None:
@@ -179,6 +206,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not hass.data[DOMAIN]:
             hass.services.async_remove(DOMAIN, SERVICE_BROADCAST)
             hass.services.async_remove(DOMAIN, SERVICE_SEND_DIRECT)
+            # Only once the last gateway is gone: a reload of one entry must
+            # not take the shared listener down with it.
+            unsubscribe = hass.data.pop(DATA_LISTENER, None)
+            if unsubscribe is not None:
+                unsubscribe()
     return unload_ok
 
 

@@ -70,6 +70,7 @@ const en: Dict = {
   "status.noIntegration": "No Hermes entities found. Add the integration first.",
 
   "status.reception": "Reception",
+  "status.busEvents": "Mesh events reaching Hermes",
   "status.mismatch": "nothing is getting through",
   "status.notRunning": "not running",
   "status.notRunningHint": "This gateway is configured but the integration is not running, so nothing is listening for messages. The settings below are read from storage and look fine either way. Check Settings, Devices and Services for an error on Hermes, and the Home Assistant log.",
@@ -263,6 +264,7 @@ const it: Dict = {
   "status.noIntegration": "Nessuna entità Hermes trovata. Aggiungi prima l'integrazione.",
 
   "status.reception": "Ricezione",
+  "status.busEvents": "Eventi mesh arrivati a Hermes",
   "status.mismatch": "non passa niente",
   "status.notRunning": "non in esecuzione",
   "status.notRunningHint": "Questo gateway e' configurato ma l'integrazione non e' in esecuzione, quindi non c'e' nulla in ascolto dei messaggi. Le impostazioni qui sotto vengono lette dallo storage e sembrano corrette comunque. Controlla in Impostazioni, Dispositivi e servizi se Hermes e' in errore, e il log di Home Assistant.",
@@ -456,6 +458,7 @@ const es: Dict = {
   "status.noIntegration": "No se han encontrado entidades de Hermes. Añade primero la integración.",
 
   "status.reception": "Recepcion",
+  "status.busEvents": "Eventos mesh llegados a Hermes",
   "status.mismatch": "no pasa nada",
   "status.notRunning": "no en ejecucion",
   "status.notRunningHint": "Esta puerta de enlace esta configurada pero la integracion no esta en ejecucion, asi que no hay nada escuchando mensajes. Los ajustes de abajo se leen del almacenamiento y parecen correctos igualmente. Revisa en Ajustes, Dispositivos y servicios si Hermes esta en error, y el registro de Home Assistant.",
@@ -649,6 +652,7 @@ const fr: Dict = {
   "status.noIntegration": "Aucune entité Hermes trouvée. Ajoutez d'abord l'intégration.",
 
   "status.reception": "Reception",
+  "status.busEvents": "Evenements mesh arrives a Hermes",
   "status.mismatch": "rien ne passe",
   "status.notRunning": "pas en cours d execution",
   "status.notRunningHint": "Cette passerelle est configuree mais l integration ne tourne pas, rien n ecoute donc les messages. Les parametres ci-dessous sont lus depuis le stockage et paraissent corrects de toute facon. Verifiez dans Parametres, Appareils et services si Hermes est en erreur, ainsi que le journal de Home Assistant.",
@@ -842,6 +846,7 @@ const de: Dict = {
   "status.noIntegration": "Keine Hermes-Entitäten gefunden. Füge zuerst die Integration hinzu.",
 
   "status.reception": "Empfang",
+  "status.busEvents": "Mesh-Ereignisse, die Hermes erreichen",
   "status.mismatch": "es kommt nichts an",
   "status.notRunning": "laeuft nicht",
   "status.notRunningHint": "Dieses Gateway ist konfiguriert, aber die Integration laeuft nicht, es hoert also nichts auf Nachrichten. Die Einstellungen unten stammen aus dem Speicher und sehen ohnehin korrekt aus. Pruefe unter Einstellungen, Geraete und Dienste, ob Hermes einen Fehler zeigt, und das Home-Assistant-Log.",

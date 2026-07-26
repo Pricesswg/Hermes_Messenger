@@ -93,6 +93,10 @@ function renderReception(
           : ""}
         <div class="rows">
           <div class="row">
+            <span class="k">${t("status.busEvents")}</span>
+            <span class="v">${entry.bus_events ?? 0}</span>
+          </div>
+          <div class="row">
             <span class="k">${t("status.expects")}</span>
             <span class="v">
               ${t("settings.gateway")} ${entry.gateway_node_id ?? "-"},

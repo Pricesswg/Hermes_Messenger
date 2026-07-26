@@ -156,6 +156,8 @@ export interface HermesEntry {
   last_seen: HermesLastSeen | null;
   /** Count of text messages per outcome, since Home Assistant started. */
   seen_counts: Record<string, number>;
+  /** Mesh events seen on the bus by the shared listener, across all gateways. */
+  bus_events: number;
 }
 
 /** The last text message this entry saw on the mesh, before any filtering. */
