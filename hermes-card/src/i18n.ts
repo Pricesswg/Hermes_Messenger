@@ -38,6 +38,9 @@ const en: Dict = {
   "log.outcome.sent": "sent",
   "log.outcome.help": "help sent",
   "log.outcome.rate_limited": "rate limit reached",
+  "log.outcome.other_gateway": "ignored, another gateway",
+  "log.outcome.other_target": "ignored, another channel or a direct message",
+  "log.outcome.malformed": "ignored, unexpected format",
 
   "presets.title": "Quick send",
   "presets.add": "Add preset",
@@ -225,6 +228,9 @@ const it: Dict = {
   "log.outcome.sent": "inviato",
   "log.outcome.help": "aiuto inviato",
   "log.outcome.rate_limited": "limite di frequenza raggiunto",
+  "log.outcome.other_gateway": "ignorato, un altro gateway",
+  "log.outcome.other_target": "ignorato, un altro canale o un messaggio diretto",
+  "log.outcome.malformed": "ignorato, formato inatteso",
 
   "presets.title": "Invio rapido",
   "presets.add": "Aggiungi preset",
@@ -412,6 +418,9 @@ const es: Dict = {
   "log.outcome.sent": "enviado",
   "log.outcome.help": "ayuda enviada",
   "log.outcome.rate_limited": "limite de frecuencia alcanzado",
+  "log.outcome.other_gateway": "ignorado, otra puerta de enlace",
+  "log.outcome.other_target": "ignorado, otro canal o un mensaje directo",
+  "log.outcome.malformed": "ignorado, formato inesperado",
 
   "presets.title": "Envío rápido",
   "presets.add": "Añadir preajuste",
@@ -599,6 +608,9 @@ const fr: Dict = {
   "log.outcome.sent": "envoyé",
   "log.outcome.help": "aide envoyee",
   "log.outcome.rate_limited": "limite de frequence atteinte",
+  "log.outcome.other_gateway": "ignore, une autre passerelle",
+  "log.outcome.other_target": "ignore, un autre canal ou un message direct",
+  "log.outcome.malformed": "ignore, format inattendu",
 
   "presets.title": "Envoi rapide",
   "presets.add": "Ajouter un préréglage",
@@ -786,6 +798,9 @@ const de: Dict = {
   "log.outcome.sent": "gesendet",
   "log.outcome.help": "Hilfe gesendet",
   "log.outcome.rate_limited": "Ratenlimit erreicht",
+  "log.outcome.other_gateway": "ignoriert, ein anderes Gateway",
+  "log.outcome.other_target": "ignoriert, ein anderer Kanal oder eine Direktnachricht",
+  "log.outcome.malformed": "ignoriert, unerwartetes Format",
 
   "presets.title": "Schnellversand",
   "presets.add": "Vorlage hinzufügen",

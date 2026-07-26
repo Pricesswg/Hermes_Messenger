@@ -315,7 +315,13 @@ class HermesCoordinator:
 
     @callback
     def _note_seen(self, data: dict[str, Any], reason: str) -> None:
-        """Remember the last mesh message and what this entry made of it."""
+        """Remember the last mesh message and what this entry made of it.
+
+        Anything discarded by a filter is written to the log as well. Showing
+        only what survived every filter meant a message that was read and then
+        dropped left no trace in the one place anyone looks, which is
+        indistinguishable from never having been read at all.
+        """
         to = data.get("to") or {}
         self._count(reason)
         self.last_seen = {
@@ -326,6 +332,10 @@ class HermesCoordinator:
             "reason": reason,
             "time": dt_util.utcnow(),
         }
+
+        if reason != "accepted":
+            text = data.get("message") or ""
+            self._log("in", text, data.get("from"), reason)
 
     @callback
     def _log(self, direction: str, text: str, node: int | None, outcome: str) -> None:
