@@ -86,8 +86,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     entry.async_on_unload(coordinator.async_shutdown)
 
-    # Reload the entry when options change (command/whitelist CRUD): this way UI
-    # changes take effect without restarting the integration.
+    # Refresh the sensors when options change. Deliberately not a reload: every
+    # setting is read live from the entry, so a change already takes effect on
+    # the next message without rebuilding anything.
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     # Global settings store and websocket API, both shared by every entry.
@@ -215,8 +216,19 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload the entry when options change."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    """React to an options change without reloading the entry.
+
+    Reloading was the obvious thing to do and it was wrong. Every setting the
+    coordinator uses is read from the entry when it is needed, so a change is
+    already live; the reload only tore the integration down and built it again.
+    That cost was real: messages arriving during the rebuild were lost, the
+    in-memory counters went back to zero, and the mesh subscription was
+    cancelled and recreated. Since saving any command or setting triggered it,
+    the act of configuring Hermes was disrupting the thing being configured.
+    """
+    coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if coordinator is not None:
+        coordinator.async_refresh_sensors()
 
 
 def _async_register_services(hass: HomeAssistant) -> None:

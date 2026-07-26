@@ -106,6 +106,11 @@ class HermesCoordinator:
         )
 
     @callback
+    def async_refresh_sensors(self) -> None:
+        """Push the current values to the sensors after a settings change."""
+        self._notify_sensors()
+
+    @callback
     def async_shutdown(self) -> None:
         """Release resources (called on unload)."""
         if self._unsub_midnight is not None:
