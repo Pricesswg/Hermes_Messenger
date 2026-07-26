@@ -1,9 +1,11 @@
 broadcast:
   name: Broadcast
+  # Shown behind the question mark next to the action.
   description: >-
     Send a message on the channel (or DM) configured in the Hermes entry,
     passing through the byte-safe split engine. Intended for push notifications
     from Home Assistant automations, including scheduled ones.
+    Guide: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations
   fields:
     config_entry_id:
       name: Hermes instance
@@ -39,6 +41,7 @@ send_direct:
   description: >-
     Send a direct message to a single node, bypassing the entry's default
     channel.
+    Guide: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations
   fields:
     config_entry_id:
       name: Hermes instance

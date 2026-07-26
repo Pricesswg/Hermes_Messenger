@@ -13,6 +13,9 @@ integration: it does not manage the node connection (TCP/serial/BLE), it listens
 to its events and uses its services. All configuration happens from the UI, with
 no hand-written YAML, no raw Jinja2, and no custom Lovelace cards.
 
+> **[Read the user guide](https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md)** for setting up, building commands, and
+> working out what is wrong when nothing happens.
+
 ## Why the name "Hermes"?
 
 **Hermes** (Greek Ἑρμῆς; the Roman **Mercury**) is the Greek god of **messengers,
@@ -54,74 +57,33 @@ Greek-deity naming line.
 
 ## Installation
 
-HACS cannot install from a private repository (it only reads publicly available
-information), so pick the method that matches the repo visibility.
-
-### Manual (works while the repo is private)
-
-1. Copy the `custom_components/hermes/` folder into your Home Assistant
-   `config/custom_components/` directory (result: `config/custom_components/hermes/`).
-2. Restart Home Assistant.
-3. **Settings, Devices & Services, Add Integration, Hermes**.
-
-Get the folder by cloning the repo, downloading it as a ZIP from GitHub, or
-copying it over Samba/SSH. Updates mean replacing the folder and restarting.
-
-### HACS (once the repo is public)
+Through HACS:
 
 1. HACS, ⋮ menu, **Custom repositories**.
-2. Add the repo URL, category **Integration**.
-3. Install "Hermes", restart Home Assistant, then add it from
-   **Settings, Devices & Services**.
+2. Add `https://github.com/Pricesswg/Hermes_Messenger`, category **Integration**.
+3. Install Hermes, restart Home Assistant.
+4. **Settings, Devices and Services, Add Integration, Hermes**.
 
-`hacs.json` is already in place, so going public needs no extra packaging. A
-third-party option to install from private repos is
-[Private HACS](https://github.com/pestevez/private-hacs), which uses a Personal
-Access Token.
+The Lovelace card registers itself, so there is no resource to add by hand. Add
+it to a dashboard from **Add card**, searching for **Hermes**.
+
+After any update, restart Home Assistant and hard refresh the page: Python only
+changes on a restart and the card is cached by the browser.
 
 ## Configuration
 
-### Initial step (config flow)
+Everything is configured from the card, with no YAML. Pick the gateway node, the
+mode (a channel or direct messages), the channel, and which nodes are allowed to
+send commands.
 
-| Field | Description |
-|-------|-------------|
-| **Gateway node** | Pick your gateway from the list of Meshtastic devices. No numeric id to look up. |
-| **Mode** | `Channel (broadcast)` or `Direct message (DM)`. |
-| **Channel** | Picked from the channels configured on the radio, by name. Used only in channel mode and changeable later from the card. |
-| **Authorized nodes** | Pick the allowed nodes from the Meshtastic device list. An optional field lets you add node ids for nodes HA has not seen yet. At least one required. |
+Commands are built by picking an entity and clicking buttons: **Read** buttons
+insert a live value into the reply, **Do** buttons run something. You never type
+a service name, and values are offered within the range your device actually
+accepts.
 
-Node picking works because the base Meshtastic integration exposes each node as a
-device; Hermes resolves the picked device to its node number for you.
-
-To manage **multiple channels**: add the integration multiple times (one config
-entry per gateway + channel/DM combination). This is native multi-instance, no
-ad-hoc configuration needed.
-
-### Commands (options flow)
-
-**Configure, Add a command.** Each command:
-
-| Field | Notes |
-|-------|-------|
-| **Keyword** | for example `status`, `lights off`. |
-| **Match type** | `Exact match` or `Starts with`. |
-| **Service** | `domain.service`, for example `light.turn_off`. |
-| **Target** | Entity or area (native selector). |
-| **Reply template** | Simple placeholders (below). |
-| **Reply routing** | On channel (broadcast) or DM to the sender. |
-| **Service data** | Optional, advanced (dict). |
-| **Authorized nodes override** | Optional: pick devices for a whitelist specific to this command. |
-
-Commands are **editable without restarting** the integration.
-
-#### Reply template placeholders
-
-No Jinja2: just two placeholders, resolved internally.
-
-- `{state:entity_id}` resolves to the entity state, for example `{state:sensor.living_room_temp}`
-- `{attr:entity_id:attribute}` resolves to an attribute value, for example `{attr:climate.living_room:temperature}`
-
-Example reply: `Living room: {state:sensor.living_room_temp}°C, lights {state:light.living_room}`
+The [user guide](docs/USER_GUIDE.md) walks through all of it, with worked
+examples for a toggle, a status reply, and a command that takes a number from the
+message.
 
 ## Services (for automations, including scheduled ones)
 

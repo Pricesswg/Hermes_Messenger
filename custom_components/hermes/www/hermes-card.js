@@ -1640,7 +1640,7 @@ function t(t,e,n,i){var s,o=arguments.length,a=o<3?e:null===i?i=Object.getOwnPro
       </div>
     </div>
   `}(t,n,e))}
-  `}const Qt="0.20.0";function te(t,e,n,i,s){if(!function(t){return xt(t,wt).length>0}(t))return W`<div class="empty">${s("status.noIntegration")}</div>`;const o=Lt(t),a=kt(t,"commands_executed"),r=kt(t,"last_command"),l=kt(t,"last_error"),h=t=>t&&"unknown"!==t&&"unavailable"!==t?t:s("status.none");return W`
+  `}const Qt="0.21.0";function te(t,e,n,i,s){if(!function(t){return xt(t,wt).length>0}(t))return W`<div class="empty">${s("status.noIntegration")}</div>`;const o=Lt(t),a=kt(t,"commands_executed"),r=kt(t,"last_command"),l=kt(t,"last_error"),h=t=>t&&"unknown"!==t&&"unavailable"!==t?t:s("status.none");return W`
     <h2 class="screen-title">
       ${s("status.title")}
       ${i?W`<span class="hint">${s("status.updatedAt")} ${i}</span>`:""}
