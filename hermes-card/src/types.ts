@@ -88,8 +88,10 @@ export interface HermesPreset {
   id?: string;
   label: string;
   text: string;
-  /** Send as a DM to this node; empty means broadcast on the entry channel. */
+  /** Send as a DM to this node; empty means broadcast on a channel. */
   node_id?: number | null;
+  /** Channel to broadcast on; empty means the gateway's own channel. */
+  channel?: number | null;
 }
 
 /** One line of the received and sent log. */

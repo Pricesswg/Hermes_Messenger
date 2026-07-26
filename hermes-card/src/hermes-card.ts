@@ -286,7 +286,7 @@ export class HermesCard extends LitElement {
   };
 
   private _onPresetNew = (): void => {
-    this._editingPreset = { label: "", text: "", node_id: null };
+    this._editingPreset = { label: "", text: "", node_id: null, channel: null };
   };
 
   private _onPresetEdit = (preset: HermesPreset): void => {

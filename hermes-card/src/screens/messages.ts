@@ -167,6 +167,32 @@ function renderPresets(
             ></textarea>
           </div>
           <div class="field">
+            <label>${t("presets.channel")}</label>
+            <select
+              ?disabled=${Boolean(draft.node_id)}
+              @change=${(e: Event) => {
+                const raw = (e.target as HTMLSelectElement).value;
+                ctx.onPresetInput("channel", raw === "" ? null : Number(raw));
+              }}
+            >
+              <option value="" ?selected=${draft.channel === null || draft.channel === undefined}>
+                ${t("presets.channelDefault")}
+              </option>
+              ${ctx.channels.map(
+                (channel) => html`
+                  <option
+                    value=${channel.index}
+                    ?selected=${draft.channel === channel.index}
+                  >
+                    ${channel.index}: ${channel.name}
+                  </option>
+                `
+              )}
+            </select>
+            <span class="hint">${t("presets.channelHint")}</span>
+          </div>
+
+          <div class="field">
             <label>${t("presets.node")}</label>
             <input
               type="number"
@@ -203,7 +229,9 @@ function renderPresets(
                   <span class="sub">
                     ${preset.node_id
                       ? `${t("presets.toNode")} ${preset.node_id}`
-                      : t("presets.toChannel")}
+                      : preset.channel !== null && preset.channel !== undefined
+                        ? `${t("presets.toChannel")} ${preset.channel}`
+                        : t("presets.toChannelDefault")}
                   </span>
                 </div>
                 <div class="actions" style="margin:0">

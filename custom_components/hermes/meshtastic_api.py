@@ -26,6 +26,28 @@ _LOGGER = logging.getLogger(__name__)
 DEFAULT_PSK = "AQ=="
 
 
+def node_num_from_device(device: Any) -> int | None:
+    """Meshtastic node number of a device, or None if it is not one.
+
+    Deliberately tolerant about the shape of the identifiers. This runs over
+    every device in Home Assistant, not only the Meshtastic ones, and an
+    integration that stored an identifier which is not a plain pair used to
+    break the whole call with an unpacking error.
+    """
+    for identifier in getattr(device, "identifiers", None) or ():
+        try:
+            domain, value = identifier[0], identifier[1]
+        except (TypeError, IndexError, KeyError):
+            continue
+        if domain != MESHTASTIC_DOMAIN:
+            continue
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
 def _clients(hass: HomeAssistant) -> list[Any]:
     """Every Meshtastic API client currently loaded."""
     found = []

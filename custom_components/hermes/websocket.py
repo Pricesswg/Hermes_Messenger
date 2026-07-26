@@ -20,7 +20,11 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 
 from .actions import ACTIONS_BY_TYPE, DOMAIN_TO_TYPE, GENERIC_ACTIONS
-from .meshtastic_api import async_get_channels, gateway_firmware
+from .meshtastic_api import (
+    async_get_channels,
+    gateway_firmware,
+    node_num_from_device,
+)
 from .const import (
     CMD_ID,
     CONF_AUTHORIZED_NODES,
@@ -256,21 +260,16 @@ def ws_nodes_list(hass: HomeAssistant, connection, msg: dict) -> None:
     registry = dr.async_get(hass)
     nodes: list[dict[str, Any]] = []
     for device in registry.devices.values():
-        for domain, value in device.identifiers:
-            if domain != MESHTASTIC_DOMAIN:
-                continue
-            try:
-                node_num = int(value)
-            except (TypeError, ValueError):
-                continue
-            nodes.append(
-                {
-                    "device_id": device.id,
-                    "node_num": node_num,
-                    "name": device.name_by_user or device.name or str(node_num),
-                }
-            )
-            break
+        node_num = node_num_from_device(device)
+        if node_num is None:
+            continue
+        nodes.append(
+            {
+                "device_id": device.id,
+                "node_num": node_num,
+                "name": device.name_by_user or device.name or str(node_num),
+            }
+        )
     nodes.sort(key=lambda n: n["name"].lower())
     connection.send_result(msg["id"], nodes)
 
@@ -356,6 +355,9 @@ async def ws_preset_send(hass: HomeAssistant, connection, msg: dict) -> None:
             DOMAIN, "send_direct", {**data, "node_id": int(node_id)}, blocking=True
         )
     else:
+        channel = preset.get("channel")
+        if channel is not None:
+            data["channel"] = int(channel)
         await hass.services.async_call(DOMAIN, "broadcast", data, blocking=True)
 
     connection.send_result(msg["id"], {"sent": preset["id"]})

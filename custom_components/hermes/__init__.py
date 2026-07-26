@@ -43,10 +43,14 @@ ATTR_CONFIG_ENTRY_ID = "config_entry_id"
 ATTR_MESSAGE = "message"
 ATTR_NODE_ID = "node_id"
 
+ATTR_CHANNEL = "channel"
+
 _BROADCAST_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_CONFIG_ENTRY_ID): cv.string,
         vol.Required(ATTR_MESSAGE): cv.string,
+        # Optional override: without it the entry's own channel is used.
+        vol.Optional(ATTR_CHANNEL): vol.All(vol.Coerce(int), vol.Range(min=0, max=7)),
     }
 )
 
@@ -172,7 +176,9 @@ def _async_register_services(hass: HomeAssistant) -> None:
         return coordinator
 
     async def _handle_broadcast(call: ServiceCall) -> None:
-        await _resolve(call).async_broadcast(call.data[ATTR_MESSAGE])
+        await _resolve(call).async_broadcast(
+            call.data[ATTR_MESSAGE], call.data.get(ATTR_CHANNEL)
+        )
 
     async def _handle_send_direct(call: ServiceCall) -> None:
         coordinator = _resolve(call)

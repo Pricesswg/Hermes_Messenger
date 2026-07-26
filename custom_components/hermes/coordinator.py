@@ -429,14 +429,22 @@ class HermesCoordinator:
 
     # --- Public services (broadcast / send_direct) -------------------------
 
-    async def async_broadcast(self, message: str) -> None:
-        """Send on the channel/DM configured in the entry (for HA automations)."""
+    async def async_broadcast(
+        self, message: str, channel: int | None = None
+    ) -> None:
+        """Send on a channel, defaulting to the one configured in the entry.
+
+        The explicit channel wins when given, so an automation or a preset can
+        reach a channel other than the one this gateway listens on without
+        needing a second config entry.
+        """
         parts = split_message(message, DEFAULT_BYTE_LIMIT)
         if not parts:
             return
         base = {"from": self.gateway_node_id, "ack": self.require_ack}
-        if self.mode == MODE_CHANNEL and self.channel_index is not None:
-            base["channel"] = self.channel_index
+        target = channel if channel is not None else self.channel_index
+        if target is not None:
+            base["channel"] = int(target)
         await self._send_parts(parts, base)
 
     async def async_send_direct(self, node_id: int, message: str) -> None:

@@ -25,6 +25,7 @@ from homeassistant.config_entries import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, selector
 
+from .meshtastic_api import node_num_from_device
 from .const import (
     CMD_AUTH_OVERRIDE,
     CMD_ID,
@@ -84,13 +85,7 @@ def _device_to_node(hass: HomeAssistant, device_id: str) -> int | None:
     device = dr.async_get(hass).async_get(device_id)
     if device is None:
         return None
-    for domain, value in device.identifiers:
-        if domain == MESHTASTIC_DOMAIN:
-            try:
-                return int(value)
-            except (TypeError, ValueError):
-                return None
-    return None
+    return node_num_from_device(device)
 
 
 def _node_to_device(hass: HomeAssistant, node_id: int) -> str | None:

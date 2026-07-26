@@ -20,6 +20,19 @@ broadcast:
       selector:
         text:
           multiline: true
+    channel:
+      name: Channel
+      description: >-
+        Channel index to send on. Leave empty to use the channel configured in
+        the entry; set it to reach a different channel without adding a second
+        Hermes instance.
+      required: false
+      example: 1
+      selector:
+        number:
+          mode: box
+          min: 0
+          max: 7
 
 send_direct:
   name: Send direct (DM)
