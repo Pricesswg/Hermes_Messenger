@@ -158,6 +158,10 @@ export interface HermesEntry {
   seen_counts: Record<string, number>;
   /** Mesh events seen on the bus by the shared listener, across all gateways. */
   bus_events: number;
+  /** Version of the Python currently loaded, which needs a restart to change. */
+  backend_version: string;
+  /** Whether the shared mesh subscription is in place. */
+  listening: boolean;
 }
 
 /** The last text message this entry saw on the mesh, before any filtering. */

@@ -1,6 +1,7 @@
 import { html, type TemplateResult } from "lit";
 
 import type { HermesEntry, HomeAssistant } from "../types";
+import { VERSION } from "../version";
 import { hasHermes, hermesSensor, meshNodes } from "../utils";
 
 /** Status screen: a compact overview, no long lists. */
@@ -92,6 +93,17 @@ function renderReception(
             </div>`
           : ""}
         <div class="rows">
+          <div class="row">
+            <span class="k">${t("status.versions")}</span>
+            <span class="v">
+              ${t("status.card")} ${VERSION},
+              ${t("status.backend")} ${entry.backend_version || "?"}
+              ${entry.listening === false ? ` (${t("status.notListening")})` : ""}
+            </span>
+          </div>
+          ${entry.backend_version && entry.backend_version !== VERSION
+            ? html`<div class="note warn">${t("status.versionMismatch")}</div>`
+            : ""}
           <div class="row">
             <span class="k">${t("status.busEvents")}</span>
             <span class="v">${entry.bus_events ?? 0}</span>

@@ -39,6 +39,7 @@ from .const import (
     CONF_RATE_LIMIT,
     CONF_REQUIRE_ACK,
     DATA_BUS_EVENTS,
+    DATA_LISTENER,
     DATA_STORE,
     DATA_WS_REGISTERED,
     DEFAULT_CASE_SENSITIVE,
@@ -109,6 +110,12 @@ def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
         "last_seen": _last_seen(hass, entry.entry_id),
         # Counted by the shared listener, so it is independent of this entry.
         "bus_events": hass.data.get(DATA_BUS_EVENTS, 0),
+        # Python code only changes on a full restart. Reporting the running
+        # version lets the card catch a backend that is still the previous one
+        # while the browser already has the new bundle, which otherwise looks
+        # like a listener that receives nothing.
+        "backend_version": _running_version(hass),
+        "listening": DATA_LISTENER in hass.data,
         "seen_counts": dict(
             getattr(
                 hass.data.get(DOMAIN, {}).get(entry.entry_id), "seen_counts", {}
@@ -119,6 +126,13 @@ def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
             CONF_CASE_SENSITIVE, DEFAULT_CASE_SENSITIVE
         ),
     }
+
+
+def _running_version(hass: HomeAssistant) -> str:
+    """Version of the Python actually loaded, read from the live manifest."""
+    integration = hass.data.get("integrations", {}).get(DOMAIN)
+    version = getattr(integration, "version", None)
+    return str(version) if version else ""
 
 
 def _last_seen(hass: HomeAssistant, entry_id: str) -> dict[str, Any] | None:
