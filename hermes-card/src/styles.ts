@@ -585,6 +585,12 @@ export const hermesLayout = css`
     vertical-align: middle;
   }
 
+  .field.indented {
+    margin-left: 16px;
+    padding-left: 12px;
+    border-left: 2px solid var(--border);
+  }
+
   .channel-badge {
     display: inline-flex;
     align-items: center;

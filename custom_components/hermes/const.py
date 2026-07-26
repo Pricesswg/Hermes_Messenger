@@ -47,6 +47,9 @@ CMD_TARGET = "target"
 CMD_SERVICE_DATA = "service_data"
 CMD_REPLY_TEMPLATE = "reply_template"
 CMD_REPLY_TO = "reply_to"
+# Channel to answer on when replying on a channel. Absent means the one this
+# gateway listens on, which is where the command was heard.
+CMD_REPLY_CHANNEL = "reply_channel"
 CMD_AUTH_OVERRIDE = "authorized_nodes_override"
 
 MATCH_EXACT = "exact"

@@ -272,10 +272,18 @@ function renderRow(
   const summary = command.service || command.reply_template || "";
   // Where this specific command answers: the channel it is heard on, or a DM
   // back to whoever sent it.
+  const explicit = command.reply_channel;
+  const named =
+    explicit !== null && explicit !== undefined
+      ? ctx.channels.find((c) => c.index === explicit)
+      : undefined;
+
   const target =
     command.reply_to === "sender_dm"
       ? t("messages.onDm")
-      : channelLabel(ctx, entry, t);
+      : explicit !== null && explicit !== undefined
+        ? `${explicit}${named ? `: ${named.name}` : ""}`
+        : channelLabel(ctx, entry, t);
 
   return html`
     <div class="list-row">
@@ -480,6 +488,42 @@ function renderForm(
           </option>
         </select>
       </div>
+
+      ${draft.reply_to === "channel"
+        ? html`
+            <div class="field indented">
+              <label>${t("messages.replyChannel")}</label>
+              <select
+                @change=${(e: Event) => {
+                  const raw = (e.target as HTMLSelectElement).value;
+                  ctx.onDraftInput(
+                    "reply_channel",
+                    raw === "" ? null : Number(raw)
+                  );
+                }}
+              >
+                <option
+                  value=""
+                  ?selected=${draft.reply_channel === null ||
+                  draft.reply_channel === undefined}
+                >
+                  ${t("messages.replyChannelSame")}
+                </option>
+                ${ctx.channels.map(
+                  (channel) => html`
+                    <option
+                      value=${channel.index}
+                      ?selected=${draft.reply_channel === channel.index}
+                    >
+                      ${channel.index}: ${channel.name}
+                    </option>
+                  `
+                )}
+              </select>
+              <span class="hint">${t("messages.replyChannelHint")}</span>
+            </div>
+          `
+        : ""}
 
       <button class="btn link" @click=${ctx.onToggleAdvanced}>
         ${ctx.showAdvanced ? t("messages.hideAdvanced") : t("messages.advanced")}

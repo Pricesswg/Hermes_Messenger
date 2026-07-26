@@ -124,6 +124,8 @@ export interface HermesCommand {
   service_data?: Record<string, any>;
   reply_template?: string;
   reply_to: "channel" | "sender_dm";
+  /** Channel to answer on; empty means the one the gateway listens on. */
+  reply_channel?: number | null;
   authorized_nodes_override?: number[];
 }
 

@@ -22,6 +22,7 @@ from .const import (
     CMD_AUTH_OVERRIDE,
     CMD_KEYWORD,
     CMD_MATCH_TYPE,
+    CMD_REPLY_CHANNEL,
     CMD_REPLY_TEMPLATE,
     CMD_REPLY_TO,
     CMD_SERVICE,
@@ -404,7 +405,16 @@ class HermesCoordinator:
 
         base = {"from": self.gateway_node_id, "ack": self.require_ack}
         reply_to = command.get(CMD_REPLY_TO, REPLY_CHANNEL)
-        if self.mode == MODE_DIRECT or reply_to == REPLY_SENDER_DM:
+        explicit = command.get(CMD_REPLY_CHANNEL)
+
+        if reply_to == REPLY_SENDER_DM:
+            base["to"] = sender
+        elif explicit is not None:
+            # The command names its own channel, which wins even on a DM
+            # gateway: answering somewhere specific was an explicit choice.
+            base["channel"] = int(explicit)
+        elif self.mode == MODE_DIRECT:
+            # A DM gateway has no channel of its own to answer on.
             base["to"] = sender
         else:
             base["channel"] = self.channel_index
