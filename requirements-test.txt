@@ -5,3 +5,10 @@
 # version tracks a Home Assistant release, so bumping it is how the suite moves
 # to a newer Home Assistant.
 pytest-homeassistant-custom-component==0.13.348
+
+# Hermes depends on the frontend component to serve its card, so setting the
+# integration up in a test needs the real frontend package. Home Assistant
+# itself does not pull it in, and without it the setup test cannot run at all.
+# Keep the pin equal to the one in homeassistant/components/frontend/manifest.json.
+home-assistant-frontend==20260624.6
+
