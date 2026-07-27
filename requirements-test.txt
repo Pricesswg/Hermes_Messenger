@@ -1,0 +1,7 @@
+# Everything the test suite needs beyond the standard library.
+#
+# pytest-homeassistant-custom-component pulls in Home Assistant itself and the
+# pytest plugins it expects, pinned to versions that work together. Its own
+# version tracks a Home Assistant release, so bumping it is how the suite moves
+# to a newer Home Assistant.
+pytest-homeassistant-custom-component==0.13.348

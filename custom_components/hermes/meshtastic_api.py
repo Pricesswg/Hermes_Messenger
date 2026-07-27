@@ -18,7 +18,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
-from .const import MESHTASTIC_DOMAIN
+from .const import DOMAIN, MESHTASTIC_DOMAIN
 from .nodedb import node_records
 
 _LOGGER = logging.getLogger(__name__)
@@ -76,6 +76,30 @@ def is_radio_connected(hass: HomeAssistant) -> bool | None:
     if not states:
         return None
     return any(states)
+
+
+def competing_integrations(hass: HomeAssistant) -> list[str]:
+    """Other loaded integrations that also talk to a Meshtastic node.
+
+    A Meshtastic node accepts one connection at a time. A second integration
+    opening its own serial or TCP link to the same node therefore takes it, and
+    the base integration's link goes down: from inside Hermes that looks exactly
+    like a listener that is never called, which is the wrong place to look and
+    the reason this cost days to find. Naming the suspects turns it into a
+    one line diagnosis.
+
+    Matched on the domain name rather than a hardcoded list, so an integration
+    written after this code is still caught. `meshtastic` itself is the one
+    Hermes is built on, and Hermes opens no connection of its own.
+    """
+    return sorted(
+        component
+        for component in hass.config.components
+        # Platforms appear as "sensor.meshtastic"; only whole domains connect.
+        if "." not in component
+        and MESHTASTIC_DOMAIN in component
+        and component not in (MESHTASTIC_DOMAIN, DOMAIN)
+    )
 
 
 def _clients(hass: HomeAssistant) -> list[Any]:

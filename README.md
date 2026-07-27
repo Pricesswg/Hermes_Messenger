@@ -227,13 +227,35 @@ These values are reasonable defaults, not experimental truths:
 
 ## Development / testing
 
-The split engine is pure Python and testable without Home Assistant:
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements-test.txt
+.venv/bin/pytest tests/ -v
+```
+
+The suite is in two halves. The pure modules (matching, message splitting,
+tokens, rate limit, node database) import the file directly and need nothing
+installed. The coordinator tests run a real Home Assistant and assert on the
+service calls that come out of it, which is where the decisions that matter
+live: who is authorized, which channel is accepted, what is refused.
+
+The card is TypeScript:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install pytest
-.venv/bin/pytest tests/test_message.py -v
+cd hermes-card && npm ci && npm run build
 ```
+
+The bundle it produces is committed, because Home Assistant serves it straight
+from the repository with no build step on the user's machine. CI rebuilds it and
+fails if the committed copy has drifted from the sources, checks that the
+manifest version and the card version agree, and checks that no language is
+missing a key:
+
+```bash
+python3 scripts/check_translations.py
+```
+
+To cut a release, `scripts/release.sh patch|minor|major` bumps both versions,
+rebuilds the bundle and runs those gates before you commit.
 
 ## License
 

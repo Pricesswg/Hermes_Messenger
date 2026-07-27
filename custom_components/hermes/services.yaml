@@ -1,33 +1,20 @@
+# Field metadata only. The names and descriptions the user reads live in
+# strings.json under "services", which is what Home Assistant translates: left
+# here they would stay English whatever language the user runs.
 broadcast:
-  name: Broadcast
-  # Shown behind the question mark next to the action.
-  description: >-
-    Send a message on the channel (or DM) configured in the Hermes entry,
-    passing through the byte-safe split engine. Intended for push notifications
-    from Home Assistant automations, including scheduled ones.
-    Guide: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations
   fields:
     config_entry_id:
-      name: Hermes instance
-      description: The Hermes config entry to send from.
       required: true
       selector:
         config_entry:
           integration: hermes
     message:
-      name: Message
-      description: Text to send (it will be split if it exceeds the byte limit).
       required: true
       example: "Alert: motion detected in the garden"
       selector:
         text:
           multiline: true
     channel:
-      name: Channel
-      description: >-
-        Channel index to send on. Leave empty to use the channel configured in
-        the entry; set it to reach a different channel without adding a second
-        Hermes instance.
       required: false
       example: 1
       selector:
@@ -37,22 +24,13 @@ broadcast:
           max: 7
 
 send_direct:
-  name: Send direct (DM)
-  description: >-
-    Send a direct message to a single node, bypassing the entry's default
-    channel.
-    Guide: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations
   fields:
     config_entry_id:
-      name: Hermes instance
-      description: The Hermes config entry to use as the sending gateway.
       required: true
       selector:
         config_entry:
           integration: hermes
     node_id:
-      name: Recipient node ID
-      description: Node id of the Meshtastic node to DM.
       required: true
       example: 3771721320
       selector:
@@ -60,8 +38,6 @@ send_direct:
           mode: box
           min: 0
     message:
-      name: Message
-      description: Text to send (it will be split if it exceeds the byte limit).
       required: true
       selector:
         text:

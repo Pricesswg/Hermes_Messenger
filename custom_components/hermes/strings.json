@@ -119,9 +119,53 @@
   },
   "entity": {
     "sensor": {
-      "last_command": { "name": "Last command received" },
-      "commands_executed": { "name": "Commands executed" },
-      "last_error": { "name": "Last error / auth rejection" }
+      "last_command": {
+        "name": "Last command received"
+      },
+      "commands_executed": {
+        "name": "Commands executed"
+      },
+      "last_error": {
+        "name": "Last error / auth rejection"
+      }
+    }
+  },
+  "services": {
+    "broadcast": {
+      "name": "Broadcast",
+      "description": "Send a message on the channel, or as a direct message, configured in the Hermes entry. Long text is split to fit the Meshtastic payload without cutting a character in half. Meant for notifications from automations. Guide: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations",
+      "fields": {
+        "config_entry_id": {
+          "name": "Hermes instance",
+          "description": "The Hermes entry to send from."
+        },
+        "message": {
+          "name": "Message",
+          "description": "Text to send. It is split if it exceeds the byte limit."
+        },
+        "channel": {
+          "name": "Channel",
+          "description": "Channel index to send on. Leave it empty to use the one configured in the entry; set it to reach a different channel without adding a second Hermes instance."
+        }
+      }
+    },
+    "send_direct": {
+      "name": "Send direct message",
+      "description": "Send a message to a single node instead of the channel configured in the entry. On firmware with PKC the message is encrypted for that node alone. Guide: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations",
+      "fields": {
+        "config_entry_id": {
+          "name": "Hermes instance",
+          "description": "The Hermes entry whose gateway sends the message."
+        },
+        "node_id": {
+          "name": "Recipient node",
+          "description": "Node number of the Meshtastic node to write to."
+        },
+        "message": {
+          "name": "Message",
+          "description": "Text to send. It is split if it exceeds the byte limit."
+        }
+      }
     }
   }
 }

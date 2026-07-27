@@ -25,6 +25,7 @@ from .meshtastic_api import (
     async_get_radio_config,
     async_radio_details,
     async_set_radio_config,
+    competing_integrations,
     gateway_firmware,
     is_radio_connected,
     mesh_nodes,
@@ -128,6 +129,9 @@ def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
         "listening": DATA_LISTENER in hass.data,
         # None when it cannot be read, which is not the same as disconnected.
         "radio_connected": is_radio_connected(hass),
+        # Named so a dead radio link points at the likeliest cause instead of
+        # sending the user looking inside Hermes.
+        "competing_integrations": competing_integrations(hass),
         "seen_counts": dict(
             getattr(
                 hass.data.get(DOMAIN, {}).get(entry.entry_id), "seen_counts", {}

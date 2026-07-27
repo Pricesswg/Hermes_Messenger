@@ -5,6 +5,11 @@ from __future__ import annotations
 DOMAIN = "hermes"
 PLATFORMS = ["sensor"]
 
+# Shape of the data stored in a config entry. The config flow stamps it and
+# async_migrate_entry converts anything older, so the two must move together:
+# they read the same constant precisely so they cannot drift apart.
+CONFIG_ENTRY_VERSION = 1
+
 # --- Base Meshtastic integration (verified against meshtastic/home-assistant) -
 # The event and the service belong to the official `meshtastic` integration.
 # Reconfirm on every major update of the base: all the coupling lives here.

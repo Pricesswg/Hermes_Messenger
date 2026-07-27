@@ -413,6 +413,12 @@ This one is deceptive: an app connected **straight to the radio** keeps showing
 traffic perfectly, because it never goes through Home Assistant. Seeing messages
 there does not mean Home Assistant is receiving them.
 
+The usual cause is a **second integration on the same node**. A Meshtastic node
+accepts one connection at a time, so anything else that opens its own link to it
+takes the connection away from the Meshtastic integration, and from there
+nothing reaches Hermes. Status names any such integration it finds loaded, right
+under the warning. Remove or disconnect it and the link comes back.
+
 ### 2. Is Hermes running?
 
 **Not running** means the integration failed to load. The settings still display

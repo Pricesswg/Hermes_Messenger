@@ -25,6 +25,7 @@ from . import websocket as hermes_websocket
 from .const import (
     CARD_FILENAME,
     CARD_URL,
+    CONFIG_ENTRY_VERSION,
     DATA_BUS_EVENTS,
     DATA_CARD_REGISTERED,
     DATA_LISTENER,
@@ -196,6 +197,34 @@ async def _async_register_frontend_card(hass: HomeAssistant) -> None:
     # instead of being remembered as done.
     hass.data[DATA_CARD_REGISTERED] = True
     _LOGGER.info("Hermes: Lovelace card %s served from %s", version, served)
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Bring an entry written by an older version up to the current shape.
+
+    There is nothing to migrate yet: every entry ever written is version 1. The
+    hook exists anyway, because the day the options need reshaping is the day
+    people already have entries in the old shape, and without this Home
+    Assistant refuses to load them rather than converting them. Adding it later
+    does not help those installs; adding it now costs a function.
+
+    A version from the future means the user downgraded the integration below
+    the data it wrote. Fail rather than guess: refusing to load leaves the entry
+    intact for the newer version, while a guess could quietly discard settings.
+    """
+    if entry.version > CONFIG_ENTRY_VERSION:
+        _LOGGER.error(
+            "Hermes: entry '%s' was written by a newer version (%s > %s). "
+            "Update Hermes again, or remove and add the entry",
+            entry.title,
+            entry.version,
+            CONFIG_ENTRY_VERSION,
+        )
+        return False
+
+    # Each future step goes here as `if entry.version == N:`, ending in
+    # hass.config_entries.async_update_entry(entry, data=..., version=N + 1).
+    return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

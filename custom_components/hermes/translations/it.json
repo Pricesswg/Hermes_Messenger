@@ -119,9 +119,53 @@
   },
   "entity": {
     "sensor": {
-      "last_command": { "name": "Ultimo comando ricevuto" },
-      "commands_executed": { "name": "Comandi eseguiti" },
-      "last_error": { "name": "Ultimo errore / rifiuto autorizzazione" }
+      "last_command": {
+        "name": "Ultimo comando ricevuto"
+      },
+      "commands_executed": {
+        "name": "Comandi eseguiti"
+      },
+      "last_error": {
+        "name": "Ultimo errore / rifiuto autorizzazione"
+      }
+    }
+  },
+  "services": {
+    "broadcast": {
+      "name": "Trasmetti",
+      "description": "Invia un messaggio sul canale, o come messaggio diretto, configurato nella voce Hermes. Il testo lungo viene diviso per stare nel payload Meshtastic senza spezzare un carattere a metà. Pensato per le notifiche dalle automazioni. Guida: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations",
+      "fields": {
+        "config_entry_id": {
+          "name": "Istanza Hermes",
+          "description": "La voce Hermes da cui inviare."
+        },
+        "message": {
+          "name": "Messaggio",
+          "description": "Testo da inviare. Viene diviso se supera il limite di byte."
+        },
+        "channel": {
+          "name": "Canale",
+          "description": "Indice del canale su cui inviare. Lascialo vuoto per usare quello configurato nella voce; impostalo per raggiungere un canale diverso senza aggiungere una seconda istanza di Hermes."
+        }
+      }
+    },
+    "send_direct": {
+      "name": "Invia messaggio diretto",
+      "description": "Invia un messaggio a un singolo nodo invece che sul canale configurato nella voce. Con firmware dotato di PKC il messaggio è cifrato solo per quel nodo. Guida: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations",
+      "fields": {
+        "config_entry_id": {
+          "name": "Istanza Hermes",
+          "description": "La voce Hermes il cui gateway invia il messaggio."
+        },
+        "node_id": {
+          "name": "Nodo destinatario",
+          "description": "Numero del nodo Meshtastic a cui scrivere."
+        },
+        "message": {
+          "name": "Messaggio",
+          "description": "Testo da inviare. Viene diviso se supera il limite di byte."
+        }
+      }
     }
   }
 }

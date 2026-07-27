@@ -82,6 +82,18 @@ if [ "$MANIFEST_V" != "$CARD_V" ]; then
   exit 1
 fi
 
+# The same gates CI runs, before the commit rather than after the push: a red
+# suite found by CI is a release already tagged and already offered by HACS.
+echo "Checking the translations"
+python3 "$ROOT/scripts/check_translations.py"
+
+if [ -x "$ROOT/.venv/bin/pytest" ]; then
+  echo "Running the tests"
+  "$ROOT/.venv/bin/pytest" "$ROOT/tests" -q
+else
+  echo "warning: no .venv/bin/pytest, skipping the tests (CI will still run them)" >&2
+fi
+
 echo "Done. manifest and card both at $MANIFEST_V"
 echo
 echo "Next:"

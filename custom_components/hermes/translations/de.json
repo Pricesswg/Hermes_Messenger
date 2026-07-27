@@ -119,9 +119,53 @@
   },
   "entity": {
     "sensor": {
-      "last_command": { "name": "Letzter empfangener Befehl" },
-      "commands_executed": { "name": "Ausgeführte Befehle" },
-      "last_error": { "name": "Letzter Fehler / Autorisierungsablehnung" }
+      "last_command": {
+        "name": "Letzter empfangener Befehl"
+      },
+      "commands_executed": {
+        "name": "Ausgeführte Befehle"
+      },
+      "last_error": {
+        "name": "Letzter Fehler / Autorisierungsablehnung"
+      }
+    }
+  },
+  "services": {
+    "broadcast": {
+      "name": "Senden",
+      "description": "Sendet eine Nachricht auf dem Kanal oder als Direktnachricht, wie im Hermes-Eintrag eingestellt. Langer Text wird so aufgeteilt, dass er in die Meshtastic-Nutzlast passt, ohne ein Zeichen zu zerschneiden. Gedacht für Benachrichtigungen aus Automatisierungen. Anleitung: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations",
+      "fields": {
+        "config_entry_id": {
+          "name": "Hermes-Instanz",
+          "description": "Der Hermes-Eintrag, von dem gesendet wird."
+        },
+        "message": {
+          "name": "Nachricht",
+          "description": "Zu sendender Text. Er wird geteilt, wenn er das Byte-Limit überschreitet."
+        },
+        "channel": {
+          "name": "Kanal",
+          "description": "Index des Kanals, auf dem gesendet wird. Leer lassen, um den im Eintrag eingestellten zu verwenden; setzen, um einen anderen Kanal zu erreichen, ohne eine zweite Hermes-Instanz anzulegen."
+        }
+      }
+    },
+    "send_direct": {
+      "name": "Direktnachricht senden",
+      "description": "Sendet eine Nachricht an einen einzelnen Knoten statt auf den im Eintrag eingestellten Kanal. Mit PKC-fähiger Firmware wird die Nachricht nur für diesen Knoten verschlüsselt. Anleitung: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations",
+      "fields": {
+        "config_entry_id": {
+          "name": "Hermes-Instanz",
+          "description": "Der Hermes-Eintrag, dessen Gateway die Nachricht sendet."
+        },
+        "node_id": {
+          "name": "Empfängerknoten",
+          "description": "Nummer des Meshtastic-Knotens, an den geschrieben wird."
+        },
+        "message": {
+          "name": "Nachricht",
+          "description": "Zu sendender Text. Er wird geteilt, wenn er das Byte-Limit überschreitet."
+        }
+      }
     }
   }
 }

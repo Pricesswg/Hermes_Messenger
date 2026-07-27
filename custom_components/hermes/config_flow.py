@@ -152,7 +152,7 @@ def _meshtastic_device(multiple: bool) -> selector.DeviceSelector:
 class HermesConfigFlow(ConfigFlow, domain=DOMAIN):
     """Config flow: create a gateway + channel/DM entry."""
 
-    VERSION = 1
+    VERSION = CONFIG_ENTRY_VERSION
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None

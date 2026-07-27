@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Python tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install
+        run: pip install -r requirements-test.txt
+
+      - name: Run the suite
+        run: pytest tests/ -v
+
+  card:
+    name: Card bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: hermes-card/package-lock.json
+
+      - name: Install
+        working-directory: hermes-card
+        run: npm ci
+
+      - name: Type check
+        working-directory: hermes-card
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: hermes-card
+        run: npm run build
+
+      # The bundle is committed, because Home Assistant serves it straight from
+      # the repository and there is no build step on the user's machine. So a
+      # commit that changes the sources without rebuilding ships a card that
+      # does not match its own code, which is invisible until someone loads it.
+      - name: The committed bundle must match the sources
+        run: |
+          if ! git diff --quiet -- custom_components/hermes/www/hermes-card.js; then
+            echo "::error::The card bundle is out of date. Run ./scripts/release.sh or 'npm run build' in hermes-card/ and commit the result."
+            git diff --stat -- custom_components/hermes/www/hermes-card.js
+            exit 1
+          fi
+
+  versions:
+    name: Versions in step
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The manifest version drives the HACS release and the cache busting query
+      # on the card URL; version.ts is what the card reports in Status. When they
+      # disagree, Status accuses the backend of being stale and the browser keeps
+      # serving a cached bundle.
+      - name: manifest.json and version.ts must agree
+        run: |
+          manifest=$(python3 -c "import json;print(json.load(open('custom_components/hermes/manifest.json'))['version'])")
+          card=$(sed -n 's/.*VERSION = "\(.*\)".*/\1/p' hermes-card/src/version.ts)
+          echo "manifest=$manifest card=$card"
+          if [ "$manifest" != "$card" ]; then
+            echo "::error::Version mismatch: manifest.json is $manifest, version.ts is $card"
+            exit 1
+          fi
+
+      - name: Every language must carry every key
+        run: python3 scripts/check_translations.py
+
+  hassfest:
+    name: Home Assistant hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    name: HACS validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hacs/action@main
+        with:
+          category: integration

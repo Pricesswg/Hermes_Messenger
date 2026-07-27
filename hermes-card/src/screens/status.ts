@@ -189,6 +189,15 @@ function renderReception(
         ${offline
           ? html`<div class="note warn">${t("status.radioOffline")}</div>`
           : ""}
+        ${offline && entry.competing_integrations?.length
+          ? html`<div class="note warn">
+              ${t("status.radioConflict")}
+              <br />
+              ${entry.competing_integrations.map(
+                (domain) => html`<code>${domain}</code> `
+              )}
+            </div>`
+          : ""}
         ${notRunning
           ? html`<div class="note warn">
               ${t("status.notRunningHint")}

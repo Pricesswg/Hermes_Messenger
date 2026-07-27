@@ -207,6 +207,8 @@ export interface HermesEntry {
   listening: boolean;
   /** Live link between the base Meshtastic integration and its node. */
   radio_connected: boolean | null;
+  /** Other loaded integrations that connect to a Meshtastic node themselves. */
+  competing_integrations?: string[];
 }
 
 /** The last text message this entry saw on the mesh, before any filtering. */
