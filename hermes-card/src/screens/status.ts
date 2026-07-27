@@ -8,7 +8,6 @@ import { hasHermes, hermesSensor, meshNodes } from "../utils";
 export function renderStatus(
   hass: HomeAssistant,
   entries: HermesEntry[],
-  onApplySeen: (entry: HermesEntry) => void,
   updatedAt: string,
   radio: RadioInfo | null,
   t: (k: string) => string
@@ -55,7 +54,94 @@ export function renderStatus(
 
     ${radio ? renderRadio(radio, t) : ""}
 
-    ${entries.map((entry) => renderReception(entry, onApplySeen, t))}
+    ${entries.map((entry) => renderReception(entry, t))}
+  `;
+}
+
+/**
+ * The same readings as the Status tab, as a plain list of parameters.
+ *
+ * Built for a dashboard column rather than a panel: no tabs, no controls,
+ * nothing that writes anything, and every value on its own row so it stays
+ * legible when the card is a third of the screen wide.
+ */
+export function renderStatusSummary(
+  hass: HomeAssistant,
+  entries: HermesEntry[],
+  updatedAt: string,
+  radio: RadioInfo | null,
+  t: (k: string) => string
+): TemplateResult {
+  if (!hasHermes(hass)) {
+    return html`<div class="empty">${t("status.noIntegration")}</div>`;
+  }
+
+  const asText = (value?: string): string =>
+    !value || value === "unknown" || value === "unavailable"
+      ? t("status.none")
+      : value;
+
+  const executed = hermesSensor(hass, "commands_executed");
+  const lastCommand = hermesSensor(hass, "last_command");
+  const lastError = hermesSensor(hass, "last_error");
+  // One offline gateway is enough to stop everything it serves, so the summary
+  // reports the worst link rather than an average.
+  const offline = entries.some((entry) => entry.radio_connected === false);
+  const received = entries.reduce(
+    (total, entry) => total + (entry.seen_counts?.received ?? 0),
+    0
+  );
+  const accepted = entries.reduce(
+    (total, entry) => total + (entry.seen_counts?.accepted ?? 0),
+    0
+  );
+
+  const rows: [string, unknown][] = [
+    [
+      t("summary.link"),
+      offline ? t("status.radioOfflineBadge") : t("summary.linkUp"),
+    ],
+    [t("status.nodes"), meshNodes(hass).length],
+    [t("summary.received"), received],
+    [t("summary.accepted"), accepted],
+    [t("status.executed"), executed ? executed.state : "0"],
+    [t("status.lastCommand"), asText(lastCommand?.state)],
+    [t("status.lastError"), asText(lastError?.state)],
+  ];
+
+  if (radio?.long_name) rows.splice(1, 0, [t("radio.name"), radio.long_name]);
+
+  return html`
+    <div class="summary" data-warn=${offline ? "1" : "0"}>
+      <div class="summary-head">
+        <span class="summary-title">Hermes</span>
+        ${updatedAt ? html`<span class="hint">${updatedAt}</span>` : ""}
+      </div>
+
+      <div class="rows">
+        ${rows.map(
+          ([label, value]) => html`
+            <div class="row">
+              <span class="k">${label}</span>
+              <span class="v">${String(value)}</span>
+            </div>
+          `
+        )}
+      </div>
+
+      ${entries.map(
+        (entry) => html`
+          <div class="row">
+            <span class="k">${entry.title}</span>
+            <span class="v">
+              ${entry.mode === "channel"
+                ? `${t("settings.channel")} ${entry.channel_index ?? 0}`
+                : t("messages.onDm")}
+            </span>
+          </div>
+        `
+      )}
+    </div>
   `;
 }
 
@@ -65,10 +151,16 @@ export function renderStatus(
  * A message on another gateway or another channel is dropped before anything
  * reaches the log, so without this the two most common misconfigurations look
  * exactly like nothing happening at all.
+ *
+ * Diagnosis only, deliberately. There used to be a button that copied the
+ * reception of the last message straight into the gateway settings, which took
+ * one click to move a gateway from direct messages to a channel: the whole
+ * difference between a verified sender and anyone holding the channel key. A
+ * single stray message on a channel was enough to offer it, so the reading is
+ * shown and the change is left to Settings, where the mode says what it means.
  */
 function renderReception(
   entry: HermesEntry,
-  onApplySeen: (entry: HermesEntry) => void,
   t: (k: string) => string
 ): TemplateResult {
   const seen = entry.last_seen;
@@ -171,19 +263,6 @@ function renderReception(
                   ? t("status.hintGateway")
                   : t("status.hintTarget")}
               </div>
-              ${seen
-                ? html`
-                    <div class="actions">
-                      <button
-                        class="btn primary"
-                        @click=${() => onApplySeen(entry)}
-                      >
-                        ${t("status.applySeen")}
-                      </button>
-                    </div>
-                    <span class="hint">${t("status.applySeenHint")}</span>
-                  `
-                : ""}
             `
           : ""}
       </div>

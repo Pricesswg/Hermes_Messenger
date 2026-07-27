@@ -49,7 +49,15 @@ export interface HermesCardConfig {
   type: string;
   /** Optional starting tab. Defaults to "status". */
   tab?: TabId;
+  /**
+   * How much of Hermes this card shows. "full" is the panel with every tab;
+   * the others are single purpose cards meant to sit in a dashboard column
+   * next to unrelated cards.
+   */
+  view?: CardView;
 }
+
+export type CardView = "full" | "summary" | "chat";
 
 export type TabId =
   | "status"
@@ -214,9 +222,19 @@ export interface HermesLastSeen {
 
 /** A Meshtastic node as reported by the backend. */
 export interface NodeInfo {
-  device_id: string;
+  /** Null for a node the radio knows but Home Assistant never imported. */
+  device_id: string | null;
   node_num: number;
   name: string;
+  /** Where the record came from: the HA registry, the radio, or both. */
+  source?: "ha" | "mesh" | "both";
+  latitude?: number | null;
+  longitude?: number | null;
+  battery?: number | null;
+  /** Epoch seconds of the last packet heard from this node. */
+  last_heard?: number | null;
+  snr?: number | null;
+  hops_away?: number | null;
 }
 
 /** A node ready to be drawn on the map. */

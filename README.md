@@ -62,6 +62,11 @@ integration, so nothing opens a second connection to your node.
 | **Home Assistant** | Which entities your commands use, and whether they still exist |
 | **Settings** | Everything configurable, including the radio itself |
 
+Two more cards ship alongside it, for a dashboard you already use for something
+else: **Hermes summary**, the state of the system as a list of parameters that
+reflows when the column is narrow, and **Hermes chat**, for reading and sending
+messages. Both take only the height they need, and neither changes a setting.
+
 **Byte-safe by design.** Every outgoing message is split to fit the Meshtastic
 payload, with a `(1/3)` header, never cutting a multi-byte character in half.
 

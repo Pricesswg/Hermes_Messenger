@@ -1,7 +1,12 @@
 import { html, type TemplateResult } from "lit";
 
 import "../hermes-map";
-import type { HermesSettings, HomeAssistant, MapNode } from "../types";
+import type {
+  HermesSettings,
+  HomeAssistant,
+  MapNode,
+  NodeInfo,
+} from "../types";
 import { distanceKm, mapNodes } from "../utils";
 
 export interface MapCtx {
@@ -9,6 +14,8 @@ export interface MapCtx {
   settings: HermesSettings | null;
   /** Nodes allowed to send commands, across every gateway. */
   authorized: number[];
+  /** Every node the radio knows, not only the ones imported as devices. */
+  meshNodes: NodeInfo[];
   /** Show every mesh node, not only the ones picked in Settings. */
   showAll: boolean;
   /** Restrict the nodes to a circle around the reference point. */
@@ -42,7 +49,8 @@ export function renderMap(
     selected,
     ctx.showAll,
     ctx.settings?.reachable_minutes ?? 120,
-    ctx.authorized
+    ctx.authorized,
+    ctx.meshNodes
   );
 
   const center = referencePoint(allNodes);

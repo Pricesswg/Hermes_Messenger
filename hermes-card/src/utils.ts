@@ -4,6 +4,7 @@ import type {
   HomeAssistant,
   MapNode,
   MeshNode,
+  NodeInfo,
 } from "./types";
 
 const MESHTASTIC = "meshtastic";
@@ -109,7 +110,8 @@ export function mapNodes(
   selected: number[],
   includeAll = false,
   reachableMinutes = 120,
-  authorized: number[] = []
+  authorized: number[] = [],
+  mesh: NodeInfo[] = []
 ): MapNode[] {
   const wanted = new Set((selected ?? []).map(Number));
   const trusted = new Set((authorized ?? []).map(Number));
@@ -132,12 +134,10 @@ export function mapNodes(
   }
 
   // Iterate the devices, not the trackers, so every known node is listed.
-  const out: MapNode[] = [];
+  const byNum = new Map<number, MapNode>();
   for (const device of Object.values(hass.devices ?? {})) {
     const nodeNum = nodeNumFor(hass, device.id);
     if (nodeNum === null) continue;
-    const isSelected = wanted.has(nodeNum);
-    if (!includeAll && !isSelected) continue;
 
     const trackerId = trackers.get(device.id);
     const state = trackerId ? hass.states[trackerId] : undefined;
@@ -145,7 +145,7 @@ export function mapNodes(
     const longitude = state?.attributes?.longitude;
     const battery = state?.attributes?.battery_level;
 
-    out.push({
+    byNum.set(nodeNum, {
       nodeNum,
       name:
         device.name_by_user ||
@@ -159,12 +159,66 @@ export function mapNodes(
         ? new Date(state.last_changed).toLocaleString()
         : "",
       connected: isReachable(hass, lastHeard.get(device.id), reachableMinutes),
-      selected: isSelected,
+      selected: wanted.has(nodeNum),
       authorized: trusted.has(nodeNum),
     });
   }
 
+  // Then the radio's own node database, which holds every node heard on the
+  // channels rather than only the few the base integration imported. For a node
+  // that is also a device this fills the gaps, since a node with no
+  // device_tracker had no position at all.
+  for (const node of mesh ?? []) {
+    const nodeNum = Number(node.node_num);
+    if (!Number.isFinite(nodeNum)) continue;
+    const heard = heardRecently(node.last_heard, reachableMinutes);
+    const known = byNum.get(nodeNum);
+
+    if (!known) {
+      byNum.set(nodeNum, {
+        nodeNum,
+        name: node.name || String(nodeNum),
+        latitude: node.latitude ?? null,
+        longitude: node.longitude ?? null,
+        battery: node.battery ?? null,
+        lastSeen: node.last_heard
+          ? new Date(node.last_heard * 1000).toLocaleString()
+          : "",
+        connected: heard,
+        selected: wanted.has(nodeNum),
+        authorized: trusted.has(nodeNum),
+      });
+      continue;
+    }
+
+    if (known.latitude === null && node.latitude != null) {
+      known.latitude = node.latitude;
+      known.longitude = node.longitude ?? null;
+    }
+    if (known.battery === null && node.battery != null) {
+      known.battery = node.battery;
+    }
+    if (!known.lastSeen && node.last_heard) {
+      known.lastSeen = new Date(node.last_heard * 1000).toLocaleString();
+    }
+    // Heard on the mesh counts as reachable even when the Home Assistant
+    // sensor is stale or was never created.
+    known.connected = known.connected || heard;
+  }
+
+  const out = [...byNum.values()].filter(
+    (node) => includeAll || node.selected
+  );
   return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Whether an epoch seconds contact is inside the reachability window. */
+function heardRecently(
+  lastHeard: number | null | undefined,
+  minutes: number
+): boolean {
+  if (!lastHeard) return false;
+  return Date.now() - lastHeard * 1000 < minutes * 60000;
 }
 
 /**

@@ -42,6 +42,19 @@ export interface SettingsCtx {
  * property once the user has interacted, so a saved selection did not always
  * come back. Checkboxes bind to a property and are obvious to use.
  */
+/**
+ * Nodes that can act as a gateway, which means the ones Home Assistant holds a
+ * device for.
+ *
+ * The node list now also carries every node the radio has merely heard, which
+ * is what the map and the authorized senders want. A gateway is different: it
+ * is the node the base integration is actually connected to, so offering a
+ * remote node here would only ever produce a gateway that receives nothing.
+ */
+function gatewayNodes(nodes: NodeInfo[]): NodeInfo[] {
+  return nodes.filter((node) => node.source !== "mesh");
+}
+
 function nodeChecklist(
   nodes: NodeInfo[],
   selected: number[],
@@ -256,7 +269,7 @@ function renderEntry(
 
         <div class="field" style="margin-top:12px">
           <label>${t("settings.gateway")}</label>
-          ${ctx.nodes.length
+          ${gatewayNodes(ctx.nodes).length
             ? html`
                 <select
                   @change=${(e: Event) =>
@@ -266,7 +279,7 @@ function renderEntry(
                       Number((e.target as HTMLSelectElement).value)
                     )}
                 >
-                  ${ctx.nodes.map(
+                  ${gatewayNodes(ctx.nodes).map(
                     (node) => html`
                       <option
                         value=${node.node_num}

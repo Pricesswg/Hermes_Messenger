@@ -10,8 +10,9 @@ import { renderLog } from "./screens/log";
 import { renderMap } from "./screens/map";
 import { renderMessages } from "./screens/messages";
 import { renderSettings } from "./screens/settings";
-import { renderStatus } from "./screens/status";
+import { renderStatus, renderStatusSummary } from "./screens/status";
 import type {
+  CardView,
   ChatMessage,
   RadioConfig,
   HermesCardConfig,
@@ -63,6 +64,8 @@ const TABS: TabId[] = [
   "settings",
 ];
 
+const VIEWS: CardView[] = ["full", "summary", "chat"];
+
 const EMPTY_COMMAND: HermesCommand = {
   keyword: "",
   match_type: "exact",
@@ -79,6 +82,8 @@ export class HermesCard extends LitElement {
 
   @state() private _config?: HermesCardConfig;
   @state() private _tab: TabId = "status";
+  /** Pinned by the compact cards; "full" is the tabbed panel. */
+  @state() private _view: CardView = "full";
 
   @state() private _entries: HermesEntry[] = [];
   @state() private _nodes: NodeInfo[] = [];
@@ -129,6 +134,12 @@ export class HermesCard extends LitElement {
     if (config?.tab && TABS.includes(config.tab)) {
       this._tab = config.tab;
     }
+    this._view = VIEWS.includes(config?.view as CardView)
+      ? (config.view as CardView)
+      : "full";
+    // The host element itself has to stop stretching, and only an attribute
+    // reaches it from inside the shadow root.
+    this.toggleAttribute("compact", this._view !== "full");
   }
 
   public getCardSize(): number {
@@ -184,8 +195,12 @@ export class HermesCard extends LitElement {
     }
     try {
       this._entries = await fetchEntries(this.hass);
-      this._history = await fetchHistory(this.hass);
-      this._chats = await fetchChats(this.hass);
+      if (this._view === "full") {
+        this._history = await fetchHistory(this.hass);
+      }
+      if (this._view !== "summary") {
+        this._chats = await fetchChats(this.hass);
+      }
       this._updatedAt = new Date().toLocaleTimeString();
     } catch (err) {
       console.warn("Hermes: refresh failed", err);
@@ -265,6 +280,18 @@ export class HermesCard extends LitElement {
     }
 
     try {
+      this._chats = await fetchChats(this.hass);
+    } catch (err) {
+      console.error("Hermes: failed to load the conversations", err);
+    }
+
+    // A compact card has everything it draws by now. The rest is for the
+    // panel, and one of these cards can sit on a dashboard next to another:
+    // reading the radio configuration, which talks to the node over the air,
+    // three times a screen for a screen that never shows it is pure cost.
+    if (this._view !== "full") return;
+
+    try {
       // Authoritative action catalogue; the client fallback covers a failure.
       setCatalogue(await fetchActions(this.hass));
     } catch (err) {
@@ -281,12 +308,6 @@ export class HermesCard extends LitElement {
       this._history = await fetchHistory(this.hass);
     } catch (err) {
       console.error("Hermes: failed to load the log", err);
-    }
-
-    try {
-      this._chats = await fetchChats(this.hass);
-    } catch (err) {
-      console.error("Hermes: failed to load the conversations", err);
     }
 
     try {
@@ -531,28 +552,6 @@ export class HermesCard extends LitElement {
     this._mapRadiusKm = km;
   };
 
-  private _onApplySeen = async (entry: HermesEntry): Promise<void> => {
-    const seen = entry.last_seen;
-    if (!this.hass || !seen) return;
-
-    // Take the reception straight from a message that really arrived, which
-    // removes the guesswork about which node is the gateway and which channel
-    // the traffic is on.
-    const patch: Record<string, unknown> = {};
-    if (seen.gateway !== null) patch.gateway_node_id = seen.gateway;
-    if (seen.channel !== null && seen.channel !== undefined) {
-      patch.mode = "channel";
-      patch.channel_index = seen.channel;
-    } else if (seen.node !== null && seen.node !== undefined) {
-      patch.mode = "direct_message";
-    }
-    if (!Object.keys(patch).length) return;
-
-    await updateEntry(this.hass, entry.entry_id, patch);
-    this._flagSaved();
-    await this._load();
-  };
-
   private _onRefresh = async (): Promise<void> => {
     // Explicit reload: channels, node list and gateway options are all read
     // from the radio and the registry, so a change made in the Meshtastic app
@@ -646,7 +645,6 @@ export class HermesCard extends LitElement {
         return renderStatus(
           hass,
           this._entries,
-          this._onApplySeen,
           this._updatedAt,
           this._radio,
           t
@@ -695,6 +693,7 @@ export class HermesCard extends LitElement {
             authorized: [
               ...new Set(this._entries.flatMap((e) => e.authorized_nodes ?? [])),
             ],
+            meshNodes: this._nodes,
             showAll: this._mapShowAll,
             radiusOn: this._mapRadiusOn,
             radiusKm: this._mapRadiusKm,
@@ -786,7 +785,6 @@ export class HermesCard extends LitElement {
         return renderStatus(
           hass,
           this._entries,
-          this._onApplySeen,
           this._updatedAt,
           this._radio,
           t
@@ -794,9 +792,40 @@ export class HermesCard extends LitElement {
     }
   }
 
+  /** The single screen a compact card shows, without tabs or toolbar. */
+  private _compact(t: (k: string) => string): TemplateResult {
+    const hass = this.hass!;
+    if (this._view === "chat") {
+      return renderChat(
+        {
+          chats: this._chats,
+          channels: this._channels,
+          nodes: this._nodes,
+          thread: this._chatThread,
+          draft: this._chatDraft,
+          sending: this._chatSending,
+          onSelect: this._onChatSelect,
+          onDraft: this._onChatDraft,
+          onSend: this._onChatSend,
+          onClear: this._onChatClear,
+        },
+        t
+      );
+    }
+    return renderStatusSummary(hass, this._entries, this._updatedAt, this._radio, t);
+  }
+
   protected render(): TemplateResult {
     if (!this.hass || !this._config) return html``;
     const t = translator(this.hass);
+
+    if (this._view !== "full") {
+      return html`
+        <div class="shell compact" data-view=${this._view}>
+          <div class="content">${this._compact(t)}</div>
+        </div>
+      `;
+    }
 
     return html`
       <div class="shell">
@@ -829,13 +858,57 @@ export class HermesCard extends LitElement {
   }
 }
 
-// Register the card in the Lovelace picker.
+/**
+ * The two compact cards.
+ *
+ * Separate elements rather than a config option alone, so they show up in the
+ * Lovelace picker under their own name: a user putting a chat box on a
+ * dashboard should not have to know that it is the panel card with a setting
+ * changed. Both are the same card underneath, with the view pinned.
+ */
+@customElement("hermes-summary-card")
+export class HermesSummaryCard extends HermesCard {
+  public setConfig(config: HermesCardConfig): void {
+    super.setConfig({ ...config, view: "summary" });
+  }
+
+  public getCardSize(): number {
+    return 4;
+  }
+}
+
+@customElement("hermes-chat-card")
+export class HermesChatCard extends HermesCard {
+  public setConfig(config: HermesCardConfig): void {
+    super.setConfig({ ...config, view: "chat" });
+  }
+
+  public getCardSize(): number {
+    return 8;
+  }
+}
+
+// Register the cards in the Lovelace picker.
 (window as any).customCards = (window as any).customCards || [];
-(window as any).customCards.push({
-  type: "hermes-card",
-  name: "Hermes",
-  description: "Meshtastic Commander control panel",
-  preview: false,
-});
+(window as any).customCards.push(
+  {
+    type: "hermes-card",
+    name: "Hermes",
+    description: "Meshtastic Commander control panel",
+    preview: false,
+  },
+  {
+    type: "hermes-summary-card",
+    name: "Hermes summary",
+    description: "Hermes status as a list of parameters, for a dashboard column",
+    preview: false,
+  },
+  {
+    type: "hermes-chat-card",
+    name: "Hermes chat",
+    description: "Send and read Meshtastic messages, channels and direct",
+    preview: false,
+  }
+);
 
 console.info(`%c HERMES-CARD %c ${VERSION} `, "background:#FFD60A;color:#000", "");

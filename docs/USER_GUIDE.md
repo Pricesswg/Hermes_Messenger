@@ -60,6 +60,35 @@ type: custom:hermes-card
 
 A **Panel (1 card)** view suits it best, since it fills the screen.
 
+### The two small cards
+
+The panel above is the place where Hermes is set up, and it wants a view of its
+own. For a dashboard you already use for something else there are two more
+cards, each doing one thing and taking only the height it needs, so they sit in
+a column next to your lights and your thermostat.
+
+| Card | What it shows |
+|------|---------------|
+| **Hermes summary** | The state of the system as a list of parameters: radio link, nodes, messages received, commands accepted and executed, last command, last error, and what each gateway listens to |
+| **Hermes chat** | Conversations, so you can read and send messages on a channel or straight to a node without leaving the dashboard |
+
+Both are in **Add card** under their own name. In YAML:
+
+```yaml
+type: custom:hermes-summary-card
+```
+
+```yaml
+type: custom:hermes-chat-card
+```
+
+Neither changes any setting: the summary only reads, and the chat only sends
+what you type. Everything that configures Hermes stays in the panel.
+
+The summary rearranges itself when the column is narrow, putting each value
+under its label instead of beside it, so it stays readable in a third of a
+screen.
+
 ---
 
 ## Building a command
@@ -225,6 +254,12 @@ changing a reply delay.
 **Map** draws the nodes you picked in Settings. Only those, which is what makes
 it usable as an emergency tracker rather than a crowded map. Two switches change
 that: showing every mesh node, and filtering to a radius you set with a slider.
+
+The nodes to pick from are every node **the radio knows**, not only the few the
+Meshtastic integration imported into Home Assistant as devices. Those are
+usually a hand picked handful, while the radio holds everything it has heard on
+its channels, with the position each one reported: the same list the Meshtastic
+app shows you.
 
 Pins are **green** when the node was heard recently and **yellow** when it was
 not. How recent counts as recent is configurable: two hours suits a fixed
@@ -396,8 +431,13 @@ Check Settings, Devices and Services for an error.
 ### 4. Does it match this gateway?
 
 The panel puts what the gateway listens to next to the last message that
-actually arrived. If they differ you get **nothing is getting through**, and a
-button that adopts the gateway, mode and channel from that real message.
+actually arrived. If the two differ you get **nothing is getting through**, and
+the two lines tell you exactly what to change in Settings.
+
+Change it yourself rather than expecting a button to do it. Adopting whatever
+the last message happened to use would move a gateway from direct messages to a
+channel on the strength of one stray packet, and that is the whole difference
+between a sender the protocol verified and anyone holding the channel key.
 
 The gateway is always the node **connected to Home Assistant**, never the one
 you send from. With several nodes on a desk this is an easy mistake.

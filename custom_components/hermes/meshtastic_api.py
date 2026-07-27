@@ -19,6 +19,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
 from .const import MESHTASTIC_DOMAIN
+from .nodedb import node_records
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -347,6 +348,25 @@ async def async_set_radio_config(hass: HomeAssistant, patch: dict[str, Any]) -> 
         for field, value in device_patch.items():
             _apply_field(device, field, value)
         await interface.write_device_config(device)
+
+
+def mesh_nodes(hass: HomeAssistant) -> list[dict[str, Any]]:
+    """Every node in the radio's own database.
+
+    Home Assistant only holds the nodes the base integration chose to import,
+    which is normally a hand picked few. The radio itself knows every node it
+    has heard on its channels, with their position and when they were last
+    heard, and that is the list the Meshtastic apps show. Without it the map can
+    only ever draw the handful of nodes that became Home Assistant devices.
+    """
+    interface = _interface(hass)
+    if interface is None:
+        return []
+
+    # nodesByNum is keyed by the number Hermes works in; nodes is keyed by the
+    # "!hex" user id. Either shape carries the same records.
+    raw = getattr(interface, "nodesByNum", None) or getattr(interface, "nodes", None)
+    return node_records(raw)
 
 
 def gateway_firmware(hass: HomeAssistant) -> str | None:

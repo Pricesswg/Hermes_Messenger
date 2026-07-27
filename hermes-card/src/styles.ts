@@ -21,6 +21,12 @@ export const hermesTokens = css`
     padding-top: var(--hermes-panel-offset, var(--header-height, 56px));
   }
 
+  /* A compact card is one card among many in a column: it has to end where its
+   * content ends, not stretch to whatever the row happens to be. */
+  :host([compact]) {
+    height: auto;
+  }
+
   :host {
     --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
@@ -245,6 +251,10 @@ export const hermesLayout = css`
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     text-align: right;
+    /* Values are user text: a command with no spaces, or an error message
+     * carrying an entity id, has to wrap rather than run off the card. */
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .empty {
@@ -792,5 +802,65 @@ export const hermesLayout = css`
     font-size: 0.72rem;
     color: var(--danger);
     word-break: break-word;
+  }
+
+  /* --- Compact cards ----------------------------------------------------
+   *
+   * The panel card owns a whole view and stretches to it. These two sit in a
+   * dashboard column next to unrelated cards, so they take the height their
+   * content needs and measure themselves rather than the window: a column can
+   * be a quarter of the screen wide on a desktop, which no viewport media
+   * query would ever notice. */
+  .shell.compact {
+    height: auto;
+    container-type: inline-size;
+  }
+
+  .shell.compact .content {
+    padding: 14px;
+    overflow: visible;
+  }
+
+  .shell.compact .screen-title {
+    font-size: 0.95rem;
+  }
+
+  /* Tall enough to hold a conversation, short enough to leave room for the
+   * cards underneath it. */
+  .shell.compact .chat-log {
+    max-height: 320px;
+  }
+
+  .summary-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .summary-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+
+  /* The radio link being down makes every other reading meaningless, so it
+   * marks the whole card instead of one row. */
+  .summary[data-warn="1"] {
+    border-left: 3px solid var(--warn);
+    padding-left: 11px;
+    margin-left: -14px;
+  }
+
+  @container (max-width: 330px) {
+    .row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1px;
+    }
+
+    .row .v {
+      text-align: left;
+    }
   }
 `;

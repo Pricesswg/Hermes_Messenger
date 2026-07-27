@@ -27,6 +27,7 @@ from .meshtastic_api import (
     async_set_radio_config,
     gateway_firmware,
     is_radio_connected,
+    mesh_nodes,
     node_num_from_device,
 )
 from .const import (
@@ -331,25 +332,51 @@ def ws_actions(hass: HomeAssistant, connection, msg: dict) -> None:
 @websocket_api.websocket_command({vol.Required("type"): "hermes/nodes/list"})
 @callback
 def ws_nodes_list(hass: HomeAssistant, connection, msg: dict) -> None:
-    """List the Meshtastic nodes known to Home Assistant.
+    """Every Meshtastic node, whether or not Home Assistant imported it.
 
-    Node numbers come from the device identifiers registered by the base
-    meshtastic integration, the same mapping the config flow uses.
+    Two sources, merged on the node number. Home Assistant devices come first
+    because the user may have renamed them, and their name is the one shown
+    everywhere else. The radio's own database then fills in the position and the
+    last contact, and adds every node the base integration never imported:
+    those are the majority on a busy channel, and leaving them out made the map
+    show a handful of nodes when the Meshtastic app showed dozens.
     """
     registry = dr.async_get(hass)
-    nodes: list[dict[str, Any]] = []
+    by_num: dict[int, dict[str, Any]] = {}
+
     for device in registry.devices.values():
         node_num = node_num_from_device(device)
         if node_num is None:
             continue
-        nodes.append(
-            {
-                "device_id": device.id,
-                "node_num": node_num,
-                "name": device.name_by_user or device.name or str(node_num),
+        by_num[node_num] = {
+            "device_id": device.id,
+            "node_num": node_num,
+            "name": device.name_by_user or device.name or str(node_num),
+            "source": "ha",
+            "latitude": None,
+            "longitude": None,
+            "battery": None,
+            "last_heard": None,
+            "snr": None,
+            "hops_away": None,
+        }
+
+    for node in mesh_nodes(hass):
+        known = by_num.get(node["node_num"])
+        if known is None:
+            by_num[node["node_num"]] = {
+                "device_id": None,
+                "source": "mesh",
+                **node,
             }
-        )
-    nodes.sort(key=lambda n: n["name"].lower())
+            continue
+        # The device keeps its name; everything the radio knows better wins.
+        known["source"] = "both"
+        for key in ("latitude", "longitude", "battery", "last_heard", "snr", "hops_away"):
+            if node.get(key) is not None:
+                known[key] = node[key]
+
+    nodes = sorted(by_num.values(), key=lambda n: str(n["name"]).lower())
     connection.send_result(msg["id"], nodes)
 
 
