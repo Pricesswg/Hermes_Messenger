@@ -91,3 +91,25 @@ async def test_the_integration_sets_up_and_unloads(hass):
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
     assert entry.entry_id not in hass.data[DOMAIN]
+
+
+async def test_the_card_is_served_even_with_no_entry_at_all(hass):
+    """The user interface must not depend on a gateway working.
+
+    This is the failure the user hit: an entry that would not load took the
+    card down with it, so the dashboard said "Configuration error" and the one
+    screen that could have explained why was the screen that did not load.
+    """
+    from homeassistant.components.frontend import DATA_EXTRA_MODULE_URL
+    from homeassistant.setup import async_setup_component
+
+    from custom_components.hermes.const import CARD_URL, DATA_CARD_REGISTERED
+
+    assert await async_setup_component(hass, DOMAIN, {})
+    await hass.async_block_till_done()
+
+    assert hass.data.get(DATA_CARD_REGISTERED) is True
+    urls = hass.data[DATA_EXTRA_MODULE_URL].urls
+    assert any(url.startswith(CARD_URL) for url in urls), urls
+    # And the websocket API the card talks to, for the same reason.
+    assert "hermes/entries/list" in hass.data["websocket_api"]

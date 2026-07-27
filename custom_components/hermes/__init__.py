@@ -19,6 +19,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_integration
 
 from . import websocket as hermes_websocket
@@ -66,6 +67,26 @@ _SEND_DIRECT_SCHEMA = vol.Schema(
 )
 
 
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up what the frontend needs, before and regardless of any entry.
+
+    The card used to be served from `async_setup_entry`, which tied it to an
+    entry loading successfully. When one did not, the card was never served, so
+    the custom element did not exist and every dashboard using it showed
+    "Configuration error" with nothing to explain it: the one screen that could
+    have said what was wrong was the screen that failed to load. A broken
+    gateway should cost you the gateway, not the user interface that diagnoses
+    it.
+
+    So the card and the websocket API are registered here, where Home Assistant
+    calls us once the component is loaded, whatever happens to the entries
+    afterwards. Both are idempotent, and the card copes with having no gateway.
+    """
+    hermes_websocket.async_register(hass)
+    await _async_register_frontend_card(hass)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Hermes from a config entry."""
     coordinator = HermesCoordinator(hass, entry)
@@ -92,14 +113,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # the next message without rebuilding anything.
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
-    # Global settings store and websocket API, both shared by every entry.
+    # Global settings store, shared by every entry.
     if DATA_STORE not in hass.data:
         store = HermesStore(hass)
         await store.async_load()
         hass.data[DATA_STORE] = store
-    hermes_websocket.async_register(hass)
 
     _async_register_services(hass)
+    # Both already done in async_setup. Repeated here, and both idempotent,
+    # because an entry can be set up without async_setup having run in the
+    # same process, for instance when the integration is reloaded on its own.
+    hermes_websocket.async_register(hass)
     await _async_register_frontend_card(hass)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

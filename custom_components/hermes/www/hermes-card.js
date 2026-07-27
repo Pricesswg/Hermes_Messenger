@@ -2022,7 +2022,7 @@ function e(e,t,n,i){var s,a=arguments.length,o=a<3?t:null===i?i=Object.getOwnPro
       </div>
     </div>
   `}(e,n,t))}
-  `}const ht="1.0.1";function dt(e,t,n,i,s){if(!Te(e))return W`<div class="empty">${s("status.noIntegration")}</div>`;const a=Ae(e),o=Le(e,"commands_executed"),r=Le(e,"last_command"),l=Le(e,"last_error"),h=e=>e&&"unknown"!==e&&"unavailable"!==e?e:s("status.none");return W`
+  `}const ht="1.0.2";function dt(e,t,n,i,s){if(!Te(e))return W`<div class="empty">${s("status.noIntegration")}</div>`;const a=Ae(e),o=Le(e,"commands_executed"),r=Le(e,"last_command"),l=Le(e,"last_error"),h=e=>e&&"unknown"!==e&&"unavailable"!==e?e:s("status.none");return W`
     <h2 class="screen-title">
       ${s("status.title")}
       ${n?W`<span class="hint">${s("status.updatedAt")} ${n}</span>`:""}
