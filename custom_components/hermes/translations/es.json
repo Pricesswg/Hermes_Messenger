@@ -133,7 +133,7 @@
   "services": {
     "broadcast": {
       "name": "Difundir",
-      "description": "Envía un mensaje por el canal, o como mensaje directo, configurado en la entrada de Hermes. El texto largo se divide para caber en la carga útil de Meshtastic sin cortar un carácter por la mitad. Pensado para las notificaciones de las automatizaciones. Guía: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations",
+      "description": "Envía un mensaje por el canal, o como mensaje directo, configurado en la entrada de Hermes. El texto largo se divide para caber en la carga útil de Meshtastic sin cortar un carácter por la mitad. Pensado para las notificaciones de las automatizaciones.",
       "fields": {
         "config_entry_id": {
           "name": "Instancia de Hermes",
@@ -151,7 +151,7 @@
     },
     "send_direct": {
       "name": "Enviar mensaje directo",
-      "description": "Envía un mensaje a un solo nodo en lugar del canal configurado en la entrada. Con firmware con PKC el mensaje se cifra solo para ese nodo. Guía: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations",
+      "description": "Envía un mensaje a un solo nodo en lugar del canal configurado en la entrada. Con firmware con PKC el mensaje se cifra solo para ese nodo.",
       "fields": {
         "config_entry_id": {
           "name": "Instancia de Hermes",

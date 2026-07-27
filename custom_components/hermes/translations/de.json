@@ -133,7 +133,7 @@
   "services": {
     "broadcast": {
       "name": "Senden",
-      "description": "Sendet eine Nachricht auf dem Kanal oder als Direktnachricht, wie im Hermes-Eintrag eingestellt. Langer Text wird so aufgeteilt, dass er in die Meshtastic-Nutzlast passt, ohne ein Zeichen zu zerschneiden. Gedacht für Benachrichtigungen aus Automatisierungen. Anleitung: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations",
+      "description": "Sendet eine Nachricht auf dem Kanal oder als Direktnachricht, wie im Hermes-Eintrag eingestellt. Langer Text wird so aufgeteilt, dass er in die Meshtastic-Nutzlast passt, ohne ein Zeichen zu zerschneiden. Gedacht für Benachrichtigungen aus Automatisierungen.",
       "fields": {
         "config_entry_id": {
           "name": "Hermes-Instanz",
@@ -151,7 +151,7 @@
     },
     "send_direct": {
       "name": "Direktnachricht senden",
-      "description": "Sendet eine Nachricht an einen einzelnen Knoten statt auf den im Eintrag eingestellten Kanal. Mit PKC-fähiger Firmware wird die Nachricht nur für diesen Knoten verschlüsselt. Anleitung: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations",
+      "description": "Sendet eine Nachricht an einen einzelnen Knoten statt auf den im Eintrag eingestellten Kanal. Mit PKC-fähiger Firmware wird die Nachricht nur für diesen Knoten verschlüsselt.",
       "fields": {
         "config_entry_id": {
           "name": "Hermes-Instanz",

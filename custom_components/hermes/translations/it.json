@@ -133,7 +133,7 @@
   "services": {
     "broadcast": {
       "name": "Trasmetti",
-      "description": "Invia un messaggio sul canale, o come messaggio diretto, configurato nella voce Hermes. Il testo lungo viene diviso per stare nel payload Meshtastic senza spezzare un carattere a metà. Pensato per le notifiche dalle automazioni. Guida: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations",
+      "description": "Invia un messaggio sul canale, o come messaggio diretto, configurato nella voce Hermes. Il testo lungo viene diviso per stare nel payload Meshtastic senza spezzare un carattere a metà. Pensato per le notifiche dalle automazioni.",
       "fields": {
         "config_entry_id": {
           "name": "Istanza Hermes",
@@ -151,7 +151,7 @@
     },
     "send_direct": {
       "name": "Invia messaggio diretto",
-      "description": "Invia un messaggio a un singolo nodo invece che sul canale configurato nella voce. Con firmware dotato di PKC il messaggio è cifrato solo per quel nodo. Guida: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations",
+      "description": "Invia un messaggio a un singolo nodo invece che sul canale configurato nella voce. Con firmware dotato di PKC il messaggio è cifrato solo per quel nodo.",
       "fields": {
         "config_entry_id": {
           "name": "Istanza Hermes",

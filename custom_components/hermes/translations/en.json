@@ -133,7 +133,7 @@
   "services": {
     "broadcast": {
       "name": "Broadcast",
-      "description": "Send a message on the channel, or as a direct message, configured in the Hermes entry. Long text is split to fit the Meshtastic payload without cutting a character in half. Meant for notifications from automations. Guide: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations",
+      "description": "Send a message on the channel, or as a direct message, configured in the Hermes entry. Long text is split to fit the Meshtastic payload without cutting a character in half. Meant for notifications from automations.",
       "fields": {
         "config_entry_id": {
           "name": "Hermes instance",
@@ -151,7 +151,7 @@
     },
     "send_direct": {
       "name": "Send direct message",
-      "description": "Send a message to a single node instead of the channel configured in the entry. On firmware with PKC the message is encrypted for that node alone. Guide: https://github.com/Pricesswg/Hermes_Messenger/blob/main/docs/USER_GUIDE.md#sending-from-automations",
+      "description": "Send a message to a single node instead of the channel configured in the entry. On firmware with PKC the message is encrypted for that node alone.",
       "fields": {
         "config_entry_id": {
           "name": "Hermes instance",
