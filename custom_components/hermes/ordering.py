@@ -55,6 +55,19 @@ def group_of(command: dict[str, Any]) -> str:
     return str(command.get(CMD_GROUP) or "").strip()
 
 
+def canonical_group(name: str | None) -> str:
+    """The name to store for a group: trimmed and upper case.
+
+    The field is free text, so "Lights" typed once and "lights" the next time
+    would become two groups that look like a mistake and are one. Comparing
+    without case would fix the symptom while leaving two spellings in storage
+    and a question about which one to show. Storing one form removes the
+    question: there is only ever one name for a group, and the headings were
+    already drawn in capitals anyway.
+    """
+    return (name or "").strip().upper()
+
+
 def group_names(commands: list[dict[str, Any]]) -> list[str]:
     """Group labels in the order they first appear, ungrouped last.
 

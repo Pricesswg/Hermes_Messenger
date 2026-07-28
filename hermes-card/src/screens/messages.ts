@@ -271,6 +271,48 @@ function renderPresets(
 }
 
 /**
+ * The groups already in use, as buttons that fill the field.
+ *
+ * The field is free text because a group is created by naming one, and there is
+ * no separate place to manage them. That is simple until the second command,
+ * when the name has to be typed again exactly. Clicking beats remembering, and
+ * the name is stored in capitals either way, so a slip cannot split one group
+ * into two.
+ */
+function renderGroupChips(
+  ctx: MessagesCtx,
+  draft: HermesCommand,
+  t: (k: string) => string
+): TemplateResult {
+  const entry =
+    ctx.entries.find((e) => e.entry_id === ctx.selectedEntry) ?? ctx.entries[0];
+  const names: string[] = [];
+  for (const command of entry?.commands ?? []) {
+    const name = (command.group ?? "").trim();
+    if (name && !names.includes(name)) names.push(name);
+  }
+  if (!names.length) return html``;
+
+  const current = (draft.group ?? "").trim();
+  return html`
+    <div class="chips" style="margin-bottom:2px">
+      ${names.map(
+        (name) => html`
+          <button
+            class="chip"
+            data-on=${name === current ? "1" : "0"}
+            @click=${() =>
+              ctx.onDraftInput("group", name === current ? "" : name)}
+          >
+            ${name}
+          </button>
+        `
+      )}
+    </div>
+  `;
+}
+
+/**
  * The commands, under their group headings.
  *
  * The headings are cosmetic; the sequence is not. The first command whose
@@ -595,10 +637,16 @@ function renderForm(
 
       <div class="field">
         <label>${t("messages.group")}</label>
+        ${renderGroupChips(ctx, draft, t)}
         <input
+          class="group-input"
           .value=${draft.group ?? ""}
           placeholder=${t("messages.groupPlaceholder")}
-          @input=${bind("group")}
+          @input=${(e: Event) =>
+            ctx.onDraftInput(
+              "group",
+              (e.target as HTMLInputElement).value.toUpperCase()
+            )}
         />
         <span class="hint">${t("messages.groupHint")}</span>
       </div>

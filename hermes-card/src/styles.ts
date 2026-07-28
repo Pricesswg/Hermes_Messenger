@@ -920,6 +920,12 @@ export const hermesLayout = css`
    * belonging to it rather than to the next one. */
   /* Heading over each block of commands. Cosmetic: the sequence underneath
    * is the one that decides which keyword wins. */
+  /* Typed in capitals as well as stored in them, so the field shows exactly
+   * what will be saved rather than transforming it behind the user. */
+  .group-input {
+    text-transform: uppercase;
+  }
+
   .group-head {
     margin-top: 14px;
   }

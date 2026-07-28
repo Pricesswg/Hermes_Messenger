@@ -11,6 +11,7 @@ from __future__ import annotations
 # Imported as part of the package rather than loaded by path: this module reads
 # the command keys from const, so it needs its package context.
 from custom_components.hermes.ordering import (
+    canonical_group,
     group_names,
     reorder,
     sort_into_groups,
@@ -90,3 +91,27 @@ def test_grouping_never_reorders_within_a_group():
     commands = [cmd("lights kitchen", "Lights"), cmd("lights", "Lights")]
     out = sort_into_groups(commands)
     assert [c["id"] for c in out] == ["lights kitchen", "lights"]
+
+
+# --- Naming a group --------------------------------------------------------
+
+
+def test_a_group_name_is_stored_upper_case():
+    """One spelling per group, so a slip cannot split it into two."""
+    assert canonical_group("Lights") == "LIGHTS"
+    assert canonical_group("lights") == "LIGHTS"
+    assert canonical_group("LIGHTS") == "LIGHTS"
+
+
+def test_a_group_name_is_trimmed():
+    assert canonical_group("  Lights  ") == "LIGHTS"
+
+
+def test_no_group_stays_no_group():
+    assert canonical_group("") == ""
+    assert canonical_group(None) == ""
+    assert canonical_group("   ") == ""
+
+
+def test_accents_survive():
+    assert canonical_group("caldaia però") == "CALDAIA PERÒ"

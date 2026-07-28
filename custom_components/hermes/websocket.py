@@ -21,7 +21,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.util import dt as dt_util
 
 from .actions import ACTIONS_BY_TYPE, DOMAIN_TO_TYPE, GENERIC_ACTIONS
-from .ordering import reorder, sort_into_groups
+from .ordering import canonical_group, reorder, sort_into_groups
 from .meshtastic_api import (
     async_get_channels,
     channel_default_psk,
@@ -35,6 +35,7 @@ from .meshtastic_api import (
     node_num_from_device,
 )
 from .const import (
+    CMD_GROUP,
     CMD_ID,
     CONF_AUTHORIZED_NODES,
     CONF_CHANNEL_INDEX,
@@ -371,6 +372,10 @@ def ws_command_save(hass: HomeAssistant, connection, msg: dict) -> None:
         command[CMD_ID] = uuid.uuid4().hex
 
     commands = list(entry.options.get(CONF_COMMANDS, []))
+    # Stored upper case, so "Lights" and "lights" are one group and not two.
+    # Done here, once, so everything downstream compares plain strings.
+    if CMD_GROUP in command:
+        command[CMD_GROUP] = canonical_group(command.get(CMD_GROUP))
     for index, existing in enumerate(commands):
         if existing.get(CMD_ID) == command[CMD_ID]:
             commands[index] = command
