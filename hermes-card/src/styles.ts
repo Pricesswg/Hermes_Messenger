@@ -930,6 +930,37 @@ export const hermesLayout = css`
     margin-top: 14px;
   }
 
+  /* A row that has just been moved. Two commands swapping places is a small
+   * change in a long list, and without a mark it is easy to wonder whether the
+   * click did anything at all. Long enough to notice, short enough to leave. */
+  .list-row[data-moved="1"] {
+    animation: hermes-moved 0.9s ease-out;
+  }
+
+  @keyframes hermes-moved {
+    0% {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+    70% {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+    100% {
+      border-color: var(--border);
+      box-shadow: none;
+    }
+  }
+
+  /* Respect a system that asked for less movement: the colour still says it
+   * happened, it just does not fade. */
+  @media (prefers-reduced-motion: reduce) {
+    .list-row[data-moved="1"] {
+      animation: none;
+      border-color: var(--accent);
+    }
+  }
+
   .btn.move {
     padding: 4px 9px;
     font-size: 0.9rem;

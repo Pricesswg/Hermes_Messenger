@@ -132,6 +132,8 @@ export class HermesCard extends LitElement {
   @state() private _armed: string | null = null;
   /** Entry whose public channel warning is open. */
   @state() private _riskDialog: string | null = null;
+  /** Command just moved, flashed briefly so the eye can follow it. */
+  @state() private _movedId: string | null = null;
 
   private _loaded = false;
   private _pollTimer?: number;
@@ -715,6 +717,13 @@ export class HermesCard extends LitElement {
     await reorderCommands(this.hass, entry.entry_id, ids);
     this._flagSaved();
     await this._load();
+
+    // The list redraws in the new order, and two rows swapping places is easy
+    // to miss. A brief mark on the one that moved says which.
+    this._movedId = command.id;
+    window.setTimeout(() => {
+      if (this._movedId === command.id) this._movedId = null;
+    }, 900);
   };
 
   private _onDeleteCommand = async (command: HermesCommand): Promise<void> => {
@@ -820,6 +829,7 @@ export class HermesCard extends LitElement {
             onDuplicate: this._onDuplicate,
             onDelete: this._onDeleteCommand,
             onMove: this._onMoveCommand,
+            movedId: this._movedId,
             onDraftInput: this._onDraftInput,
             onPaletteEntity: this._onPaletteEntity,
             onPaletteValue: this._onPaletteValue,

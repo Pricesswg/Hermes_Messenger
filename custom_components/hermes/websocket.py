@@ -17,7 +17,7 @@ import voluptuous as vol
 
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import dt as dt_util
 
 from .actions import ACTIONS_BY_TYPE, DOMAIN_TO_TYPE, GENERIC_ACTIONS
@@ -168,6 +168,23 @@ def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
         # here rather than in the card so the screen and the coordinator can
         # never disagree about whether something will actually run.
         "channel_block": _channel_block(hass, entry),
+        # Where the diagnostic sensors actually ended up. The card used to look
+        # for an entity id ending in "last_command", which only works while the
+        # entity name is English: Home Assistant builds the id from the
+        # translated name, so on any other language nothing matched and the
+        # panel showed nothing for ever. The registry knows, so it is asked.
+        "sensors": _sensor_ids(hass, entry),
+    }
+
+
+def _sensor_ids(hass: HomeAssistant, entry: Any) -> dict[str, str | None]:
+    """Entity id of each diagnostic sensor, resolved through its unique id."""
+    registry = er.async_get(hass)
+    return {
+        kind: registry.async_get_entity_id(
+            "sensor", DOMAIN, f"{entry.entry_id}_{kind}"
+        )
+        for kind in ("commands_executed", "last_command", "last_error")
     }
 
 

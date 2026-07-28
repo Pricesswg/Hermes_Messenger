@@ -17,9 +17,9 @@ export function renderStatus(
   }
 
   const nodes = meshNodes(hass);
-  const executed = hermesSensor(hass, "commands_executed");
-  const lastCommand = hermesSensor(hass, "last_command");
-  const lastError = hermesSensor(hass, "last_error");
+  const executed = hermesSensor(hass, "commands_executed", entries);
+  const lastCommand = hermesSensor(hass, "last_command", entries);
+  const lastError = hermesSensor(hass, "last_error", entries);
 
   const asText = (value?: string): string =>
     !value || value === "unknown" || value === "unavailable"
@@ -81,9 +81,9 @@ export function renderStatusSummary(
       ? t("status.none")
       : value;
 
-  const executed = hermesSensor(hass, "commands_executed");
-  const lastCommand = hermesSensor(hass, "last_command");
-  const lastError = hermesSensor(hass, "last_error");
+  const executed = hermesSensor(hass, "commands_executed", entries);
+  const lastCommand = hermesSensor(hass, "last_command", entries);
+  const lastError = hermesSensor(hass, "last_error", entries);
   // One offline gateway is enough to stop everything it serves, so the summary
   // reports the worst link rather than an average.
   const offline = entries.some((entry) => entry.radio_connected === false);

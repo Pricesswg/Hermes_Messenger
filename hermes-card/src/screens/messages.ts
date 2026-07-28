@@ -42,6 +42,8 @@ export interface MessagesCtx {
   onDelete: (command: HermesCommand) => void;
   /** Move a command one place up (-1) or down (+1) in the stored order. */
   onMove: (command: HermesCommand, delta: number) => void;
+  /** Id of the command that was just moved, so it can be flashed. */
+  movedId: string | null;
   onDraftInput: (key: keyof HermesCommand, value: unknown) => void;
   onPaletteEntity: (entityId: string) => void;
   onPaletteValue: (actionId: string, value: number | string) => void;
@@ -296,6 +298,13 @@ function renderGroupChips(
   const current = (draft.group ?? "").trim();
   return html`
     <div class="chips" style="margin-bottom:2px">
+      <button
+        class="chip"
+        data-on=${current ? "0" : "1"}
+        @click=${() => ctx.onDraftInput("group", "")}
+      >
+        ${t("messages.noGroup")}
+      </button>
       ${names.map(
         (name) => html`
           <button
@@ -340,7 +349,15 @@ function renderCommandList(
             </div>`
           : "";
       previous = group;
-      return html`${heading}${renderRow(ctx, command, entry, t, index, commands.length)}`;
+      return html`${heading}${renderRow(
+        ctx,
+        command,
+        entry,
+        t,
+        index,
+        commands.length,
+        command.id === ctx.movedId
+      )}`;
     })}
   `;
 }
@@ -351,7 +368,8 @@ function renderRow(
   entry: HermesEntry,
   t: (k: string) => string,
   index = 0,
-  total = 1
+  total = 1,
+  moved = false
 ): TemplateResult {
   const summary = command.service || command.reply_template || "";
   // Where this specific command answers: the channel it is heard on, or a DM
@@ -370,7 +388,7 @@ function renderRow(
         : channelLabel(ctx, entry, t);
 
   return html`
-    <div class="list-row">
+    <div class="list-row" data-moved=${moved ? "1" : "0"}>
       <div class="meta">
         <span class="kw">${command.keyword}</span>
         <span class="sub">${summary}</span>

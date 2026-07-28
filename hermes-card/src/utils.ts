@@ -24,10 +24,28 @@ function entitiesForPlatform(hass: HomeAssistant, platform: string) {
 }
 
 /** State of the first Hermes entity whose id ends with the given suffix. */
+/**
+ * State of one diagnostic sensor.
+ *
+ * The entity id comes from the backend, which resolves it through the unique
+ * id. Guessing it here used to mean matching an id ending in "last_command",
+ * which is only true while the entity name is English: Home Assistant builds
+ * the id from the translated name, so on an Italian instance the entity is
+ * `sensor.gateway_ultimo_comando` and nothing matched. The panel then showed
+ * nothing at all, which reads as a value that never updates.
+ *
+ * The suffix search is kept as a fallback for a backend older than the field.
+ */
 export function hermesSensor(
   hass: HomeAssistant,
-  suffix: string
+  suffix: string,
+  entries: HermesEntry[] = []
 ): HassEntityState | undefined {
+  for (const entry of entries) {
+    const entityId = entry.sensors?.[suffix];
+    if (entityId && hass.states[entityId]) return hass.states[entityId];
+  }
+
   for (const entry of entitiesForPlatform(hass, HERMES)) {
     if (entry.entity_id.endsWith(suffix)) {
       const state = hass.states[entry.entity_id];

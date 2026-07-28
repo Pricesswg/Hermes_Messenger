@@ -109,6 +109,13 @@ Commands sharing a name are shown under a heading, and stored together so the
 picture on screen and the order that runs stay the same thing. Anything without
 a name goes last, which is usually where a broad catch-all belongs anyway.
 
+To take a command out of a group, open it and click **No group**, the first
+button above the field. A group is not a thing you delete: it stops existing on
+its own once no command carries its name, so emptying it is how you remove it.
+
+Moving a command flashes its row for a moment, because two rows swapping places
+in a long list is otherwise easy to miss.
+
 ## Building a command
 
 Open **Messages**, then **Add message**.

@@ -232,6 +232,8 @@ export interface HermesEntry {
   channel_block?: "default_psk" | "channel_zero" | null;
   /** The recorded acceptance of that risk, deliberately visible. */
   channel_risk_ack?: ChannelRiskAck | null;
+  /** Entity id of each diagnostic sensor, resolved from its unique id. */
+  sensors?: Record<string, string | null>;
 }
 
 /** Who accepted that a public channel may run commands, and when. */
