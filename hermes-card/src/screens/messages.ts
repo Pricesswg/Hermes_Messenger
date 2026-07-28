@@ -40,6 +40,8 @@ export interface MessagesCtx {
   onEdit: (command: HermesCommand) => void;
   onDuplicate: (command: HermesCommand) => void;
   onDelete: (command: HermesCommand) => void;
+  /** Move a command one place up (-1) or down (+1) in the stored order. */
+  onMove: (command: HermesCommand, delta: number) => void;
   onDraftInput: (key: keyof HermesCommand, value: unknown) => void;
   onPaletteEntity: (entityId: string) => void;
   onPaletteValue: (actionId: string, value: number | string) => void;
@@ -127,7 +129,7 @@ export function renderMessages(
       ? renderForm(ctx, ctx.editing, t)
       : html`
           ${entry.commands.length
-            ? entry.commands.map((command) => renderRow(ctx, command, entry, t))
+            ? renderCommandList(ctx, entry, t)
             : html`<div class="empty">${t("messages.empty")}</div>`}
           <div class="actions">
             <button class="btn primary" @click=${ctx.onNew}>
@@ -268,11 +270,46 @@ function renderPresets(
   `;
 }
 
+/**
+ * The commands, under their group headings.
+ *
+ * The headings are cosmetic; the sequence is not. The first command whose
+ * keyword matches is the one that runs, so a specific "lights kitchen" has to
+ * sit above a broader "lights" or it can never fire. The list is therefore
+ * shown in exactly the stored order, and the arrows move a command within it.
+ */
+function renderCommandList(
+  ctx: MessagesCtx,
+  entry: HermesEntry,
+  t: (k: string) => string
+): TemplateResult {
+  const commands = entry.commands;
+  const grouped = commands.some((command) => (command.group ?? "").trim());
+
+  let previous: string | null = null;
+  return html`
+    <div class="hint" style="margin-bottom:8px">${t("messages.orderHint")}</div>
+    ${commands.map((command, index) => {
+      const group = (command.group ?? "").trim();
+      const heading =
+        grouped && group !== previous
+          ? html`<div class="section-title group-head">
+              ${group || t("messages.ungrouped")}
+            </div>`
+          : "";
+      previous = group;
+      return html`${heading}${renderRow(ctx, command, entry, t, index, commands.length)}`;
+    })}
+  `;
+}
+
 function renderRow(
   ctx: MessagesCtx,
   command: HermesCommand,
   entry: HermesEntry,
-  t: (k: string) => string
+  t: (k: string) => string,
+  index = 0,
+  total = 1
 ): TemplateResult {
   const summary = command.service || command.reply_template || "";
   // Where this specific command answers: the channel it is heard on, or a DM
@@ -297,6 +334,22 @@ function renderRow(
         <span class="sub">${summary}</span>
       </div>
       <div class="actions" style="margin:0">
+        <button
+          class="btn move"
+          ?disabled=${index === 0}
+          title=${t("messages.moveUp")}
+          @click=${() => ctx.onMove(command, -1)}
+        >
+          &uarr;
+        </button>
+        <button
+          class="btn move"
+          ?disabled=${index === total - 1}
+          title=${t("messages.moveDown")}
+          @click=${() => ctx.onMove(command, 1)}
+        >
+          &darr;
+        </button>
         <span class="channel-badge small" title=${t("messages.repliesOn")}>
           ${target}
         </span>
@@ -538,6 +591,16 @@ function renderForm(
           @input=${bind("reply_template")}
         ></textarea>
         <span class="hint">${t("messages.templateHint")}</span>
+      </div>
+
+      <div class="field">
+        <label>${t("messages.group")}</label>
+        <input
+          .value=${draft.group ?? ""}
+          placeholder=${t("messages.groupPlaceholder")}
+          @input=${bind("group")}
+        />
+        <span class="hint">${t("messages.groupHint")}</span>
       </div>
 
       <div class="field">

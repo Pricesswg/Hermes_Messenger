@@ -44,6 +44,7 @@ import {
   fetchPresets,
   fetchSettings,
   removeCommand,
+  reorderCommands,
   removePreset,
   saveCommand,
   savePreset,
@@ -690,6 +691,32 @@ export class HermesCard extends LitElement {
     await this._load();
   };
 
+  /**
+   * Move a command one place in the stored order.
+   *
+   * The order is what decides which of two overlapping keywords runs, so this
+   * writes the whole sequence back rather than a position: the backend keeps
+   * one list and there is no second notion of order anywhere.
+   */
+  private _onMoveCommand = async (
+    command: HermesCommand,
+    delta: number
+  ): Promise<void> => {
+    const entryId = this._selectedEntry ?? this._entries[0]?.entry_id;
+    const entry = this._entries.find((e) => e.entry_id === entryId);
+    if (!this.hass || !entry || !command.id) return;
+
+    const ids = entry.commands.map((c) => c.id ?? "");
+    const from = ids.indexOf(command.id);
+    const to = from + delta;
+    if (from < 0 || to < 0 || to >= ids.length) return;
+
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    await reorderCommands(this.hass, entry.entry_id, ids);
+    this._flagSaved();
+    await this._load();
+  };
+
   private _onDeleteCommand = async (command: HermesCommand): Promise<void> => {
     const entryId = this._selectedEntry;
     if (!this.hass || !entryId || !command.id) return;
@@ -792,6 +819,7 @@ export class HermesCard extends LitElement {
             onEdit: this._onEdit,
             onDuplicate: this._onDuplicate,
             onDelete: this._onDeleteCommand,
+            onMove: this._onMoveCommand,
             onDraftInput: this._onDraftInput,
             onPaletteEntity: this._onPaletteEntity,
             onPaletteValue: this._onPaletteValue,

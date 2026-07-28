@@ -110,6 +110,7 @@ function renderEntry(
         : ""}
 
       ${GUARDS.map((guard) => renderGuard(ctx, entry, guard, t))}
+      ${renderPkcConsequence(entry, t)}
 
       <div class="field">
         <label>${t("security.maxAge")}</label>
@@ -128,6 +129,28 @@ function renderEntry(
         />
         <span class="hint">${t("security.maxAgeHint")}</span>
       </div>
+    </div>
+  `;
+}
+
+/**
+ * What requiring PKC costs, said next to the switch that does it.
+ *
+ * Only a direct message is encrypted for one node. A channel message is
+ * encrypted with the key of the channel, so it is never PKC and never will be.
+ * Turning this on therefore stops every channel command, and on a gateway that
+ * listens to a channel it stops everything: a switch that silently makes a
+ * working system deaf is a switch that needs to say so before it is used.
+ */
+function renderPkcConsequence(
+  entry: HermesEntry,
+  t: (k: string) => string
+): TemplateResult {
+  const onChannel = entry.mode === "channel";
+  return html`
+    <div class="note warn pkc-note">
+      ${t("security.pkcChannelNote")}
+      ${onChannel ? html`<br /><strong>${t("security.pkcChannelGateway")}</strong>` : ""}
     </div>
   `;
 }

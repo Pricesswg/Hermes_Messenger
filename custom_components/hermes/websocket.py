@@ -21,6 +21,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.util import dt as dt_util
 
 from .actions import ACTIONS_BY_TYPE, DOMAIN_TO_TYPE, GENERIC_ACTIONS
+from .ordering import reorder, sort_into_groups
 from .meshtastic_api import (
     async_get_channels,
     channel_default_psk,
@@ -82,6 +83,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_entry_update)
     websocket_api.async_register_command(hass, ws_command_save)
     websocket_api.async_register_command(hass, ws_command_remove)
+    websocket_api.async_register_command(hass, ws_commands_reorder)
     websocket_api.async_register_command(hass, ws_nodes_list)
     websocket_api.async_register_command(hass, ws_actions)
     websocket_api.async_register_command(hass, ws_presets_list)
@@ -376,6 +378,11 @@ def ws_command_save(hass: HomeAssistant, connection, msg: dict) -> None:
     else:
         commands.append(command)
 
+    # Gathered by group in the stored list, not at display time. The order
+    # decides which of two overlapping keywords wins, so the sequence on screen
+    # has to be the sequence that runs.
+    commands = sort_into_groups(commands)
+
     options = {**entry.options, CONF_COMMANDS: commands}
     hass.config_entries.async_update_entry(entry, options=options)
     connection.send_result(msg["id"], command)
@@ -470,6 +477,34 @@ def ws_nodes_list(hass: HomeAssistant, connection, msg: dict) -> None:
 
     nodes = sorted(by_num.values(), key=lambda n: str(n["name"]).lower())
     connection.send_result(msg["id"], nodes)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hermes/commands/reorder",
+        vol.Required("entry_id"): str,
+        vol.Required("order"): [str],
+    }
+)
+@callback
+def ws_commands_reorder(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Store a new order for the commands of one gateway.
+
+    Order is not decoration: the first command whose keyword matches is the one
+    that runs, so this decides which of two overlapping keywords wins. The
+    stored list is the single sequence, used for matching and for display
+    alike, so what is on screen cannot promise a different outcome.
+    """
+    entry = _get_entry(hass, msg["entry_id"])
+    if entry is None:
+        connection.send_error(msg["id"], "not_found", "Unknown Hermes entry")
+        return
+
+    commands = reorder(list(entry.options.get(CONF_COMMANDS, [])), msg["order"])
+    options = {**entry.options, CONF_COMMANDS: commands}
+    hass.config_entries.async_update_entry(entry, options=options)
+    connection.send_result(msg["id"], commands)
 
 
 # --- Quick send presets ----------------------------------------------------

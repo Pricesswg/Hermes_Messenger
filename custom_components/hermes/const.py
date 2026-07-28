@@ -66,6 +66,10 @@ CMD_AUTH_OVERRIDE = "authorized_nodes_override"
 CMD_CONDITION_ENTITY = "condition_entity"
 # Seconds that must pass between two runs of this command.
 CMD_COOLDOWN = "cooldown_seconds"
+# Free text label used only to group commands in the list. Presentation,
+# never matching: two commands in different groups are still tried in the
+# one order the stored list has.
+CMD_GROUP = "group"
 
 MATCH_EXACT = "exact"
 MATCH_STARTSWITH = "startswith"

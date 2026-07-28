@@ -53,6 +53,19 @@ export function saveCommand(
   });
 }
 
+/** Store a new order for a gateway's commands, given as command ids. */
+export function reorderCommands(
+  hass: HomeAssistant,
+  entryId: string,
+  order: string[]
+): Promise<HermesCommand[]> {
+  return hass.callWS<HermesCommand[]>({
+    type: "hermes/commands/reorder",
+    entry_id: entryId,
+    order,
+  });
+}
+
 export function removeCommand(
   hass: HomeAssistant,
   entryId: string,

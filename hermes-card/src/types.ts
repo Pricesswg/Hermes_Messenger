@@ -180,6 +180,8 @@ export interface HermesCommand {
   /** Channel to answer on; empty means the one the gateway listens on. */
   reply_channel?: number | null;
   authorized_nodes_override?: number[];
+  /** Free text label used only to group the list. Never affects matching. */
+  group?: string;
   /** Entity that must be on for this command to run. */
   condition_entity?: string;
   /** Seconds that must pass between two runs of this command. */

@@ -916,6 +916,29 @@ export const hermesLayout = css`
     color: var(--danger);
   }
 
+  /* Sits directly under the switch it is about, indented so it reads as
+   * belonging to it rather than to the next one. */
+  /* Heading over each block of commands. Cosmetic: the sequence underneath
+   * is the one that decides which keyword wins. */
+  .group-head {
+    margin-top: 14px;
+  }
+
+  .btn.move {
+    padding: 4px 9px;
+    font-size: 0.9rem;
+    line-height: 1;
+  }
+
+  .btn.move:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .pkc-note {
+    margin: -4px 0 8px;
+  }
+
   .note.danger {
     border-left: 3px solid var(--danger);
     padding-left: 10px;

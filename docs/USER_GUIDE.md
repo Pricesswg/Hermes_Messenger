@@ -91,6 +91,19 @@ screen.
 
 ---
 
+## Order and groups
+
+The order of the list is not decoration. The **first** keyword that matches is
+the one that runs, so a specific `lights kitchen` has to sit above a broader
+`lights` that starts the same way, or it can never fire. The arrows on each
+command move it, and what you see is exactly the sequence that is tried.
+
+**Group** is a free text label on a command, and it is the opposite: purely
+presentational. Commands sharing a label are shown under a heading, and stored
+together so the picture on screen and the order that runs stay the same thing.
+Anything without a label goes last, which is usually where a broad catch-all
+belongs anyway.
+
 ## Building a command
 
 Open **Messages**, then **Add message**.
