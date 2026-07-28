@@ -221,6 +221,16 @@ function renderReception(
             <span class="v">${entry.bus_events ?? 0}</span>
           </div>
           <div class="row">
+            <span class="k">${t("status.replayGuard")}</span>
+            <span class="v">
+              ${entry.replay_protected === false
+                ? t("status.replayGuard.off")
+                : entry.replay_protected === true
+                  ? t("status.replayGuard.on")
+                  : t("status.replayGuard.idle")}
+            </span>
+          </div>
+          <div class="row">
             <span class="k">${t("status.expects")}</span>
             <span class="v">
               ${t("settings.gateway")} ${entry.gateway_node_id ?? "-"},

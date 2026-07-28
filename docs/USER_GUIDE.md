@@ -298,6 +298,30 @@ point, and it is also the whole risk: whoever can get a message accepted can do
 whatever the commands allow. This section is about keeping that set small and
 the senders real.
 
+### The cheapest attack, and what stops it
+
+Before the channel and direct message question, one thing worth knowing because
+it needs no skill at all. A Meshtastic channel has no replay protection: the
+encryption documentation says so, and it exists only for direct messages between
+devices on firmware 2.5 and later. So anyone in radio range can record the
+encrypted packet that opens your gate and simply transmit it again tomorrow. No
+key, no decryption, nothing broken. The sender is your own node, so the
+authorized list waves it through, and it is one message, so a rate limit never
+notices.
+
+Hermes now refuses that. Every packet carries an id from the radio, a replay is
+the same packet so it carries the same id, and two genuine sends carry different
+ones. That means the check is exact: it stops the replay without ever stopping
+you from asking twice. It is on, it needs no configuration, and **Status** shows
+whether it is running under **Replay protection**.
+
+If Status says it is unavailable, your Meshtastic integration is too old to
+publish the packet id. Update it.
+
+This does not make a channel safe. Someone holding the channel key can build a
+new packet with a new id, and against that the only real answer is a direct
+message, which is what the rest of this section is about.
+
 ### What actually protects you
 
 There are two very different situations, and the difference decides everything

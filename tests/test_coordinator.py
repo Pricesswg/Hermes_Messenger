@@ -117,8 +117,20 @@ def message(**overrides) -> dict:
     return {"data": data}
 
 
-async def deliver(hass, coordinator, payload: dict) -> None:
-    """Fire one mesh event and let every task it starts finish."""
+_next_packet_id = iter(range(9000, 99000))
+
+
+async def deliver(hass, coordinator, payload: dict, message_id: int | None = None) -> None:
+    """Fire one mesh event and let every task it starts finish.
+
+    Each delivery gets a fresh packet id unless one is given, which is what the
+    radio does: two genuine sends are two packets. Passing the same id twice is
+    how a replay is expressed.
+    """
+    payload = {
+        **payload,
+        "message_id": next(_next_packet_id) if message_id is None else message_id,
+    }
     hass.bus.async_fire("meshtastic_api_text_message", payload)
     await hass.async_block_till_done()
     # Replies are background tasks on purpose, so the bus is never blocked by
@@ -218,6 +230,54 @@ async def test_an_unknown_keyword_does_nothing(hass, lights, sent):
 
     assert not lights
     assert not sent
+
+
+async def test_the_same_packet_twice_runs_once(hass, lights, sent):
+    """The cheapest attack on a mesh: record a packet, transmit it again.
+
+    No key and no decryption needed, and the sender is the legitimate node, so
+    the authorized list waves it through. Only the packet id tells them apart.
+    """
+    coordinator = await build(hass)
+    await deliver(hass, coordinator, message(), message_id=4242)
+    await deliver(hass, coordinator, message(), message_id=4242)
+
+    assert len(lights) == 1
+    assert coordinator.seen_counts.get("replay") == 1
+
+
+async def test_asking_twice_is_not_a_replay(hass, lights, sent):
+    """The property that lets the check be strict without false positives."""
+    coordinator = await build(hass)
+    await deliver(hass, coordinator, message(), message_id=1)
+    await deliver(hass, coordinator, message(), message_id=2)
+
+    assert len(lights) == 2
+    assert not coordinator.seen_counts.get("replay")
+
+
+async def test_a_replay_never_reaches_the_conversation(hass, lights, sent):
+    """It is not a message that happened, so it must not look like one."""
+    coordinator = await build(hass)
+    await deliver(hass, coordinator, message(), message_id=77)
+    await deliver(hass, coordinator, message(), message_id=77)
+
+    store = hass.data[DATA_STORE]
+    incoming = [
+        m for m in store.chats.get(f"node:{FRIEND}", []) if not m["outgoing"]
+    ]
+    assert len(incoming) == 1
+
+
+async def test_an_event_with_no_packet_id_still_works_and_says_so(hass, lights, sent):
+    """An older base integration must keep working, visibly unprotected."""
+    coordinator = await build(hass)
+    hass.bus.async_fire("meshtastic_api_text_message", message())
+    await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    assert len(lights) == 1
+    assert coordinator.replay_protected is False
 
 
 async def test_the_rate_limit_stops_a_flood(hass, lights, sent):

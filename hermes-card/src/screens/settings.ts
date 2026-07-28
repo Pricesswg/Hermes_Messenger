@@ -506,9 +506,11 @@ function renderChannelPicker(
             <span class="hint">${t("settings.channelsUnavailable")}</span>
           `}
       <span class="hint">${t("settings.channelHint")}</span>
-      ${known?.default_psk
+      ${known?.default_psk === true
         ? html`<div class="note warn">${t("settings.defaultPskWarning")}</div>`
-        : ""}
+        : known?.default_psk === null
+          ? html`<div class="note warn">${t("settings.defaultPskUnknown")}</div>`
+          : ""}
     </div>
   `;
 }

@@ -63,6 +63,7 @@ from .matching import accepts_message, match_command, matches_keyword
 from .meshtastic_api import node_num_from_device
 from .message import split_message
 from .rate_limit import allow as rate_allow, forget_idle
+from .replay import remember
 from .tokens import apply_argument, parse_actions, parse_argument, strip_actions
 
 _LOGGER = logging.getLogger(__name__)
@@ -89,6 +90,12 @@ class HermesCoordinator:
 
         # Sliding window of matched commands per node, for the rate limit.
         self._rate_history: dict[int, list[float]] = {}
+
+        # Packet ids already handled, so the same packet cannot run twice.
+        self._seen_packets: dict[int, float] = {}
+        # False once a message arrives without an id: the protection cannot run
+        # on that base integration, and Status must say so rather than imply it.
+        self.replay_protected: bool | None = None
 
         self._sensor_listeners: list[CALLBACK_TYPE] = []
         self._unsub_midnight: CALLBACK_TYPE | None = None
@@ -233,6 +240,24 @@ class HermesCoordinator:
             self._notify_sensors()
             return
 
+        # Replay check, before the message is recorded anywhere and long before
+        # anything runs. A Meshtastic channel has no replay protection, so a
+        # captured packet retransmitted later is the cheapest attack there is:
+        # no key, no decryption, and the sender is the legitimate node so the
+        # authorized list waves it through. The radio's own packet id tells the
+        # two apart, because a replay is the same packet while asking twice is
+        # not.
+        if not self._accept_packet(event):
+            self._note_seen(data, "replay")
+            _LOGGER.warning(
+                "Hermes: refused a repeated packet %s from %s, "
+                "which is what a replayed message looks like",
+                event.data.get("message_id"),
+                data.get("from"),
+            )
+            self._notify_sensors()
+            return
+
         # Recorded before the channel filter: the conversation view shows the
         # traffic on every channel this gateway hears, which is a different
         # question from which channel Hermes takes orders on.
@@ -268,6 +293,15 @@ class HermesCoordinator:
             # anyone would advertise the command list to the whole channel.
             if self._is_help(text):
                 if int(sender) in self.default_authorized:
+                    # Rate limited like any other command. This branch makes
+                    # the radio transmit, and it used to be the one way to do
+                    # that without a limit: a node on the list could keep the
+                    # gateway talking, spending its airtime and its battery.
+                    if not self._allow_rate(sender):
+                        self._record_error("rate limit reached", sender, text)
+                        self._log("in", text, sender, "rate_limited")
+                        self._notify_sensors()
+                        return
                     self._log("in", text, sender, "help")
                     self.entry.async_create_background_task(
                         self.hass, self._send_help(sender), name="hermes_help"
@@ -304,6 +338,27 @@ class HermesCoordinator:
 
         self._log("in", text, sender, "matched")
         await self._execute(command, sender, text)
+
+    def _accept_packet(self, event: Event) -> bool:
+        """False when this exact packet has already been handled.
+
+        The id sits on the event itself rather than inside its `data`, which is
+        where every other field lives, so it is easy to miss: the base
+        integration writes `event_data["message_id"]` after building the rest.
+
+        An event with no id at all comes from a base integration too old to
+        publish one. That is reported rather than guessed at: refusing
+        everything would break those installs, and silently accepting
+        everything would leave the panel claiming a protection that is not
+        running. `replay_protected` is what Status reads.
+        """
+        message_id = event.data.get("message_id")
+        if not isinstance(message_id, int):
+            self.replay_protected = False
+            return True
+
+        self.replay_protected = True
+        return remember(self._seen_packets, message_id, self.hass.loop.time())
 
     def _allow_rate(self, sender: int) -> bool:
         """Whether this node is still within its per minute allowance."""

@@ -214,7 +214,12 @@ def channels_from_entities(hass: HomeAssistant) -> list[dict[str, Any]]:
                 continue
             found.setdefault(
                 idx,
-                {"index": idx, "name": name, "role": None, "default_psk": False},
+                # None, not False: the key is not exposed on this path, so the
+                # honest answer is "cannot tell". Reporting False said "this
+                # channel is fine" about a channel that might still be using
+                # the published default key, and the warning quietly vanished
+                # exactly when the client was unavailable.
+                {"index": idx, "name": name, "role": None, "default_psk": None},
             )
 
     return [found[index] for index in sorted(found)]

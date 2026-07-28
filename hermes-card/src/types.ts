@@ -124,8 +124,12 @@ export interface HermesChannel {
   index: number;
   name: string;
   role: string;
-  /** True when the channel still uses the well known default key. */
-  default_psk: boolean;
+  /**
+   * True on the published default key, false when the key was read and is not
+   * it, null when the key could not be read at all. The third state matters:
+   * reporting false for "cannot tell" claimed a channel was safe.
+   */
+  default_psk: boolean | null;
 }
 
 /** A ready made message the user fires with one click. */
@@ -209,6 +213,9 @@ export interface HermesEntry {
   radio_connected: boolean | null;
   /** Other loaded integrations that connect to a Meshtastic node themselves. */
   competing_integrations?: string[];
+  /** True once a packet id was seen, false once one arrived without it,
+   * null before anything arrived. */
+  replay_protected?: boolean | null;
 }
 
 /** The last text message this entry saw on the mesh, before any filtering. */

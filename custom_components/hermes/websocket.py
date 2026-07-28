@@ -132,6 +132,12 @@ def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
         # Named so a dead radio link points at the likeliest cause instead of
         # sending the user looking inside Hermes.
         "competing_integrations": competing_integrations(hass),
+        # True once a packet id has been seen, False once one arrived without
+        # it, None before anything arrived. Reported rather than assumed: the
+        # protection depends on the base integration publishing the id.
+        "replay_protected": getattr(
+            hass.data.get(DOMAIN, {}).get(entry.entry_id), "replay_protected", None
+        ),
         "seen_counts": dict(
             getattr(
                 hass.data.get(DOMAIN, {}).get(entry.entry_id), "seen_counts", {}
