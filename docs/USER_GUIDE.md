@@ -159,6 +159,26 @@ Sending `luce` from an authorized node toggles the light and answers
 Home: {state:sensor.temperatura_salotto}C, alarm {state:alarm_control_panel.casa}
 ```
 
+That reply says `alarm armed_away`, which is how Home Assistant stores the
+state and not how anyone speaks. Under **Say it in words** you get one field per
+value the entity can report, so you can write `away` next to `armed_away` and
+`off` next to `disarmed`. Fill in only the ones you care about: anything left
+empty is sent exactly as it was.
+
+The words are inserted into the placeholder along with the entity, so they
+belong to that command. Two commands reading the same switch can word it
+differently, and a state you did not give a word to still comes through rather
+than disappearing.
+
+```
+Alarm: {state:alarm_control_panel.casa|armed_away=away,disarmed=off}
+```
+
+Entities whose values are a fixed set get the fields: switches, covers, locks,
+alarms, people, and anything publishing its own list, such as the modes of a
+thermostat. A sensor reading a temperature does not, since there is no set of
+values to name.
+
 ### Worked example: a value from the message
 
 1. Keyword: `temp`

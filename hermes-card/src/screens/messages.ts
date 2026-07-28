@@ -7,6 +7,7 @@ import {
   buildActionToken,
   buildAttrToken,
   buildStateToken,
+  labelableStates,
   rangeLabel,
   readableAttributes,
   resolveValueSpec,
@@ -31,6 +32,8 @@ export interface MessagesCtx {
   paletteEntity: string;
   /** Chosen default for the action parameter, per action id. */
   paletteValues: Record<string, number | string>;
+  /** Word to say instead of each raw state, for the entity being composed. */
+  paletteLabels: Record<string, string>;
   showAdvanced: boolean;
   onSelectEntry: (entryId: string) => void;
   onNew: () => void;
@@ -40,6 +43,7 @@ export interface MessagesCtx {
   onDraftInput: (key: keyof HermesCommand, value: unknown) => void;
   onPaletteEntity: (entityId: string) => void;
   onPaletteValue: (actionId: string, value: number | string) => void;
+  onPaletteLabel: (state: string, word: string) => void;
   onInsert: (token: string) => void;
   onToggleAdvanced: () => void;
   onSave: () => void;
@@ -359,6 +363,55 @@ function renderValueInput(
 }
 
 /**
+ * A word to say instead of each raw state.
+ *
+ * Home Assistant stores "on", "not_home", "armed_away". Those are fine in a
+ * database and poor in a message that a person reads on a radio. One field per
+ * state the entity can report, filled in only where you want to: anything left
+ * empty keeps the raw value, which is what every reply did before this existed.
+ *
+ * The words are part of the token the button inserts, so they travel with the
+ * command and two commands on the same entity can word it differently.
+ */
+function renderLabels(
+  ctx: MessagesCtx,
+  entityId: string,
+  t: (k: string) => string
+): TemplateResult {
+  const states = labelableStates(
+    ctx.hass.states[entityId]?.attributes,
+    entityId
+  );
+  // A temperature has no meaningful set of values, so it gets no fields.
+  if (!states.length) return html``;
+
+  return html`
+    <div class="labels">
+      <div class="section-title">${t("messages.groupLabels")}</div>
+      <span class="hint">${t("messages.labelsHint")}</span>
+      <div class="label-grid">
+        ${states.map(
+          (state) => html`
+            <label class="label-row">
+              <span class="raw">${state}</span>
+              <input
+                .value=${ctx.paletteLabels[state] ?? ""}
+                placeholder=${state}
+                @input=${(e: Event) =>
+                  ctx.onPaletteLabel(
+                    state,
+                    (e.target as HTMLInputElement).value
+                  )}
+              />
+            </label>
+          `
+        )}
+      </div>
+    </div>
+  `;
+}
+
+/**
  * The palette: pick an entity, then click a button. Read buttons insert the
  * value placeholder, action buttons insert a self contained action token.
  * The user never has to know a service name.
@@ -390,7 +443,8 @@ function renderPalette(
             <div class="chips">
               <button
                 class="chip read"
-                @click=${() => ctx.onInsert(buildStateToken(entityId))}
+                @click=${() =>
+                  ctx.onInsert(buildStateToken(entityId, ctx.paletteLabels))}
               >
                 ${t("messages.readState")}
               </button>
@@ -405,6 +459,8 @@ function renderPalette(
                 `
               )}
             </div>
+
+            ${renderLabels(ctx, entityId, t)}
 
             <div class="section-title">${t("messages.groupDo")}</div>
             <div class="chips">

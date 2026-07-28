@@ -62,6 +62,19 @@ export const hermesTokens = css`
 
     --pad: 16px;
 
+    /* Opaque base for anything that floats over other content.
+     *
+     * --surface follows --ha-card-background, which a good number of Home
+     * Assistant themes deliberately make translucent for a glass look. That is
+     * fine for a panel sitting on the dashboard and wrong for a dropdown: the
+     * list let the fields underneath show through and read as broken.
+     *
+     * The page background is the right base. A theme may well make a card
+     * translucent, but it has nothing to show through behind the page itself,
+     * so this one is opaque in practice and follows the theme's own light or
+     * dark palette, which a hardcoded colour could not. */
+    --overlay-base: var(--primary-background-color, var(--card-background-color, #ffffff));
+
     font-family: var(--font-sans);
     color: var(--text);
   }
@@ -74,6 +87,7 @@ export const hermesTokens = css`
     :host {
       --accent-soft: rgba(255, 214, 10, 0.18);
       --accent-ink: oklch(0.9 0.12 92);
+      --overlay-base: #1c1c1e;
     }
   }
 `;
@@ -794,6 +808,42 @@ export const hermesLayout = css`
     border-color: var(--accent);
     border-width: 2px;
     background: var(--bg-soft);
+  }
+
+  .labels {
+    margin-bottom: 12px;
+  }
+
+  .label-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .label-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* The raw state, monospaced and muted: it is what Home Assistant calls the
+   * value, shown so the mapping is obvious, not something to read as a label. */
+  .label-row .raw {
+    flex: 0 0 auto;
+    min-width: 74px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .label-row input {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.8rem;
+    padding: 5px 8px;
   }
 
   .sub-error {

@@ -98,6 +98,8 @@ export class HermesCard extends LitElement {
   @state() private _loadError: string | null = null;
   @state() private _paletteEntity = "";
   @state() private _paletteValues: Record<string, number | string> = {};
+  /** Word to say instead of each raw state, for the entity being composed. */
+  @state() private _paletteLabels: Record<string, string> = {};
   @state() private _showAdvanced = false;
   @state() private _mapShowAll = false;
   @state() private _mapRadiusOn = false;
@@ -400,10 +402,17 @@ export class HermesCard extends LitElement {
 
   private _onPaletteEntity = (entityId: string): void => {
     this._paletteEntity = entityId;
+    // The words belong to the entity that was being composed. Carrying them to
+    // the next one would quietly put "running" on a door lock.
+    this._paletteLabels = {};
   };
 
   private _onPaletteValue = (actionId: string, value: number | string): void => {
     this._paletteValues = { ...this._paletteValues, [actionId]: value };
+  };
+
+  private _onPaletteLabel = (state: string, word: string): void => {
+    this._paletteLabels = { ...this._paletteLabels, [state]: word };
   };
 
   private _onToggleAdvanced = (): void => {
@@ -714,6 +723,7 @@ export class HermesCard extends LitElement {
             loadError: this._loadError,
             paletteEntity: this._paletteEntity,
             paletteValues: this._paletteValues,
+            paletteLabels: this._paletteLabels,
             showAdvanced: this._showAdvanced,
             onSelectEntry: this._onSelectEntry,
             onNew: this._onNew,
@@ -723,6 +733,7 @@ export class HermesCard extends LitElement {
             onDraftInput: this._onDraftInput,
             onPaletteEntity: this._onPaletteEntity,
             onPaletteValue: this._onPaletteValue,
+            onPaletteLabel: this._onPaletteLabel,
             onInsert: this._onInsert,
             onToggleAdvanced: this._onToggleAdvanced,
             onSave: this._onSaveCommand,

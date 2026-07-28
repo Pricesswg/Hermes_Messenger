@@ -93,12 +93,79 @@ export function buildActionToken(
   return `{do:${action.service}:${entityId}:${action.value.key}=${value}}`;
 }
 
-export function buildStateToken(entityId: string): string {
-  return `{state:${entityId}}`;
+/**
+ * The label section of a placeholder, empty when there is nothing to say.
+ *
+ * A label holding a comma, an equals sign, a brace or a pipe would break the
+ * placeholder around it, so it is dropped rather than written into a token the
+ * backend would then read back wrongly. Mirrors format_labels in labels.py.
+ */
+function labelSection(labels?: Record<string, string>): string {
+  const parts = Object.entries(labels ?? {})
+    .filter(
+      ([state, label]) =>
+        state && label && !/[,={}|]/.test(label)
+    )
+    .map(([state, label]) => `${state}=${label}`);
+  return parts.length ? `|${parts.join(",")}` : "";
 }
 
-export function buildAttrToken(entityId: string, attribute: string): string {
-  return `{attr:${entityId}:${attribute}}`;
+export function buildStateToken(
+  entityId: string,
+  labels?: Record<string, string>
+): string {
+  return `{state:${entityId}${labelSection(labels)}}`;
+}
+
+export function buildAttrToken(
+  entityId: string,
+  attribute: string,
+  labels?: Record<string, string>
+): string {
+  return `{attr:${entityId}:${attribute}${labelSection(labels)}}`;
+}
+
+// Which values an entity can report, so the composer can offer a word for each
+// one instead of asking the user to know them. The entity is asked first, since
+// it publishes the real list for the things that have one; this table only
+// covers the domains whose states are fixed and never published.
+const STATES_BY_DOMAIN: Record<string, string[]> = {
+  light: ["on", "off"],
+  switch: ["on", "off"],
+  fan: ["on", "off"],
+  siren: ["on", "off"],
+  input_boolean: ["on", "off"],
+  automation: ["on", "off"],
+  binary_sensor: ["on", "off"],
+  lock: ["locked", "unlocked", "open"],
+  cover: ["open", "closed", "opening", "closing"],
+  person: ["home", "not_home"],
+  device_tracker: ["home", "not_home"],
+  alarm_control_panel: ["disarmed", "armed_home", "armed_away", "triggered"],
+  media_player: ["playing", "paused", "idle", "off"],
+  vacuum: ["cleaning", "docked", "returning", "paused", "idle"],
+  water_heater: ["eco", "performance", "off"],
+};
+
+/**
+ * The states worth offering a word for, or an empty list when there is no
+ * meaningful set.
+ *
+ * A sensor reporting a temperature has infinitely many values and none of them
+ * wants a label, so it gets none: offering a text field per value there would
+ * be noise. What the entity itself publishes wins over the table, because a
+ * thermostat knows its own modes better than any list written here.
+ */
+export function labelableStates(
+  attributes: Record<string, any> | undefined,
+  entityId: string
+): string[] {
+  const published =
+    attributes?.options ?? attributes?.hvac_modes ?? attributes?.effect_list;
+  if (Array.isArray(published) && published.length && published.length <= 12) {
+    return published.map(String);
+  }
+  return STATES_BY_DOMAIN[domainOf(entityId)] ?? [];
 }
 
 // Where the real limits of a parameter live in the entity attributes. The

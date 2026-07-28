@@ -58,6 +58,7 @@ from .const import (
     SERVICE_SEND_TEXT,
 )
 from .actions import entity_bounds, value_spec
+from .labels import PLACEHOLDER_RE, apply_labels, parse_labels
 from .matching import accepts_message, match_command, matches_keyword
 from .meshtastic_api import node_num_from_device
 from .message import split_message
@@ -65,11 +66,6 @@ from .rate_limit import allow as rate_allow, forget_idle
 from .tokens import apply_argument, parse_actions, parse_argument, strip_actions
 
 _LOGGER = logging.getLogger(__name__)
-
-# User-facing placeholders: {state:entity_id} and {attr:entity_id:attribute}.
-# We deliberately do NOT expose raw Jinja2: these two cover 90% of cases and do
-# not allow arbitrary execution inside the reply text.
-_PLACEHOLDER_RE = re.compile(r"\{(state|attr):([^:}]+?)(?::([^}]+?))?\}")
 
 
 class HermesCoordinator:
@@ -526,22 +522,30 @@ class HermesCoordinator:
                 )
 
     def _render_reply(self, template_str: str) -> str:
-        """Resolve {state:...}/{attr:...:...} placeholders by reading states."""
+        """Resolve {state:...}/{attr:...:...} placeholders by reading states.
+
+        A placeholder may carry its own words for the values it can take, so a
+        switch answers "running" rather than "on". Purely presentational, and
+        written by the administrator in the card: the sender contributes
+        nothing here.
+        """
         if not template_str:
             return ""
 
         def _resolve(match: re.Match[str]) -> str:
             kind, entity_id, attr = match.group(1), match.group(2).strip(), match.group(3)
+            labels = parse_labels(match.group(4))
             state = self.hass.states.get(entity_id)
             if state is None:
                 return "?"
             if kind == "state":
-                return str(state.state)
+                return apply_labels(str(state.state), labels)
             if kind == "attr" and attr:
-                return str(state.attributes.get(attr.strip(), "?"))
+                value = state.attributes.get(attr.strip(), "?")
+                return apply_labels(str(value), labels)
             return "?"
 
-        return _PLACEHOLDER_RE.sub(_resolve, template_str)
+        return PLACEHOLDER_RE.sub(_resolve, template_str)
 
     async def _send_reply(
         self, text: str, command: dict[str, Any], sender: int

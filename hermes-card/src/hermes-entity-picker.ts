@@ -21,12 +21,21 @@ export class HermesEntityPicker extends LitElement {
     }
     .list {
       position: absolute;
-      z-index: 20;
+      /* Above everything else the card draws. The list floats over fields that
+       * come after it, and any of them showing through makes both unreadable. */
+      z-index: 200;
       left: 0;
       right: 0;
       max-height: 240px;
       overflow-y: auto;
-      background: var(--surface);
+      /* Two layers: the themed surface colour painted over an opaque base, so
+       * the list stays solid even where the theme makes --surface translucent.
+       * A single themed background was see-through on those themes. */
+      background-color: var(
+        --overlay-base,
+        var(--primary-background-color, #ffffff)
+      );
+      background-image: linear-gradient(var(--surface), var(--surface));
       border: 1px solid var(--border);
       border-radius: var(--r-sm, 6px);
       box-shadow: var(--shadow-md);

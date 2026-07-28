@@ -327,6 +327,53 @@ async def test_a_reply_reads_live_state(hass, sent):
     assert sent[0].data["text"] == "Living room: 21.5C"
 
 
+async def test_a_reply_says_the_label_instead_of_the_raw_state(hass, sent):
+    """"on" is what Home Assistant stores, not what anyone wants to read."""
+    hass.states.async_set("switch.pump", "on")
+    coordinator = await build(
+        hass,
+        **{
+            CONF_COMMANDS: [
+                command(
+                    **{
+                        CMD_KEYWORD: "pump",
+                        CMD_SERVICE: "",
+                        CMD_REPLY_TEMPLATE: (
+                            "Pump: {state:switch.pump|on=running,off=stopped}"
+                        ),
+                    }
+                )
+            ]
+        },
+    )
+    await deliver(hass, coordinator, message(message="pump"))
+
+    assert sent[0].data["text"] == "Pump: running"
+
+
+async def test_an_unlabelled_state_still_comes_through(hass, sent):
+    hass.states.async_set("cover.gate", "opening")
+    coordinator = await build(
+        hass,
+        **{
+            CONF_COMMANDS: [
+                command(
+                    **{
+                        CMD_KEYWORD: "gate",
+                        CMD_SERVICE: "",
+                        CMD_REPLY_TEMPLATE: (
+                            "Gate: {state:cover.gate|open=up,closed=down}"
+                        ),
+                    }
+                )
+            ]
+        },
+    )
+    await deliver(hass, coordinator, message(message="gate"))
+
+    assert sent[0].data["text"] == "Gate: opening"
+
+
 async def test_a_long_reply_is_split_into_parts(hass, sent):
     coordinator = await build(
         hass,
