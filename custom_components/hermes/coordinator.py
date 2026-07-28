@@ -21,6 +21,9 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     CMD_AUTH_OVERRIDE,
+    CMD_CONDITION_ENTITY,
+    CMD_COOLDOWN,
+    CMD_ID,
     CMD_KEYWORD,
     CMD_MATCH_TYPE,
     CMD_REPLY_CHANNEL,
@@ -36,7 +39,11 @@ from .const import (
     CONF_INITIAL_DELAY,
     CONF_MODE,
     CONF_CASE_SENSITIVE,
+    CONF_CHANNEL_RISK_ACK,
     CONF_HELP_KEYWORD,
+    CONF_MAX_AGE,
+    CONF_REJECT_MQTT,
+    CONF_REQUIRE_PKC,
     CONF_PART_DELAY,
     CONF_RATE_LIMIT,
     CONF_REQUIRE_ACK,
@@ -46,8 +53,11 @@ from .const import (
     DEFAULT_HELP_KEYWORD,
     DEFAULT_INITIAL_DELAY,
     DEFAULT_PART_DELAY,
+    DEFAULT_MAX_AGE,
     DEFAULT_RATE_LIMIT,
+    DEFAULT_REJECT_MQTT,
     DEFAULT_REQUIRE_ACK,
+    DEFAULT_REQUIRE_PKC,
     MATCH_EXACT,
     MATCH_STARTSWITH,
     MESHTASTIC_DOMAIN,
@@ -60,8 +70,9 @@ from .const import (
 from .actions import entity_bounds, value_spec
 from .labels import PLACEHOLDER_RE, apply_labels, parse_labels
 from .matching import accepts_message, match_command, matches_keyword
-from .meshtastic_api import node_num_from_device
+from .meshtastic_api import channel_default_psk, node_num_from_device
 from .message import split_message
+from .packet_meta import async_lookup
 from .rate_limit import allow as rate_allow, forget_idle
 from .replay import remember
 from .tokens import apply_argument, parse_actions, parse_argument, strip_actions
@@ -93,6 +104,8 @@ class HermesCoordinator:
 
         # Packet ids already handled, so the same packet cannot run twice.
         self._seen_packets: dict[int, float] = {}
+        # When each command last ran, for the per command cooldown.
+        self._last_run: dict[str, float] = {}
         # False once a message arrives without an id: the protection cannot run
         # on that base integration, and Status must say so rather than imply it.
         self.replay_protected: bool | None = None
@@ -181,6 +194,18 @@ class HermesCoordinator:
         return bool(
             self.entry.options.get(CONF_CASE_SENSITIVE, DEFAULT_CASE_SENSITIVE)
         )
+
+    @property
+    def require_pkc(self) -> bool:
+        return bool(self.entry.options.get(CONF_REQUIRE_PKC, DEFAULT_REQUIRE_PKC))
+
+    @property
+    def reject_mqtt(self) -> bool:
+        return bool(self.entry.options.get(CONF_REJECT_MQTT, DEFAULT_REJECT_MQTT))
+
+    @property
+    def max_age_seconds(self) -> int:
+        return int(self.entry.options.get(CONF_MAX_AGE, DEFAULT_MAX_AGE) or 0)
 
     @property
     def help_keyword(self) -> str:
@@ -336,8 +361,137 @@ class HermesCoordinator:
             self._notify_sensors()
             return
 
+        # From here on the checks are about what the message actually was and
+        # whether this is a moment to act, rather than who sent it. They come
+        # last because they are the expensive ones: one awaits packet metadata,
+        # one reads an entity, and both only matter for a message that was
+        # going to run something.
+        refusal = await self._policy_refusal(event, command)
+        if refusal is not None:
+            self._record_error(refusal, sender, text)
+            self._log("in", text, sender, "refused")
+            _LOGGER.warning("Hermes: refused '%s' from %s: %s", text, sender, refusal)
+            self._notify_sensors()
+            return
+
         self._log("in", text, sender, "matched")
         await self._execute(command, sender, text)
+
+    async def _policy_refusal(
+        self, event: Event, command: dict[str, Any]
+    ) -> str | None:
+        """Why this command must not run now, or None to let it through.
+
+        Returns a reason rather than a bool so the panel can say which rule
+        stopped a message. A command silently not running is the single most
+        confusing thing this integration can do.
+        """
+        blocked = self._channel_block()
+        if blocked is not None:
+            return blocked
+
+        # Only fetched when a rule actually reads it. The lookup waits up to a
+        # second for the packet event to catch up with the text event, and
+        # paying that on every message to answer a question nobody asked would
+        # put a delay in the path of a gateway with no policies at all.
+        needs_meta = (
+            self.require_pkc or self.reject_mqtt or self.max_age_seconds > 0
+        )
+        meta = (
+            await async_lookup(self.hass, event.data.get("message_id"))
+            if needs_meta
+            else None
+        )
+
+        if self.require_pkc:
+            if meta is None:
+                return "encryption could not be verified"
+            if not meta.get("pki_encrypted"):
+                # The whole point: on anything else the sender is a claim, and
+                # the authorized list is checking a claim against a list.
+                return "not encrypted for this node alone"
+
+        if self.reject_mqtt and meta is not None and meta.get("via_mqtt"):
+            return "arrived over an MQTT bridge"
+
+        max_age = self.max_age_seconds
+        if max_age > 0 and meta is not None:
+            received = meta.get("rx_time")
+            if isinstance(received, (int, float)) and received > 0:
+                age = dt_util.utcnow().timestamp() - float(received)
+                if age > max_age:
+                    return f"too old, received {int(age)}s ago"
+
+        condition = str(command.get(CMD_CONDITION_ENTITY) or "").strip()
+        if condition and not self._condition_met(condition):
+            return f"{condition} is not on"
+
+        cooldown = command.get(CMD_COOLDOWN) or 0
+        if cooldown and not self._cooldown_passed(command, float(cooldown)):
+            return f"run less than {int(cooldown)}s ago"
+
+        return None
+
+    def _condition_met(self, entity_id: str) -> bool:
+        """Whether the guard entity currently allows this command.
+
+        A missing entity blocks. Somebody pointed a command at something that
+        does not exist, and running anyway would make the guard look like it
+        was working when it never ran at all.
+        """
+        state = self.hass.states.get(entity_id)
+        if state is None:
+            _LOGGER.warning(
+                "Hermes: condition entity %s does not exist, refusing", entity_id
+            )
+            return False
+        return state.state in ("on", "home", "open", "unlocked", "true")
+
+    def _cooldown_passed(self, command: dict[str, Any], cooldown: float) -> bool:
+        """Whether enough time has passed since this command last ran."""
+        key = str(command.get(CMD_ID) or command.get(CMD_KEYWORD) or "")
+        now = self.hass.loop.time()
+        last = self._last_run.get(key)
+        if last is not None and now - last < cooldown:
+            return False
+        self._last_run[key] = now
+        return True
+
+    def _channel_block(self) -> str | None:
+        """Why commands are blocked on this channel, or None.
+
+        A channel key is shared by everyone holding it and a channel message
+        has no verified sender, so a public channel is a place to publish, not
+        a place to take orders. The user can accept that risk deliberately;
+        until then this refuses, and the refusal lives here rather than in the
+        card because it is an execution decision.
+        """
+        if self.mode != MODE_CHANNEL:
+            return None
+
+        index = self.channel_index
+        if channel_default_psk(self.hass, index) is True:
+            reason = "default_psk"
+        elif index in (0, None):
+            reason = "channel_zero"
+        else:
+            return None
+
+        if self._risk_accepted(reason, index):
+            return None
+        return f"public channel blocked ({reason})"
+
+    def _risk_accepted(self, reason: str, index: Any) -> bool:
+        """Whether the user accepted this exact risk on this exact channel.
+
+        Tied to both, so an acceptance given for one channel does not silently
+        carry over when the gateway is pointed somewhere else. It was given for
+        a situation, not for ever.
+        """
+        ack = self.entry.options.get(CONF_CHANNEL_RISK_ACK)
+        if not isinstance(ack, dict) or not ack.get("accepted"):
+            return False
+        return ack.get("reason") == reason and ack.get("channel") == index
 
     def _accept_packet(self, event: Event) -> bool:
         """False when this exact packet has already been handled.

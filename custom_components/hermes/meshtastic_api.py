@@ -18,7 +18,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 
-from .const import DOMAIN, MESHTASTIC_DOMAIN
+from .const import DATA_CHANNELS, DOMAIN, MESHTASTIC_DOMAIN
 from .nodedb import node_records
 
 _LOGGER = logging.getLogger(__name__)
@@ -165,14 +165,41 @@ async def async_get_channels(hass: HomeAssistant) -> list[dict[str, Any]]:
         unique.setdefault(channel["index"], channel)
 
     if unique:
-        return [unique[index] for index in sorted(unique)]
+        found = [unique[index] for index in sorted(unique)]
+        _cache_channels(hass, found)
+        return found
 
     # The client had nothing to say, which happens while the node is still
     # connecting or if its internals moved. Fall back to the public entities.
     fallback = channels_from_entities(hass)
     if fallback:
         _LOGGER.debug("Hermes: channels read from the notify entities")
+    _cache_channels(hass, fallback)
     return fallback
+
+
+def _cache_channels(hass: HomeAssistant, channels: list[dict[str, Any]]) -> None:
+    """Keep the last channel list, so a per message question costs nothing.
+
+    Whether a channel is the public one decides whether commands run on it, and
+    that has to be answerable while handling a message. Reading it from the
+    radio there would put a round trip in the path of every packet.
+    """
+    hass.data[DATA_CHANNELS] = {
+        channel["index"]: channel.get("default_psk") for channel in channels
+    }
+
+
+def channel_default_psk(hass: HomeAssistant, index: Any) -> bool | None:
+    """True on the published default key, None when it is not known.
+
+    None is the honest answer both before any channel list has been read and on
+    the fallback path, which cannot see the key at all.
+    """
+    cache = hass.data.get(DATA_CHANNELS)
+    if not isinstance(cache, dict):
+        return None
+    return cache.get(index)
 
 
 def channels_from_entities(hass: HomeAssistant) -> list[dict[str, Any]]:

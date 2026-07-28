@@ -22,7 +22,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_integration
 
-from . import websocket as hermes_websocket
+from . import packet_meta, websocket as hermes_websocket
 from .const import (
     CARD_FILENAME,
     CARD_URL,
@@ -36,6 +36,7 @@ from .const import (
     PLATFORMS,
 )
 from .coordinator import HermesCoordinator
+from .meshtastic_api import async_get_channels
 from .store import HermesStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -83,6 +84,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     afterwards. Both are idempotent, and the card copes with having no gateway.
     """
     hermes_websocket.async_register(hass)
+    # Packet metadata, so a gateway can tell an encrypted direct message from a
+    # message anyone on the channel could have written. Registered here for the
+    # same reason as the card: it must not depend on an entry loading.
+    packet_meta.async_register(hass)
     await _async_register_frontend_card(hass)
     return True
 
@@ -124,7 +129,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # because an entry can be set up without async_setup having run in the
     # same process, for instance when the integration is reloaded on its own.
     hermes_websocket.async_register(hass)
+    packet_meta.async_register(hass)
     await _async_register_frontend_card(hass)
+
+    # Warm the channel cache, so the first message can be judged without a
+    # round trip to the radio in the middle of handling it.
+    await async_get_channels(hass)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

@@ -541,6 +541,35 @@ function renderForm(
       </div>
 
       <div class="field">
+        <label>${t("messages.conditionEntity")}</label>
+        <hermes-entity-picker
+          .hass=${ctx.hass}
+          .value=${draft.condition_entity ?? ""}
+          placeholder="input_boolean.remote_control"
+          @value-changed=${(e: CustomEvent) =>
+            ctx.onDraftInput("condition_entity", e.detail.value)}
+        ></hermes-entity-picker>
+        <span class="hint">${t("messages.conditionHint")}</span>
+      </div>
+
+      <div class="field">
+        <label>${t("messages.cooldown")}</label>
+        <input
+          type="number"
+          min="0"
+          max="86400"
+          step="10"
+          .value=${String(draft.cooldown_seconds ?? 0)}
+          @input=${(e: Event) =>
+            ctx.onDraftInput(
+              "cooldown_seconds",
+              Number((e.target as HTMLInputElement).value)
+            )}
+        />
+        <span class="hint">${t("messages.cooldownHint")}</span>
+      </div>
+
+      <div class="field">
         <label>${t("messages.replyTo")}</label>
         <select @change=${bind("reply_to")}>
           <option value="channel" ?selected=${draft.reply_to === "channel"}>

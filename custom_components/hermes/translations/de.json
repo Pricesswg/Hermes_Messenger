@@ -46,7 +46,9 @@
           "reply_to": "Antwort-Routing (Kanalmodus)",
           "service_data": "Dienstdaten (erweitert, optional)",
           "authorized_devices": "Autorisierte Nodes überschreiben (Meshtastic-Geräte, optional)",
-          "authorized_extra": "Zusätzliche Override-Node-IDs (durch Kommas getrennt, optional)"
+          "authorized_extra": "Zusätzliche Override-Node-IDs (durch Kommas getrennt, optional)",
+          "condition_entity": "Nur ausführen, solange diese Entität an ist (optional)",
+          "cooldown_seconds": "Wartezeit zwischen Ausführungen, Sekunden (0 für keine)"
         }
       },
       "edit_command": {
@@ -61,7 +63,9 @@
           "reply_to": "Antwort-Routing (Kanalmodus)",
           "service_data": "Dienstdaten (erweitert, optional)",
           "authorized_devices": "Autorisierte Nodes überschreiben (Meshtastic-Geräte, optional)",
-          "authorized_extra": "Zusätzliche Override-Node-IDs (durch Kommas getrennt, optional)"
+          "authorized_extra": "Zusätzliche Override-Node-IDs (durch Kommas getrennt, optional)",
+          "condition_entity": "Nur ausführen, solange diese Entität an ist (optional)",
+          "cooldown_seconds": "Wartezeit zwischen Ausführungen, Sekunden (0 für keine)"
         }
       },
       "select_command": {

@@ -22,6 +22,8 @@ from pytest_homeassistant_custom_component.common import (
 
 from custom_components.hermes.const import (
     CMD_AUTH_OVERRIDE,
+    CMD_CONDITION_ENTITY,
+    CMD_COOLDOWN,
     CMD_ID,
     CMD_KEYWORD,
     CMD_MATCH_TYPE,
@@ -31,13 +33,18 @@ from custom_components.hermes.const import (
     CMD_TARGET,
     CONF_AUTHORIZED_NODES,
     CONF_CHANNEL_INDEX,
+    CONF_CHANNEL_RISK_ACK,
     CONF_COMMANDS,
     CONF_GATEWAY_NODE_ID,
     CONF_HELP_KEYWORD,
     CONF_INITIAL_DELAY,
+    CONF_MAX_AGE,
     CONF_MODE,
     CONF_PART_DELAY,
     CONF_RATE_LIMIT,
+    CONF_REJECT_MQTT,
+    CONF_REQUIRE_PKC,
+    DATA_CHANNELS,
     DATA_STORE,
     DOMAIN,
     MATCH_EXACT,
@@ -48,7 +55,7 @@ from custom_components.hermes.const import (
     REPLY_CHANNEL,
     SERVICE_SEND_TEXT,
 )
-from custom_components.hermes import _async_register_mesh_listener
+from custom_components.hermes import _async_register_mesh_listener, packet_meta
 from custom_components.hermes.coordinator import HermesCoordinator
 from custom_components.hermes.store import HermesStore
 
@@ -99,9 +106,11 @@ async def build(hass, **options) -> HermesCoordinator:
 
     coordinator = HermesCoordinator(hass, entry)
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-    # The real subscription, not a direct call into the coordinator: the shared
-    # listener is itself something that has broken before.
+    # The real subscriptions, not direct calls into the coordinator: the shared
+    # listener is itself something that has broken before, and the packet
+    # metadata only exists because a second one is in place.
     _async_register_mesh_listener(hass)
+    packet_meta.async_register(hass)
     return coordinator
 
 
@@ -545,3 +554,192 @@ async def test_help_says_nothing_to_a_stranger(hass, sent):
     await deliver(hass, coordinator, message(message="help", **{"from": STRANGER}))
 
     assert not sent
+
+
+# --- What the packet actually was ------------------------------------------
+
+
+def packet(message_id: int, **fields) -> dict:
+    """The shape the base integration publishes on its per packet event."""
+    return {"data": {"id": message_id, **fields}}
+
+
+async def announce(hass, message_id: int, **fields) -> None:
+    """Publish the metadata of a packet, as the base integration does."""
+    hass.bus.async_fire("meshtastic_api_packet", packet(message_id, **fields))
+    await hass.async_block_till_done()
+
+
+async def test_require_pkc_refuses_a_message_that_was_not_encrypted_for_us(
+    hass, lights, sent
+):
+    """The gap this closes: we claimed the sender was verified, never checked."""
+    coordinator = await build(hass, **{CONF_REQUIRE_PKC: True})
+    await announce(hass, 555, pkiEncrypted=False)
+    await deliver(hass, coordinator, message(), message_id=555)
+
+    assert not lights
+    assert "not encrypted for this node alone" in coordinator.last_error["reason"]
+
+
+async def test_require_pkc_lets_a_properly_encrypted_message_through(
+    hass, lights, sent
+):
+    coordinator = await build(hass, **{CONF_REQUIRE_PKC: True})
+    await announce(hass, 556, pkiEncrypted=True)
+    await deliver(hass, coordinator, message(), message_id=556)
+
+    assert len(lights) == 1
+
+
+async def test_require_pkc_refuses_when_it_cannot_tell(hass, lights, sent):
+    """No metadata is not proof of safety, so it must not be read as one."""
+    coordinator = await build(hass, **{CONF_REQUIRE_PKC: True})
+    await deliver(hass, coordinator, message(), message_id=557)
+
+    assert not lights
+    assert "could not be verified" in coordinator.last_error["reason"]
+
+
+async def test_without_the_switch_nothing_changes(hass, lights, sent):
+    """Off by default: the field depends on firmware we cannot check from here."""
+    coordinator = await build(hass)
+    await deliver(hass, coordinator, message(), message_id=558)
+
+    assert len(lights) == 1
+
+
+async def test_an_mqtt_bridged_packet_can_be_refused(hass, lights, sent):
+    coordinator = await build(hass, **{CONF_REJECT_MQTT: True})
+    await announce(hass, 559, viaMqtt=True)
+    await deliver(hass, coordinator, message(), message_id=559)
+
+    assert not lights
+    assert "MQTT" in coordinator.last_error["reason"]
+
+
+async def test_a_stale_packet_can_be_refused(hass, lights, sent):
+    import time
+
+    coordinator = await build(hass, **{CONF_MAX_AGE: 60})
+    await announce(hass, 560, rxTime=int(time.time()) - 3600)
+    await deliver(hass, coordinator, message(), message_id=560)
+
+    assert not lights
+    assert "too old" in coordinator.last_error["reason"]
+
+
+# --- Command policies ------------------------------------------------------
+
+
+async def test_a_command_does_not_run_while_its_condition_is_off(hass, lights, sent):
+    """A replay at three in the morning does nothing when the switch is off."""
+    hass.states.async_set("input_boolean.remote", "off")
+    coordinator = await build(
+        hass,
+        **{CONF_COMMANDS: [command(**{CMD_CONDITION_ENTITY: "input_boolean.remote"})]},
+    )
+    await deliver(hass, coordinator, message())
+
+    assert not lights
+
+    hass.states.async_set("input_boolean.remote", "on")
+    await deliver(hass, coordinator, message())
+    assert len(lights) == 1
+
+
+async def test_a_missing_condition_entity_blocks(hass, lights, sent):
+    """A guard that silently does not exist is worse than no guard."""
+    coordinator = await build(
+        hass,
+        **{CONF_COMMANDS: [command(**{CMD_CONDITION_ENTITY: "input_boolean.gone"})]},
+    )
+    await deliver(hass, coordinator, message())
+
+    assert not lights
+
+
+async def test_a_cooldown_blocks_the_second_run(hass, lights, sent):
+    coordinator = await build(
+        hass, **{CONF_COMMANDS: [command(**{CMD_COOLDOWN: 600})]}
+    )
+    await deliver(hass, coordinator, message())
+    await deliver(hass, coordinator, message())
+
+    assert len(lights) == 1
+    assert "less than 600s ago" in coordinator.last_error["reason"]
+
+
+# --- The public channel ----------------------------------------------------
+
+
+async def test_a_default_key_channel_does_not_run_commands(hass, lights, sent):
+    """Anyone in the world can write there: it is a place to publish, not obey."""
+    coordinator = await build(
+        hass, **{CONF_MODE: MODE_CHANNEL, CONF_CHANNEL_INDEX: 3}
+    )
+    hass.data[DATA_CHANNELS] = {3: True}
+    await deliver(hass, coordinator, message(to={"node": None, "channel": 3}))
+
+    assert not lights
+    assert "default_psk" in coordinator.last_error["reason"]
+
+
+async def test_channel_zero_does_not_run_commands_either(hass, lights, sent):
+    coordinator = await build(
+        hass, **{CONF_MODE: MODE_CHANNEL, CONF_CHANNEL_INDEX: 0}
+    )
+    hass.data[DATA_CHANNELS] = {0: False}
+    await deliver(hass, coordinator, message(to={"node": None, "channel": 0}))
+
+    assert not lights
+    assert "channel_zero" in coordinator.last_error["reason"]
+
+
+async def test_an_accepted_risk_unblocks_that_channel(hass, lights, sent):
+    coordinator = await build(
+        hass,
+        **{
+            CONF_MODE: MODE_CHANNEL,
+            CONF_CHANNEL_INDEX: 0,
+            CONF_CHANNEL_RISK_ACK: {
+                "accepted": True,
+                "reason": "channel_zero",
+                "channel": 0,
+            },
+        },
+    )
+    hass.data[DATA_CHANNELS] = {0: False}
+    await deliver(hass, coordinator, message(to={"node": None, "channel": 0}))
+
+    assert len(lights) == 1
+
+
+async def test_an_acceptance_does_not_carry_to_another_channel(hass, lights, sent):
+    """It was given for a situation, not for ever."""
+    coordinator = await build(
+        hass,
+        **{
+            CONF_MODE: MODE_CHANNEL,
+            CONF_CHANNEL_INDEX: 3,
+            CONF_CHANNEL_RISK_ACK: {
+                "accepted": True,
+                "reason": "channel_zero",
+                "channel": 0,
+            },
+        },
+    )
+    hass.data[DATA_CHANNELS] = {3: True}
+    await deliver(hass, coordinator, message(to={"node": None, "channel": 3}))
+
+    assert not lights
+
+
+async def test_a_named_channel_with_its_own_key_is_not_blocked(hass, lights, sent):
+    coordinator = await build(
+        hass, **{CONF_MODE: MODE_CHANNEL, CONF_CHANNEL_INDEX: 2}
+    )
+    hass.data[DATA_CHANNELS] = {2: False}
+    await deliver(hass, coordinator, message(to={"node": None, "channel": 2}))
+
+    assert len(lights) == 1

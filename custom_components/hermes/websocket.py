@@ -18,10 +18,12 @@ import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
+from homeassistant.util import dt as dt_util
 
 from .actions import ACTIONS_BY_TYPE, DOMAIN_TO_TYPE, GENERIC_ACTIONS
 from .meshtastic_api import (
     async_get_channels,
+    channel_default_psk,
     async_get_radio_config,
     async_radio_details,
     async_set_radio_config,
@@ -35,15 +37,19 @@ from .const import (
     CMD_ID,
     CONF_AUTHORIZED_NODES,
     CONF_CHANNEL_INDEX,
+    CONF_CHANNEL_RISK_ACK,
     CONF_COMMANDS,
     CONF_GATEWAY_NODE_ID,
     CONF_CASE_SENSITIVE,
     CONF_HELP_KEYWORD,
     CONF_INITIAL_DELAY,
+    CONF_MAX_AGE,
     CONF_MODE,
     CONF_PART_DELAY,
     CONF_RATE_LIMIT,
+    CONF_REJECT_MQTT,
     CONF_REQUIRE_ACK,
+    CONF_REQUIRE_PKC,
     DATA_BUS_EVENTS,
     DATA_LISTENER,
     DATA_STORE,
@@ -51,9 +57,12 @@ from .const import (
     DEFAULT_CASE_SENSITIVE,
     DEFAULT_HELP_KEYWORD,
     DEFAULT_INITIAL_DELAY,
+    DEFAULT_MAX_AGE,
     DEFAULT_PART_DELAY,
     DEFAULT_RATE_LIMIT,
+    DEFAULT_REJECT_MQTT,
     DEFAULT_REQUIRE_ACK,
+    DEFAULT_REQUIRE_PKC,
     DOMAIN,
     MESHTASTIC_DOMAIN,
     MODE_CHANNEL,
@@ -147,7 +156,36 @@ def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
         "case_sensitive": options.get(
             CONF_CASE_SENSITIVE, DEFAULT_CASE_SENSITIVE
         ),
+        # --- Security -------------------------------------------------------
+        "require_pkc": options.get(CONF_REQUIRE_PKC, DEFAULT_REQUIRE_PKC),
+        "reject_mqtt": options.get(CONF_REJECT_MQTT, DEFAULT_REJECT_MQTT),
+        "max_age_seconds": options.get(CONF_MAX_AGE, DEFAULT_MAX_AGE),
+        "channel_risk_ack": options.get(CONF_CHANNEL_RISK_ACK),
+        # Why this gateway currently refuses to run commands, or null. Computed
+        # here rather than in the card so the screen and the coordinator can
+        # never disagree about whether something will actually run.
+        "channel_block": _channel_block(hass, entry),
     }
+
+
+def _channel_block(hass: HomeAssistant, entry: Any) -> str | None:
+    """"default_psk", "channel_zero" or None, ignoring any acceptance.
+
+    The acceptance is reported separately, so the card can say both "this is a
+    public channel" and "you accepted that on this date" instead of the risk
+    quietly disappearing once it has been acknowledged once.
+    """
+    options = entry.options
+    mode = options.get(CONF_MODE) or entry.data.get(CONF_MODE)
+    if mode != MODE_CHANNEL:
+        return None
+
+    channel = options.get(CONF_CHANNEL_INDEX, entry.data.get(CONF_CHANNEL_INDEX))
+    if channel_default_psk(hass, channel) is True:
+        return "default_psk"
+    if channel in (0, None):
+        return "channel_zero"
+    return None
 
 
 def _running_version(hass: HomeAssistant) -> str:
@@ -240,10 +278,21 @@ def ws_entry_update(hass: HomeAssistant, connection, msg: dict) -> None:
         CONF_INITIAL_DELAY,
         CONF_MODE,
         CONF_PART_DELAY,
+        CONF_MAX_AGE,
         CONF_RATE_LIMIT,
+        CONF_REJECT_MQTT,
         CONF_REQUIRE_ACK,
+        CONF_REQUIRE_PKC,
     }
     patch = {k: v for k, v in msg["patch"].items() if k in allowed}
+
+    # The risk acknowledgement is not a plain setting: the card sends only the
+    # decision, and the record of who and when is written here so it cannot be
+    # dictated by whatever posted the message.
+    if CONF_CHANNEL_RISK_ACK in msg["patch"]:
+        patch[CONF_CHANNEL_RISK_ACK] = _risk_record(
+            hass, connection, entry, msg["patch"][CONF_CHANNEL_RISK_ACK]
+        )
     options = {**entry.options, **patch}
 
     # Switching to channel mode needs a channel to work with: without one the
@@ -264,6 +313,39 @@ def ws_entry_update(hass: HomeAssistant, connection, msg: dict) -> None:
 
     hass.config_entries.async_update_entry(entry, options=options, title=title)
     connection.send_result(msg["id"], _entry_payload(hass, entry))
+
+
+def _risk_record(hass: HomeAssistant, connection, entry: Any, decision: Any) -> Any:
+    """Build the acknowledgement that commands may run on a public channel.
+
+    Kept visible rather than hidden. A record of consent that the person who
+    gave it cannot see is worth no more as evidence and is worth a great deal
+    less to them: they cannot check what their system is currently doing, and
+    they cannot take it back. So it names who accepted, when, on which channel
+    and for which reason, and the card shows it with a revoke button.
+
+    Who and when are taken from the connection and the clock here, not from the
+    message, so they describe what actually happened.
+    """
+    if not decision:
+        return None
+
+    options = entry.options
+    mode = options.get(CONF_MODE) or entry.data.get(CONF_MODE)
+    if mode != MODE_CHANNEL:
+        return None
+    channel = options.get(CONF_CHANNEL_INDEX, entry.data.get(CONF_CHANNEL_INDEX))
+
+    reason = "default_psk" if channel_default_psk(hass, channel) else "channel_zero"
+    user = getattr(connection, "user", None)
+    return {
+        "accepted": True,
+        "reason": reason,
+        "channel": channel,
+        "by": getattr(user, "name", None) or getattr(user, "id", None) or "unknown",
+        "at": dt_util.utcnow().isoformat(),
+        "hermes_version": _running_version(hass),
+    }
 
 
 @websocket_api.require_admin

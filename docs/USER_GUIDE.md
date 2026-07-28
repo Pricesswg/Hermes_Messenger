@@ -322,6 +322,58 @@ This does not make a channel safe. Someone holding the channel key can build a
 new packet with a new id, and against that the only real answer is a direct
 message, which is what the rest of this section is about.
 
+### Security, handle with care
+
+A section of Settings with a red border holds everything that decides whether a
+radio message may act on your house. Turning a protection **on** takes one
+click. Turning one **off** takes two: the button arms, says so, and applies only
+if you click again within five seconds. The friction is only in the direction
+that costs something.
+
+| Protection | What it does | Default |
+|---|---|---|
+| Only accept messages encrypted for this node | Runs a command only when the message was encrypted for your gateway alone, which is the only case where the protocol verified who sent it | off |
+| Refuse messages bridged over MQTT | A packet that entered the mesh through an MQTT bridge may have started anywhere on the internet | off |
+| Refuse messages older than N seconds | Uses the time the radio received the packet | off |
+
+The first is the strongest thing here and it starts off on purpose. It depends
+on a field your firmware and your Meshtastic integration must both report, and
+if they do not, turning it on stops every command. **Status** shows the
+protections of the messages that actually arrive: look there first, confirm you
+see them, then turn it on.
+
+An honest correction while we are here. Earlier versions of this guide said a
+direct message with PKC has a sender the protocol verified. That is true of the
+protocol and was never true of Hermes, because nothing checked that PKC had
+actually been used. Now something does, and that is exactly what this switch is.
+
+### Commands can wait for the right moment
+
+Two fields on each command, in the composer:
+
+- **Only run while this is on.** Point it at a switch, a person, an alarm mode,
+  anything. Empty means always. It is the plainest defence there is: a message
+  replayed at three in the morning does nothing while the switch is off. An
+  entity that does not exist blocks, rather than quietly behaving like no guard
+  at all.
+- **Wait between runs.** A minimum gap between two executions of that command.
+
+### The public channel
+
+Hermes will not run commands on a channel that is public, and it decides that
+in the code rather than in the interface, so what you see and what runs cannot
+disagree. Two cases count:
+
+- the channel still uses the key published in the Meshtastic documentation
+- the gateway takes orders on **channel 0**, the one every device starts on
+
+In both cases messages are still received, logged and shown. Nothing acts. The
+danger zone explains why and offers the way out first: use a different channel.
+If you decide to accept it anyway, the acceptance is recorded with your name,
+the date and the version, shown to you, and revocable at any time. It is tied
+to that channel, so pointing the gateway somewhere else does not silently carry
+it over.
+
 ### What actually protects you
 
 There are two very different situations, and the difference decides everything

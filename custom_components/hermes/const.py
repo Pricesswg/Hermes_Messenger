@@ -15,6 +15,10 @@ CONFIG_ENTRY_VERSION = 1
 # Reconfirm on every major update of the base: all the coupling lives here.
 MESHTASTIC_DOMAIN = "meshtastic"
 EVENT_TEXT_MESSAGE = "meshtastic_api_text_message"
+# Every packet, whole, converted to a dictionary. Carries what the text
+# event drops: whether it was PKC encrypted, whether it came over MQTT,
+# when the radio received it. Matched to a message by the packet id.
+EVENT_PACKET = "meshtastic_api_packet"
 SERVICE_SEND_TEXT = "send_text"
 
 # --- Config Entry keys (step "user") ---------------------------------------
@@ -56,6 +60,12 @@ CMD_REPLY_TO = "reply_to"
 # gateway listens on, which is where the command was heard.
 CMD_REPLY_CHANNEL = "reply_channel"
 CMD_AUTH_OVERRIDE = "authorized_nodes_override"
+# Entity that must be on for this command to run. The plainest defence
+# there is: a message replayed at three in the morning does nothing when
+# the switch is off.
+CMD_CONDITION_ENTITY = "condition_entity"
+# Seconds that must pass between two runs of this command.
+CMD_COOLDOWN = "cooldown_seconds"
 
 MATCH_EXACT = "exact"
 MATCH_STARTSWITH = "startswith"
@@ -129,6 +139,11 @@ DATA_BUS_EVENTS = f"{DOMAIN}_bus_events"
 CARD_FILENAME = "hermes-card.js"
 CARD_URL = f"/{DOMAIN}_static/{CARD_FILENAME}"
 DATA_CARD_REGISTERED = f"{DOMAIN}_card_registered"
+# Packet metadata by packet id, shared by every gateway.
+DATA_PACKET_META = f"{DOMAIN}_packet_meta"
+# Last known channel list, index to default_psk, so the question can be
+# answered while handling a message without talking to the radio.
+DATA_CHANNELS = f"{DOMAIN}_channels"
 
 # --- Defaults --------------------------------------------------------------
 # 200 bytes is the documented Meshtastic limit; reconfirm against the firmware.
@@ -143,3 +158,26 @@ DEFAULT_REQUIRE_ACK = False
 DEFAULT_RATE_LIMIT = 6
 DEFAULT_HELP_KEYWORD = ""
 DEFAULT_CASE_SENSITIVE = False
+
+# --- Security options (per gateway) -----------------------------------------
+# Only run a command when the message was encrypted for this node alone. That
+# is the only case where the protocol verified the sender; on a channel the
+# sender is a claim. Off by default because it depends on a field the base
+# integration and the firmware must both provide: Status shows what really
+# arrived, and the switch is turned on once that has been confirmed.
+CONF_REQUIRE_PKC = "require_pkc"
+DEFAULT_REQUIRE_PKC = False
+
+# Refuse packets that reached the mesh through an MQTT bridge rather than over
+# the air, since those can originate anywhere on the internet.
+CONF_REJECT_MQTT = "reject_mqtt"
+DEFAULT_REJECT_MQTT = False
+
+# Refuse a packet the radio received more than this many seconds ago. 0 is off.
+CONF_MAX_AGE = "max_age_seconds"
+DEFAULT_MAX_AGE = 0
+
+# The user's recorded acknowledgement that a channel is a public place and
+# commands may run on it anyway. Deliberately not hidden: it names who accepted,
+# when, and for which channel, and it can be revoked.
+CONF_CHANNEL_RISK_ACK = "channel_risk_ack"

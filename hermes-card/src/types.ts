@@ -180,6 +180,10 @@ export interface HermesCommand {
   /** Channel to answer on; empty means the one the gateway listens on. */
   reply_channel?: number | null;
   authorized_nodes_override?: number[];
+  /** Entity that must be on for this command to run. */
+  condition_entity?: string;
+  /** Seconds that must pass between two runs of this command. */
+  cooldown_seconds?: number;
 }
 
 /** One configured Hermes gateway (a config entry). */
@@ -216,6 +220,26 @@ export interface HermesEntry {
   /** True once a packet id was seen, false once one arrived without it,
    * null before anything arrived. */
   replay_protected?: boolean | null;
+  /** Run commands only from messages encrypted for this node alone. */
+  require_pkc?: boolean;
+  /** Refuse packets that reached the mesh through an MQTT bridge. */
+  reject_mqtt?: boolean;
+  /** Refuse packets older than this many seconds. 0 is off. */
+  max_age_seconds?: number;
+  /** Why commands are blocked on this channel, ignoring any acceptance. */
+  channel_block?: "default_psk" | "channel_zero" | null;
+  /** The recorded acceptance of that risk, deliberately visible. */
+  channel_risk_ack?: ChannelRiskAck | null;
+}
+
+/** Who accepted that a public channel may run commands, and when. */
+export interface ChannelRiskAck {
+  accepted: boolean;
+  reason: "default_psk" | "channel_zero";
+  channel: number | null;
+  by: string;
+  at: string;
+  hermes_version?: string;
 }
 
 /** The last text message this entry saw on the mesh, before any filtering. */

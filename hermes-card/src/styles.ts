@@ -846,6 +846,137 @@ export const hermesLayout = css`
     padding: 5px 8px;
   }
 
+  /* --- Danger zone -------------------------------------------------------
+   *
+   * Marked red for the whole time a protection is off, not only while it is
+   * being changed. The point of the colour is to say what the system is doing
+   * now, so it has to stay while that remains true. */
+  .danger-zone {
+    margin-top: 18px;
+  }
+
+  .danger-panel {
+    border: 2px solid var(--danger);
+    border-radius: var(--r-md);
+  }
+
+  .danger-title {
+    color: var(--danger);
+  }
+
+  .danger-entry {
+    padding-top: 12px;
+    margin-top: 12px;
+    border-top: 1px dashed var(--border);
+  }
+
+  .danger-entry:first-of-type {
+    border-top: none;
+    margin-top: 0;
+  }
+
+  .danger-entry-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+
+  .guard {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  /* Never wraps: "Click again to confirm" is longer than the label it
+   * replaces, and a button that changes shape mid-confirmation reads as a
+   * different button. */
+  .guard > button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    align-self: center;
+  }
+
+  .guard-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .guard-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+
+  /* A protection that is off is the thing worth seeing on this screen. */
+  .guard[data-on="0"] .guard-label {
+    color: var(--danger);
+  }
+
+  .note.danger {
+    border-left: 3px solid var(--danger);
+    padding-left: 10px;
+    font-size: 0.82rem;
+  }
+
+  .btn.danger {
+    border-color: var(--danger);
+    color: var(--danger);
+    font-weight: 700;
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 400;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal {
+    max-width: 520px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    /* Opaque over the page background for the same reason as the entity list:
+     * a theme may make a card translucent and this sits over other content. */
+    background-color: var(--overlay-base, #ffffff);
+    background-image: linear-gradient(var(--surface), var(--surface));
+    border-radius: var(--r-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .danger-modal {
+    border: 2px solid var(--danger);
+  }
+
+  .modal-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--danger);
+    margin-bottom: 10px;
+  }
+
+  .modal-body {
+    font-size: 0.86rem;
+    line-height: 1.45;
+    margin-bottom: 10px;
+  }
+
+  .modal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0 6px;
+  }
+
   .sub-error {
     margin-top: 8px;
     font-family: var(--font-mono);

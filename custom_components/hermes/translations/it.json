@@ -46,7 +46,9 @@
           "reply_to": "Instradamento risposta (modalità canale)",
           "service_data": "Dati servizio (avanzato, opzionale)",
           "authorized_devices": "Override nodi autorizzati (device Meshtastic, opzionale)",
-          "authorized_extra": "Node ID aggiuntivi per override (separati da virgola, opzionale)"
+          "authorized_extra": "Node ID aggiuntivi per override (separati da virgola, opzionale)",
+          "condition_entity": "Esegui solo mentre questa entità è attiva (facoltativo)",
+          "cooldown_seconds": "Attesa fra due esecuzioni, secondi (0 per nessuna)"
         }
       },
       "edit_command": {
@@ -61,7 +63,9 @@
           "reply_to": "Instradamento risposta (modalità canale)",
           "service_data": "Dati servizio (avanzato, opzionale)",
           "authorized_devices": "Override nodi autorizzati (device Meshtastic, opzionale)",
-          "authorized_extra": "Node ID aggiuntivi per override (separati da virgola, opzionale)"
+          "authorized_extra": "Node ID aggiuntivi per override (separati da virgola, opzionale)",
+          "condition_entity": "Esegui solo mentre questa entità è attiva (facoltativo)",
+          "cooldown_seconds": "Attesa fra due esecuzioni, secondi (0 per nessuna)"
         }
       },
       "select_command": {

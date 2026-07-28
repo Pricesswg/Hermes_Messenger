@@ -9,6 +9,7 @@ import { renderHomeAssistant } from "./screens/homeassistant";
 import { renderLog } from "./screens/log";
 import { renderMap } from "./screens/map";
 import { renderMessages } from "./screens/messages";
+import { renderSecurity } from "./screens/security";
 import { renderSettings } from "./screens/settings";
 import { renderStatus, renderStatusSummary } from "./screens/status";
 import type {
@@ -126,6 +127,10 @@ export class HermesCard extends LitElement {
   @state() private _radioDraft: Record<string, string | number | boolean> = {};
   @state() private _radioSaving = false;
   @state() private _radioError: string | null = null;
+  /** "<entry_id>:<key>" of the protection armed for a confirming click. */
+  @state() private _armed: string | null = null;
+  /** Entry whose public channel warning is open. */
+  @state() private _riskDialog: string | null = null;
 
   private _loaded = false;
   private _pollTimer?: number;
@@ -561,6 +566,63 @@ export class HermesCard extends LitElement {
     this._mapRadiusKm = km;
   };
 
+  private _onSecurityToggle = async (
+    entryId: string,
+    key: string,
+    value: boolean
+  ): Promise<void> => {
+    if (!this.hass) return;
+    await updateEntry(this.hass, entryId, { [key]: value });
+    this._flagSaved();
+    await this._load();
+  };
+
+  private _onSecurityNumber = async (
+    entryId: string,
+    key: string,
+    value: number
+  ): Promise<void> => {
+    if (!this.hass) return;
+    await updateEntry(this.hass, entryId, { [key]: value });
+    this._flagSaved();
+    await this._load();
+  };
+
+  private _onArm = (token: string | null): void => {
+    this._armed = token;
+    if (!token) return;
+    // The confirmation disarms itself, so a button left armed on a screen
+    // nobody is watching cannot be completed by an accidental later click.
+    window.setTimeout(() => {
+      if (this._armed === token) this._armed = null;
+    }, 5000);
+  };
+
+  private _onOpenRisk = (entryId: string | null): void => {
+    this._riskDialog = entryId;
+  };
+
+  private _onAcceptRisk = async (entryId: string): Promise<void> => {
+    if (!this.hass) return;
+    // Only the decision travels. Who and when are recorded by the backend from
+    // the connection and the clock, so the record describes what happened.
+    await updateEntry(this.hass, entryId, { channel_risk_ack: true });
+    this._flagSaved();
+    await this._load();
+  };
+
+  private _onRevokeRisk = async (entryId: string): Promise<void> => {
+    if (!this.hass) return;
+    await updateEntry(this.hass, entryId, { channel_risk_ack: false });
+    this._flagSaved();
+    await this._load();
+  };
+
+  private _onPickChannel = (entryId: string): void => {
+    this._tab = "settings";
+    this._selectedEntry = entryId;
+  };
+
   private _onRefresh = async (): Promise<void> => {
     // Explicit reload: channels, node list and gateway options are all read
     // from the radio and the registry, so a change made in the Meshtastic app
@@ -765,7 +827,37 @@ export class HermesCard extends LitElement {
           t
         );
       case "settings":
-        return renderSettings(
+        return html`
+          ${renderSecurity(
+            {
+              entries: this._entries,
+              armed: this._armed,
+              riskDialog: this._riskDialog,
+              onToggle: this._onSecurityToggle,
+              onArm: this._onArm,
+              onNumber: this._onSecurityNumber,
+              onOpenRisk: this._onOpenRisk,
+              onAcceptRisk: this._onAcceptRisk,
+              onRevokeRisk: this._onRevokeRisk,
+              onPickChannel: this._onPickChannel,
+            },
+            t
+          )}
+          ${this._renderSettings(t)}
+        `;
+      default:
+        return renderStatus(
+          hass,
+          this._entries,
+          this._updatedAt,
+          this._radio,
+          t
+        );
+    }
+  }
+
+  private _renderSettings(t: (k: string) => string): TemplateResult {
+    return renderSettings(
           {
             settings: this._settings,
             entries: this._entries,
@@ -791,16 +883,7 @@ export class HermesCard extends LitElement {
             onSaveEntry: this._onSaveEntry,
           },
           t
-        );
-      default:
-        return renderStatus(
-          hass,
-          this._entries,
-          this._updatedAt,
-          this._radio,
-          t
-        );
-    }
+    );
   }
 
   /** The single screen a compact card shows, without tabs or toolbar. */

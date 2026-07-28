@@ -46,7 +46,9 @@
           "reply_to": "Reply routing (channel mode)",
           "service_data": "Service data (advanced, optional)",
           "authorized_devices": "Authorized nodes override (Meshtastic devices, optional)",
-          "authorized_extra": "Additional override node IDs (comma-separated, optional)"
+          "authorized_extra": "Additional override node IDs (comma-separated, optional)",
+          "condition_entity": "Only run while this entity is on (optional)",
+          "cooldown_seconds": "Wait between runs, seconds (0 for none)"
         }
       },
       "edit_command": {
@@ -61,7 +63,9 @@
           "reply_to": "Reply routing (channel mode)",
           "service_data": "Service data (advanced, optional)",
           "authorized_devices": "Authorized nodes override (Meshtastic devices, optional)",
-          "authorized_extra": "Additional override node IDs (comma-separated, optional)"
+          "authorized_extra": "Additional override node IDs (comma-separated, optional)",
+          "condition_entity": "Only run while this entity is on (optional)",
+          "cooldown_seconds": "Wait between runs, seconds (0 for none)"
         }
       },
       "select_command": {

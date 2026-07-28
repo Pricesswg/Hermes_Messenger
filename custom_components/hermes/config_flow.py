@@ -28,6 +28,8 @@ from homeassistant.helpers import device_registry as dr, selector
 from .meshtastic_api import node_num_from_device
 from .const import (
     CMD_AUTH_OVERRIDE,
+    CMD_CONDITION_ENTITY,
+    CMD_COOLDOWN,
     CMD_ID,
     CMD_KEYWORD,
     CMD_MATCH_TYPE,
@@ -276,6 +278,14 @@ class HermesOptionsFlow(OptionsFlow):
                     REPLY_TARGETS, "reply_to"
                 ),
                 vol.Optional(CMD_SERVICE_DATA): selector.ObjectSelector(),
+                # An entity that has to be on for this command to run, and a
+                # minimum gap between two runs. Both are defences against a
+                # message that arrives when it should not: a replay, or the
+                # same command hammered.
+                vol.Optional(CMD_CONDITION_ENTITY, default=""): selector.EntitySelector(),
+                vol.Optional(CMD_COOLDOWN, default=0): selector.NumberSelector(
+                    selector.NumberSelectorConfig(min=0, max=86400, step=10)
+                ),
                 vol.Optional(FIELD_AUTH_DEVICES): _meshtastic_device(True),
                 vol.Optional(FIELD_AUTH_EXTRA, default=""): str,
             }
@@ -310,6 +320,10 @@ class HermesOptionsFlow(OptionsFlow):
             command[CMD_TARGET] = user_input[CMD_TARGET]
         if user_input.get(CMD_SERVICE_DATA):
             command[CMD_SERVICE_DATA] = user_input[CMD_SERVICE_DATA]
+        if user_input.get(CMD_CONDITION_ENTITY):
+            command[CMD_CONDITION_ENTITY] = user_input[CMD_CONDITION_ENTITY]
+        if user_input.get(CMD_COOLDOWN):
+            command[CMD_COOLDOWN] = int(user_input[CMD_COOLDOWN])
         if override:
             command[CMD_AUTH_OVERRIDE] = override
         return command

@@ -46,7 +46,9 @@
           "reply_to": "Routage de la réponse (mode canal)",
           "service_data": "Données du service (avancé, facultatif)",
           "authorized_devices": "Remplacement des nœuds autorisés (appareils Meshtastic, facultatif)",
-          "authorized_extra": "IDs de nœud supplémentaires pour le remplacement (séparés par des virgules, facultatif)"
+          "authorized_extra": "IDs de nœud supplémentaires pour le remplacement (séparés par des virgules, facultatif)",
+          "condition_entity": "N'exécuter que tant que cette entité est active (facultatif)",
+          "cooldown_seconds": "Attente entre deux exécutions, secondes (0 pour aucune)"
         }
       },
       "edit_command": {
@@ -61,7 +63,9 @@
           "reply_to": "Routage de la réponse (mode canal)",
           "service_data": "Données du service (avancé, facultatif)",
           "authorized_devices": "Remplacement des nœuds autorisés (appareils Meshtastic, facultatif)",
-          "authorized_extra": "IDs de nœud supplémentaires pour le remplacement (séparés par des virgules, facultatif)"
+          "authorized_extra": "IDs de nœud supplémentaires pour le remplacement (séparés par des virgules, facultatif)",
+          "condition_entity": "N'exécuter que tant que cette entité est active (facultatif)",
+          "cooldown_seconds": "Attente entre deux exécutions, secondes (0 pour aucune)"
         }
       },
       "select_command": {

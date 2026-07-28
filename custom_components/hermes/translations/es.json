@@ -46,7 +46,9 @@
           "reply_to": "Enrutamiento de respuesta (modo canal)",
           "service_data": "Datos del servicio (avanzado, opcional)",
           "authorized_devices": "Anulación de nodos autorizados (dispositivos Meshtastic, opcional)",
-          "authorized_extra": "IDs de nodo adicionales para la anulación (separados por comas, opcional)"
+          "authorized_extra": "IDs de nodo adicionales para la anulación (separados por comas, opcional)",
+          "condition_entity": "Ejecutar solo mientras esta entidad esté activa (opcional)",
+          "cooldown_seconds": "Espera entre ejecuciones, segundos (0 para ninguna)"
         }
       },
       "edit_command": {
@@ -61,7 +63,9 @@
           "reply_to": "Enrutamiento de respuesta (modo canal)",
           "service_data": "Datos del servicio (avanzado, opcional)",
           "authorized_devices": "Anulación de nodos autorizados (dispositivos Meshtastic, opcional)",
-          "authorized_extra": "IDs de nodo adicionales para la anulación (separados por comas, opcional)"
+          "authorized_extra": "IDs de nodo adicionales para la anulación (separados por comas, opcional)",
+          "condition_entity": "Ejecutar solo mientras esta entidad esté activa (opcional)",
+          "cooldown_seconds": "Espera entre ejecuciones, segundos (0 para ninguna)"
         }
       },
       "select_command": {
