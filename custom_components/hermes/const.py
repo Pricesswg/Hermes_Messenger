@@ -95,6 +95,12 @@ SETTING_REACHABLE_MINUTES = "reachable_minutes"
 # Map appearance.
 SETTING_MAP_PIN_SIZE = "map_pin_size"
 SETTING_MAP_LABELS = "map_labels"
+# Where the background tiles come from: esri, carto, topo or custom. Esri is
+# the default because since September 2026 CARTO watermarks every tile served
+# without an API key.
+SETTING_MAP_SOURCE = "map_source"
+# XYZ template used when the source is "custom". Validated in the card.
+SETTING_MAP_CUSTOM_URL = "map_custom_url"
 
 DEFAULT_SETTINGS = {
     SETTING_OPENWEATHER_KEY: "",
@@ -105,6 +111,8 @@ DEFAULT_SETTINGS = {
     SETTING_REACHABLE_MINUTES: 120,
     SETTING_MAP_PIN_SIZE: "medium",
     SETTING_MAP_LABELS: False,
+    SETTING_MAP_SOURCE: "esri",
+    SETTING_MAP_CUSTOM_URL: "",
 }
 
 # Quick send presets, the equivalent of the canned messages in the Meshtastic

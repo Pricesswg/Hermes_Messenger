@@ -25,9 +25,12 @@ export interface MapCtx {
   onToggleRadius: () => void;
   onRadiusChange: (km: number) => void;
   onHeightChange: (mode: string) => void;
+  onSourceChange: (source: string) => void;
+  onCustomUrlChange: (url: string) => void;
 }
 
 const HEIGHT_MODES = ["auto", "mobile", "tablet", "desktop"];
+const MAP_SOURCES = ["esri", "carto", "topo", "custom"];
 
 /** Centre of the radius circle: the first shown node that has a position. */
 function referencePoint(nodes: MapNode[]): [number, number] | null {
@@ -117,6 +120,27 @@ export function renderMap(
         </label>
       </span>
 
+      <span class="radius">
+        <label class="check" style="gap:6px">
+          <span>${t("map.source")}</span>
+          <select
+            @change=${(e: Event) =>
+              ctx.onSourceChange((e.target as HTMLSelectElement).value)}
+          >
+            ${MAP_SOURCES.map(
+              (id) => html`
+                <option
+                  value=${id}
+                  ?selected=${(ctx.settings?.map_source ?? "esri") === id}
+                >
+                  ${t(`map.source.${id}`)}
+                </option>
+              `
+            )}
+          </select>
+        </label>
+      </span>
+
       ${ctx.radiusOn
         ? html`
             <span class="radius">
@@ -136,6 +160,27 @@ export function renderMap(
           `
         : ""}
     </div>
+
+    <div class="hint" style="margin:-4px 0 10px">${t("map.sourceHint")}</div>
+
+    ${(ctx.settings?.map_source ?? "esri") === "custom"
+      ? html`
+          <div class="map-custom">
+            <input
+              type="text"
+              spellcheck="false"
+              autocomplete="off"
+              .value=${ctx.settings?.map_custom_url ?? ""}
+              placeholder="https://tiles.example.org/{z}/{x}/{y}.png"
+              @change=${(e: Event) =>
+                ctx.onCustomUrlChange(
+                  (e.target as HTMLInputElement).value.trim()
+                )}
+            />
+            <span class="hint">${t("map.customUrlHint")}</span>
+          </div>
+        `
+      : ""}
 
     <div class="legend">
       <span class="dot on"></span>${t("map.connected")}
@@ -162,6 +207,8 @@ export function renderMap(
               .heightMode=${ctx.settings?.map_height ?? "auto"}
               .pinSize=${ctx.settings?.map_pin_size ?? "medium"}
               .labels=${ctx.settings?.map_labels ?? false}
+              .source=${ctx.settings?.map_source ?? "esri"}
+              .customUrl=${ctx.settings?.map_custom_url ?? ""}
             ></hermes-map>
           `}
 

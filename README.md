@@ -57,7 +57,7 @@ integration, so nothing opens a second connection to your node.
 | **Chat** | Conversations by channel and by node, with replies sent from here |
 | **Log** | What Hermes decided about each message, including the ones it ignored |
 | **Devices** | Every node with battery, signal, hops and last heard |
-| **Map** | Chosen nodes as points, optionally the whole mesh, with a radius filter |
+| **Map** | Chosen nodes as points, optionally the whole mesh, with a radius filter and a choice of keyless base maps |
 | **Messages** | Building commands, and quick send presets |
 | **Home Assistant** | Which entities your commands use, and whether they still exist |
 | **Settings** | Everything configurable, including the radio itself |

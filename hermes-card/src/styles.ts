@@ -574,6 +574,21 @@ export const hermesLayout = css`
     padding: 0;
   }
 
+  /* The custom tile template needs a full line: a URL with placeholders is
+   * unreadable squeezed between the other map controls. */
+  .map-custom {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 10px;
+  }
+
+  .map-custom input {
+    max-width: 560px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+
   .legend {
     display: flex;
     align-items: center;

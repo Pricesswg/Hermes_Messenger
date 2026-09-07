@@ -3,21 +3,89 @@ import { customElement, property, state } from "lit/decorators.js";
 import * as L from "leaflet";
 
 import { LEAFLET_CSS } from "./leaflet-css";
+import { translator } from "./i18n";
 import type { HomeAssistant, MapNode } from "./types";
 
 /**
- * Base tiles from CARTO (OpenStreetMap data).
+ * Base tile sources, all of them reachable without an API key.
+ *
+ * Esri's gray canvases are the default: a quiet backdrop built for data drawn
+ * on top of it, in a light and a dark variant, on legacy endpoints Esri keeps
+ * serving keyless. CARTO stays selectable for whoever prefers its look, but
+ * since September 2026 it stamps "API KEY REQUIRED" diagonally across every
+ * keyless tile, whatever Referer the browser sends, so it can no longer be
+ * the default. OpenTopoMap shows the terrain, which on a Meshtastic map is
+ * not decoration: relief is what explains why a node is or is not heard.
  *
  * Never point a distributed integration at tile.openstreetmap.org: their tile
  * usage policy forbids it and the server answers offending clients with
- * "access blocked" tiles. CARTO also ships a native dark style, so the card
- * does not need a CSS invert hack. {r} serves retina tiles automatically.
+ * "access blocked" tiles. {r} serves retina tiles automatically.
  */
-const CARTO_LIGHT =
-  "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
-const CARTO_DARK = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-const ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+interface BaseSource {
+  light: string;
+  dark?: string;
+  subdomains?: string;
+  /** Where the provider's own tiles stop; past it Leaflet upscales. */
+  maxNativeZoom?: number;
+  attribution: string;
+}
+
+const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services";
+/**
+ * Every source is drawn up to this zoom. Pins sit metres apart, so capping
+ * the map at a provider's last native level (16 for Esri, 15 for OpenTopoMap)
+ * would cost more than the blur of an upscaled tile does.
+ */
+const MAX_ZOOM = 18;
+
+export const BASE_SOURCES: Record<string, BaseSource> = {
+  esri: {
+    // Note the {z}/{y}/{x} order: this endpoint is not the usual XYZ one.
+    light: `${ESRI}/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
+    dark: `${ESRI}/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
+    maxNativeZoom: 16,
+    attribution:
+      'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
+  },
+  carto: {
+    light:
+      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    subdomains: "abcd",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  },
+  topo: {
+    light: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+    subdomains: "abc",
+    maxNativeZoom: 15,
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM &middot; &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> (CC-BY-SA)',
+  },
+};
+
+export const DEFAULT_SOURCE = "esri";
+
+/**
+ * A custom XYZ template is accepted only when it is https, carries the
+ * {z}/{x}/{y} placeholders and holds no character that could break out of the
+ * URL Leaflet builds from it. Anything else returns null and the caller falls
+ * back to the default source without ever hitting the network.
+ */
+export function customTileTemplate(url: string): string | null {
+  const src = (url || "").trim();
+  if (!src || src.length > 512 || !src.startsWith("https://")) return null;
+  if (!src.includes("{z}") || !src.includes("{x}") || !src.includes("{y}")) {
+    return null;
+  }
+  if (/[\s<>"'`]/.test(src)) return null;
+  try {
+    new URL(src.replace(/\{[sxyzr]\}/g, "0"));
+  } catch {
+    return null;
+  }
+  return src;
+}
 
 /** Optional OpenWeather overlays, unlocked when the user configures a key. */
 export const OWM_LAYERS = [
@@ -120,6 +188,23 @@ export class HermesMap extends LitElement {
       .leaflet-marker-icon:hover {
         z-index: 500 !important;
       }
+      /* Sources with no dark variant (OpenTopoMap, custom) in dark mode.
+       * Inverting hue as well as luminance keeps water blue and woods green
+       * instead of turning the whole map into a photographic negative. */
+      .base-tiles--darkened {
+        filter: invert(1) hue-rotate(180deg) brightness(0.82) contrast(0.92)
+          saturate(0.7);
+      }
+      .base-note {
+        margin-top: 8px;
+        padding: 6px 9px;
+        font-size: 0.72rem;
+        line-height: 1.45;
+        color: var(--text-muted);
+        background: var(--bg-sunken);
+        border-left: 3px solid var(--accent);
+        border-radius: var(--r-sm, 6px);
+      }
     `,
   ];
 
@@ -133,8 +218,14 @@ export class HermesMap extends LitElement {
   @property() public heightMode = "auto";
   @property() public pinSize = "medium";
   @property({ type: Boolean }) public labels = false;
+  /** esri, carto, topo or custom. */
+  @property() public source = DEFAULT_SOURCE;
+  /** XYZ template used when source is "custom". */
+  @property() public customUrl = "";
 
   @state() private _owmLayer = "";
+  /** Source that failed and was swapped out, "" while none has. */
+  @state() private _baseFallback = "";
 
   private _map?: L.Map;
   private _base?: L.TileLayer;
@@ -142,6 +233,7 @@ export class HermesMap extends LitElement {
   private _markers: L.Marker[] = [];
   private _circle?: L.Circle;
   private _resizeObserver?: ResizeObserver;
+  private _themeQuery?: MediaQueryList;
   private _signature = "";
   private _heightApplied = "";
 
@@ -154,8 +246,14 @@ export class HermesMap extends LitElement {
       attributionControl: true,
     }).setView([46.0, 11.0], this.zoom);
 
-    this._setBase();
+    this._buildBase();
     this._drawNodes();
+
+    // The base layer is chosen for the current theme, so a theme flip has to
+    // rebuild it. Nothing else in the card watches this, and Leaflet has no
+    // notion of a colour scheme.
+    this._themeQuery = matchMedia("(prefers-color-scheme: dark)");
+    this._themeQuery.addEventListener("change", this._onThemeChange);
 
     // Leaflet needs a nudge whenever the card is resized or first revealed,
     // otherwise it renders a partially grey canvas.
@@ -177,7 +275,14 @@ export class HermesMap extends LitElement {
     );
   }
 
-  protected updated(): void {
+  protected updated(changed: Map<string, unknown>): void {
+    if (this._map && (changed.has("source") || changed.has("customUrl"))) {
+      // A source the user just picked deserves a clean try even if the
+      // previous one had already fallen back.
+      this._baseFallback = "";
+      this._buildBase();
+    }
+
     // Compare by value, not identity. The parent rebuilds the nodes array and
     // the centre tuple on every render, so an identity check would redraw and
     // re-fit the view continuously, making the map impossible to pan.
@@ -208,21 +313,97 @@ export class HermesMap extends LitElement {
   public disconnectedCallback(): void {
     super.disconnectedCallback();
     this._resizeObserver?.disconnect();
+    this._themeQuery?.removeEventListener("change", this._onThemeChange);
+    this._themeQuery = undefined;
     this._map?.remove();
     this._map = undefined;
+    this._base = undefined;
   }
 
   private _isDark(): boolean {
     return matchMedia("(prefers-color-scheme: dark)").matches;
   }
 
-  private _setBase(): void {
+  private _onThemeChange = (): void => {
+    this._baseFallback = "";
+    this._buildBase();
+  };
+
+  /** Resolve the configured source to a tile spec, in the current theme. */
+  private _baseSpec(sourceId: string): {
+    url: string;
+    opts: L.TileLayerOptions;
+    filtered: boolean;
+  } {
+    const dark = this._isDark();
+
+    if (sourceId === "custom") {
+      const url = customTileTemplate(this.customUrl);
+      if (url) {
+        // No attribution string: only the user knows who serves these tiles.
+        return {
+          url,
+          opts: { maxZoom: MAX_ZOOM, attribution: "" },
+          filtered: dark,
+        };
+      }
+      sourceId = DEFAULT_SOURCE;
+    }
+
+    const src = BASE_SOURCES[sourceId] ?? BASE_SOURCES[DEFAULT_SOURCE];
+    return {
+      url: dark && src.dark ? src.dark : src.light,
+      opts: {
+        maxZoom: MAX_ZOOM,
+        maxNativeZoom: src.maxNativeZoom,
+        subdomains: src.subdomains ?? "abc",
+        attribution: src.attribution,
+      },
+      filtered: dark && !src.dark,
+    };
+  }
+
+  /**
+   * (Re)create the base layer for the current source and theme. Rebuilding
+   * rather than calling setUrl is what lets the subdomains, the zoom cap and
+   * the dark filter change with the source.
+   *
+   * The first tile error of a non-default source swaps in Esri, so a dead
+   * custom server or a provider that changed its terms never leaves the pins
+   * floating over a blank canvas.
+   */
+  private _buildBase(sourceId?: string): void {
     if (!this._map) return;
-    this._base?.remove();
-    this._base = L.tileLayer(this._isDark() ? CARTO_DARK : CARTO_LIGHT, {
-      attribution: ATTRIBUTION,
-      maxZoom: 19,
-    }).addTo(this._map);
+    const id = sourceId || this.source || DEFAULT_SOURCE;
+
+    if (this._base) {
+      this._map.removeLayer(this._base);
+      this._base = undefined;
+    }
+
+    const spec = this._baseSpec(id);
+    const layer = L.tileLayer(spec.url, {
+      ...spec.opts,
+      className: spec.filtered
+        ? "base-tiles base-tiles--darkened"
+        : "base-tiles",
+    });
+
+    // One fallback per layer. Without the guard a provider that is down fires
+    // a tileerror per tile and rebuilds the map in a loop.
+    let failed = false;
+    layer.on("tileerror", () => {
+      if (failed || id === DEFAULT_SOURCE) return;
+      failed = true;
+      this._baseFallback = id;
+      this._buildBase(DEFAULT_SOURCE);
+    });
+
+    layer.addTo(this._map);
+    // Pins, the radius circle and the OpenWeather overlay all belong above
+    // the backdrop, whichever order the rebuild happened in.
+    layer.bringToBack();
+    this._base = layer;
   }
 
   /** Draw one pin per selected node that actually has a position. */
@@ -315,6 +496,7 @@ export class HermesMap extends LitElement {
   }
 
   protected render(): TemplateResult {
+    const t = translator(this.hass);
     return html`
       ${this.owmKey
         ? html`
@@ -334,6 +516,11 @@ export class HermesMap extends LitElement {
           `
         : ""}
       <div id="map"></div>
+      ${this._baseFallback
+        ? html`<div class="base-note">
+            ${t("map.baseFallback").replace("{source}", this._baseFallback)}
+          </div>`
+        : ""}
     `;
   }
 }

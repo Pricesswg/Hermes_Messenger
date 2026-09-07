@@ -310,6 +310,20 @@ Pins are **green** when the node was heard recently and **yellow** when it was
 not. How recent counts as recent is configurable: two hours suits a fixed
 installation, a much shorter window says more in the field.
 
+**Base map** picks where the background tiles come from. The default is Esri's
+gray canvas: no API key, a dark variant that follows your theme, and a quiet
+backdrop that lets the pins carry the colour. CARTO is still selectable, but
+since September 2026 it prints "API KEY REQUIRED" across every tile served
+without a key, so it is no longer the default. OpenTopoMap shows the relief,
+which on a mesh map is not decoration: a ridge between two nodes is usually the
+answer to why they cannot hear each other. The last option takes any https XYZ
+template — your own tile server, or a provider you hold a key for — with the
+key inside the address; sources without a dark style get darkened by a filter
+when your theme is dark.
+
+If the source you picked stops answering, the map rebuilds itself on Esri and
+says so in a line under it, rather than leaving the pins on a blank canvas.
+
 Adding your own OpenWeather API key in Settings unlocks temperature, wind, cloud
 and precipitation overlays. The key is stored in Home Assistant and never leaves
 it.

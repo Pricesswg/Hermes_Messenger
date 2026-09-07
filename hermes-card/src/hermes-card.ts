@@ -645,6 +645,18 @@ export class HermesCard extends LitElement {
     this._settings = await updateSettings(this.hass, { map_height: mode });
   };
 
+  private _onSourceChange = async (source: string): Promise<void> => {
+    if (!this.hass) return;
+    this._settings = await updateSettings(this.hass, { map_source: source });
+  };
+
+  private _onCustomUrlChange = async (url: string): Promise<void> => {
+    if (!this.hass) return;
+    // Stored as typed. The card validates the template when it builds the
+    // layer, so a half finished address is kept rather than silently dropped.
+    this._settings = await updateSettings(this.hass, { map_custom_url: url });
+  };
+
   /**
    * Insert a token where the cursor sits in the template textarea, so the user
    * can build a sentence around the tokens instead of only appending.
@@ -808,6 +820,8 @@ export class HermesCard extends LitElement {
             onToggleRadius: this._onToggleRadius,
             onRadiusChange: this._onRadiusChange,
             onHeightChange: this._onHeightChange,
+            onSourceChange: this._onSourceChange,
+            onCustomUrlChange: this._onCustomUrlChange,
           },
           t
         );

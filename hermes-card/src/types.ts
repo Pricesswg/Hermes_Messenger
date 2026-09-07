@@ -165,6 +165,10 @@ export interface HermesSettings {
   map_pin_size: string;
   /** Draw the node name beside each pin. */
   map_labels: boolean;
+  /** Base tile source: esri, carto, topo or custom. */
+  map_source: string;
+  /** XYZ template used when map_source is "custom". */
+  map_custom_url: string;
 }
 
 /** One configured command, as stored in the config entry options. */
