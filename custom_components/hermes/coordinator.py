@@ -50,6 +50,7 @@ from .const import (
     CONF_CHANNEL_RISK_ACK,
     CONF_HELP_KEYWORD,
     CONF_MAX_AGE,
+    CONF_MQTT_ALLOW_PKC,
     CONF_REJECT_MQTT,
     CONF_REQUIRE_PKC,
     CONF_PART_DELAY,
@@ -63,6 +64,7 @@ from .const import (
     DEFAULT_PART_DELAY,
     DEFAULT_MAX_AGE,
     DEFAULT_RATE_LIMIT,
+    DEFAULT_MQTT_ALLOW_PKC,
     DEFAULT_REJECT_MQTT,
     DEFAULT_REQUIRE_ACK,
     DEFAULT_REQUIRE_PKC,
@@ -231,6 +233,12 @@ class HermesCoordinator:
     @property
     def reject_mqtt(self) -> bool:
         return bool(self.entry.options.get(CONF_REJECT_MQTT, DEFAULT_REJECT_MQTT))
+
+    @property
+    def mqtt_allow_pkc(self) -> bool:
+        return bool(
+            self.entry.options.get(CONF_MQTT_ALLOW_PKC, DEFAULT_MQTT_ALLOW_PKC)
+        )
 
     @property
     def max_age_seconds(self) -> int:
@@ -461,7 +469,16 @@ class HermesCoordinator:
                 return "not encrypted for this node alone"
 
         if self.reject_mqtt and meta is not None and meta.get("via_mqtt"):
-            return "arrived over an MQTT bridge"
+            # The exception, and why it is safe where a topic allowlist would
+            # not have been. A packet says whether it travelled over MQTT; it
+            # does not say through whose broker, because the topic lives at the
+            # broker and never enters the packet. So "trust my own bridge"
+            # cannot be checked. What can be checked is who sent it: a message
+            # encrypted for this node alone was sealed with the sender's own
+            # key, and no one relaying, republishing or injecting on any broker
+            # can produce one without that key.
+            if not (self.mqtt_allow_pkc and meta.get("pki_encrypted")):
+                return "arrived over an MQTT bridge"
 
         max_age = self.max_age_seconds
         if max_age > 0 and meta is not None:

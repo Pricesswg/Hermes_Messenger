@@ -435,6 +435,55 @@ all right" to the node, and the `ok` back.
 
 ---
 
+## MQTT, and where its credentials go
+
+Not in Hermes. There is no broker field in these settings and there is not
+going to be one, which is a decision rather than an omission.
+
+Home Assistant already has an MQTT integration. It holds the broker address,
+the port, the username, the password and the TLS settings, it reconnects when
+the broker restarts, and it turns MQTT discovery into entities. A tracker
+publishing over MQTT therefore already arrives as a `device_tracker`. Building a
+second MQTT client inside Hermes would mean a second place to type those
+credentials, a second reconnection loop to get wrong, and two brokers'
+configurations to keep in step.
+
+So the path is:
+
+1. **Settings → Devices & services → Add integration → MQTT**, and put the
+   broker details there once.
+2. The tracker appears as a `device_tracker` entity.
+3. In Hermes, **Settings → Other trackers on the map**, and pick it.
+
+The same three steps cover a Garmin inReach through its MapShare integration, a
+Teltonika through Traccar, a LoRaWAN tag through The Things Network, or a phone
+running OwnTracks. None of them needs Hermes to speak its protocol.
+
+### The MQTT bridge, and the exception
+
+Separately from all of the above, the Meshtastic mesh itself can be bridged
+over MQTT, and the **Security** section has a switch to refuse messages that
+arrived that way. It exists because a bridge lets anyone who can publish to the
+broker inject a packet claiming to be from any node.
+
+An obvious wish is to allow it selectively: trust my own broker, refuse the
+public one. **That cannot be done, and it is worth knowing why.** A packet
+records that it travelled over MQTT and nothing about which broker carried it —
+the topic exists at the broker and never enters the packet. There is no field to
+match an allowlist against.
+
+What can be checked is not the road but the sender. **Except messages sealed for
+this node** lets a bridged message through when it was encrypted for this
+gateway alone, because that seal can only be produced with the sending node's
+own key: no one relaying, republishing or injecting on any broker can forge one.
+Everything else that came over the bridge stays refused.
+
+It is in the danger zone with the other protections, and because switching it on
+loosens rather than tightens, it is the one switch there that asks for
+confirmation on the way **on**.
+
+---
+
 ## Hermes in the sidebar
 
 Settings has a switch that adds a **Hermes page to the Home Assistant

@@ -40,6 +40,7 @@ from custom_components.hermes.const import (
     CONF_INITIAL_DELAY,
     CONF_MAX_AGE,
     CONF_MODE,
+    CONF_MQTT_ALLOW_PKC,
     CONF_NODE_USERS,
     CONF_PART_DELAY,
     CONF_RATE_LIMIT,
@@ -995,3 +996,61 @@ async def test_deleting_a_walk_leaves_the_others(hass):
     await store.async_delete_hike(first["id"])
 
     assert [h["id"] for h in store.hikes] == [second["id"]]
+
+
+# --- The MQTT bridge, and the one exception to it ---------------------------
+
+
+async def test_an_mqtt_message_is_refused_when_the_bridge_is_rejected(
+    hass, lights, sent
+):
+    coordinator = await build(hass, **{CONF_REJECT_MQTT: True})
+    await announce(hass, 701, viaMqtt=True)
+    await deliver(hass, coordinator, message(), message_id=701)
+
+    assert not lights
+    assert "MQTT" in coordinator.last_error["reason"]
+
+
+async def test_a_sealed_mqtt_message_is_let_through_when_allowed(
+    hass, lights, sent
+):
+    """The sound version of "trust my own broker".
+
+    The packet says it travelled over MQTT and does not say through whose
+    broker, because the topic lives at the broker and never enters the packet.
+    Encryption for this node alone is what cannot be forged by anyone
+    relaying, republishing or injecting on any broker at all.
+    """
+    coordinator = await build(
+        hass, **{CONF_REJECT_MQTT: True, CONF_MQTT_ALLOW_PKC: True}
+    )
+    await announce(hass, 702, viaMqtt=True, pkiEncrypted=True)
+    await deliver(hass, coordinator, message(), message_id=702)
+
+    assert len(lights) == 1
+
+
+async def test_the_exception_does_not_cover_an_unsealed_message(
+    hass, lights, sent
+):
+    """Otherwise it would be a switch that turns the protection off entirely."""
+    coordinator = await build(
+        hass, **{CONF_REJECT_MQTT: True, CONF_MQTT_ALLOW_PKC: True}
+    )
+    await announce(hass, 703, viaMqtt=True, pkiEncrypted=False)
+    await deliver(hass, coordinator, message(), message_id=703)
+
+    assert not lights
+    assert "MQTT" in coordinator.last_error["reason"]
+
+
+async def test_the_exception_does_nothing_when_the_bridge_is_accepted(
+    hass, lights, sent
+):
+    """With the rejection off there is nothing to make an exception to."""
+    coordinator = await build(hass, **{CONF_MQTT_ALLOW_PKC: True})
+    await announce(hass, 704, viaMqtt=True)
+    await deliver(hass, coordinator, message(), message_id=704)
+
+    assert len(lights) == 1

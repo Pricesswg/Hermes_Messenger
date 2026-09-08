@@ -54,6 +54,7 @@ from .const import (
     CONF_MODE,
     CONF_PART_DELAY,
     CONF_RATE_LIMIT,
+    CONF_MQTT_ALLOW_PKC,
     CONF_REJECT_MQTT,
     CONF_REQUIRE_ACK,
     CONF_REQUIRE_PKC,
@@ -69,6 +70,7 @@ from .const import (
     DEFAULT_RATE_LIMIT,
     DEFAULT_REJECT_MQTT,
     DEFAULT_REQUIRE_ACK,
+    DEFAULT_MQTT_ALLOW_PKC,
     DEFAULT_REQUIRE_PKC,
     DOMAIN,
     MESHTASTIC_DOMAIN,
@@ -178,6 +180,7 @@ def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
         # --- Security -------------------------------------------------------
         "require_pkc": options.get(CONF_REQUIRE_PKC, DEFAULT_REQUIRE_PKC),
         "reject_mqtt": options.get(CONF_REJECT_MQTT, DEFAULT_REJECT_MQTT),
+        "mqtt_allow_pkc": options.get(CONF_MQTT_ALLOW_PKC, DEFAULT_MQTT_ALLOW_PKC),
         "max_age_seconds": options.get(CONF_MAX_AGE, DEFAULT_MAX_AGE),
         "channel_risk_ack": options.get(CONF_CHANNEL_RISK_ACK),
         # Why this gateway currently refuses to run commands, or null. Computed
@@ -346,6 +349,7 @@ def ws_entry_update(hass: HomeAssistant, connection, msg: dict) -> None:
         CONF_MAX_AGE,
         CONF_RATE_LIMIT,
         CONF_REJECT_MQTT,
+        CONF_MQTT_ALLOW_PKC,
         CONF_REQUIRE_ACK,
         CONF_REQUIRE_PKC,
     }

@@ -219,6 +219,13 @@ DEFAULT_REQUIRE_PKC = False
 # the air, since those can originate anywhere on the internet.
 CONF_REJECT_MQTT = "reject_mqtt"
 DEFAULT_REJECT_MQTT = False
+# Exception to the rule above: let an MQTT bridged message through when it was
+# encrypted for this node alone. The packet carries no topic and no broker, so
+# "only from my own broker" cannot be expressed as a rule about the transport;
+# it can be expressed as a rule about the sender, and PKC is the only thing on
+# a mesh that proves one.
+CONF_MQTT_ALLOW_PKC = "mqtt_allow_pkc"
+DEFAULT_MQTT_ALLOW_PKC = False
 
 # Refuse a packet the radio received more than this many seconds ago. 0 is off.
 CONF_MAX_AGE = "max_age_seconds"

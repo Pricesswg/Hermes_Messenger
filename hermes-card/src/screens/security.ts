@@ -20,14 +20,30 @@ export interface SecurityCtx {
 
 /** One protection, with the asymmetry that makes the section worth having. */
 interface Guard {
-  key: "require_pkc" | "reject_mqtt";
+  key: "require_pkc" | "reject_mqtt" | "mqtt_allow_pkc";
   label: string;
   hint: string;
+  /**
+   * True when switching this on weakens rather than strengthens. The
+   * confirmation follows the danger, not the direction of the switch: a toggle
+   * that always asked on the way off would put the friction on the safe move
+   * and teach people to click through it.
+   */
+  weakens?: boolean;
+  /** Only meaningful while this other guard is on. */
+  requires?: "reject_mqtt";
 }
 
 const GUARDS: Guard[] = [
   { key: "require_pkc", label: "security.requirePkc", hint: "security.requirePkcHint" },
   { key: "reject_mqtt", label: "security.rejectMqtt", hint: "security.rejectMqttHint" },
+  {
+    key: "mqtt_allow_pkc",
+    label: "security.mqttAllowPkc",
+    hint: "security.mqttAllowPkcHint",
+    weakens: true,
+    requires: "reject_mqtt",
+  },
 ];
 
 /**
@@ -109,7 +125,9 @@ function renderEntry(
             `
         : ""}
 
-      ${GUARDS.map((guard) => renderGuard(ctx, entry, guard, t))}
+      ${GUARDS.filter(
+        (guard) => !guard.requires || Boolean((entry as any)[guard.requires])
+      ).map((guard) => renderGuard(ctx, entry, guard, t))}
       ${renderPkcConsequence(entry, t)}
 
       <div class="field">
@@ -164,35 +182,43 @@ function renderGuard(
   const on = Boolean((entry as any)[guard.key]);
   const token = `${entry.entry_id}:${guard.key}`;
   const armed = ctx.armed === token;
+  // Which way round the confirmation goes. For an ordinary guard the dangerous
+  // move is switching it off; for one that weakens, it is switching it on.
+  const safe = guard.weakens ? !on : on;
+  const next = !on;
 
   return html`
-    <div class="guard" data-on=${on ? "1" : "0"}>
+    <div class="guard" data-on=${safe ? "1" : "0"}>
       <div class="guard-text">
         <span class="guard-label">${guard.label ? t(guard.label) : ""}</span>
         <span class="hint">${t(guard.hint)}</span>
       </div>
-      ${on
+      ${safe
         ? html`
             <button
               class="btn ${armed ? "danger" : ""}"
               @click=${() => {
                 if (armed) {
-                  ctx.onToggle(entry.entry_id, guard.key, false);
+                  ctx.onToggle(entry.entry_id, guard.key, next);
                   ctx.onArm(null);
                 } else {
                   ctx.onArm(token);
                 }
               }}
             >
-              ${armed ? t("security.confirmOff") : t("security.turnOff")}
+              ${armed
+                ? t("security.confirmOff")
+                : guard.weakens
+                  ? t("security.turnOn")
+                  : t("security.turnOff")}
             </button>
           `
         : html`
             <button
               class="btn primary"
-              @click=${() => ctx.onToggle(entry.entry_id, guard.key, true)}
+              @click=${() => ctx.onToggle(entry.entry_id, guard.key, next)}
             >
-              ${t("security.turnOn")}
+              ${guard.weakens ? t("security.turnOff") : t("security.turnOn")}
             </button>
           `}
     </div>

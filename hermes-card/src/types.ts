@@ -296,6 +296,8 @@ export interface HermesEntry {
   require_pkc?: boolean;
   /** Refuse packets that reached the mesh through an MQTT bridge. */
   reject_mqtt?: boolean;
+  /** Let an MQTT bridged message through when it was sealed with PKC. */
+  mqtt_allow_pkc?: boolean;
   /** Refuse packets older than this many seconds. 0 is off. */
   max_age_seconds?: number;
   /** Why commands are blocked on this channel, ignoring any acceptance. */
