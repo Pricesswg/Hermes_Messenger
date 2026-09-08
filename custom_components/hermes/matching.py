@@ -93,3 +93,17 @@ def accepts_message(
 
     # Direct message mode: addressed to this gateway as a node.
     return channel is None and node == gateway_node_id
+
+
+def command_does_something(command: dict[str, Any]) -> bool:
+    """Whether a command runs a service, answers, or both.
+
+    A keyword that matches and then does neither is a no-op that still costs
+    the sender a slot of their rate limit, and on the radio it is
+    indistinguishable from a command that is broken. Both the options flow and
+    the card refuse to save one, so the rule lives here rather than twice.
+    """
+    return bool(
+        str(command.get("service") or "").strip()
+        or str(command.get("reply_template") or "").strip()
+    )

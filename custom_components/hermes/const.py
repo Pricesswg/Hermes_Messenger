@@ -26,6 +26,10 @@ CONF_GATEWAY_NODE_ID = "gateway_node_id"
 CONF_MODE = "mode"
 CONF_CHANNEL_INDEX = "channel_index"
 CONF_AUTHORIZED_NODES = "authorized_nodes"
+# Which person a node belongs to: {"<node number>": "<Home Assistant user id>"}.
+# Keys are strings because config entry options are stored as JSON. This is an
+# identity, never a permission: the whitelist above still decides who may act.
+CONF_NODE_USERS = "node_users"
 
 MODE_CHANNEL = "channel"
 MODE_DIRECT = "direct_message"

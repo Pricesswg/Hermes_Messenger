@@ -13,8 +13,15 @@ import logging
 import re
 from typing import Any, Callable
 
+from homeassistant.auth.permissions.const import POLICY_CONTROL
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
+from homeassistant.core import (
+    CALLBACK_TYPE,
+    Context,
+    Event,
+    HomeAssistant,
+    callback,
+)
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.util import dt as dt_util
@@ -33,6 +40,7 @@ from .const import (
     CMD_SERVICE_DATA,
     CMD_TARGET,
     CONF_AUTHORIZED_NODES,
+    CONF_NODE_USERS,
     CONF_CHANNEL_INDEX,
     CONF_COMMANDS,
     CONF_GATEWAY_NODE_ID,
@@ -93,6 +101,11 @@ class HermesCoordinator:
         # Last text message that crossed the mesh, recorded before any filter
         # so a gateway or channel mismatch can be seen instead of guessed.
         self.last_seen: dict[str, Any] | None = None
+        # When an event last reached this entry, whatever became of it. Kept
+        # apart from last_seen, which is only written once a message has passed
+        # the gateway filter: "nothing arrives" and "everything arrives and is
+        # discarded before it can be recorded" look identical without it.
+        self.last_event: Any = None
         # How many text messages reached this entry and what became of them.
         # One sample cannot tell "nothing arrives" from "everything arrives on
         # the wrong channel", which are opposite problems.
@@ -170,6 +183,22 @@ class HermesCoordinator:
         return {int(n) for n in nodes}
 
     @property
+    def node_users(self) -> dict[int, str]:
+        """Node number to Home Assistant user id, for the nodes that have one.
+
+        Stored with string keys because options are JSON. A node missing here
+        behaves exactly as it did before this existed.
+        """
+        raw = self.entry.options.get(CONF_NODE_USERS) or {}
+        users: dict[int, str] = {}
+        for node, user_id in raw.items():
+            try:
+                users[int(node)] = str(user_id)
+            except (TypeError, ValueError):
+                continue
+        return users
+
+    @property
     def commands(self) -> list[dict[str, Any]]:
         return self.entry.options.get(CONF_COMMANDS, [])
 
@@ -243,10 +272,17 @@ class HermesCoordinator:
         # expect" produce the same empty diagnostics, which are opposite
         # problems: one is upstream, the other is mine.
         self._count("received")
+        self.last_event = dt_util.utcnow()
 
         data = event.data.get("data")
         if not isinstance(data, dict):
             self._count("malformed")
+            # Logged like every other discarded message. This used to be the
+            # one branch that counted and wrote nothing, so a base integration
+            # that changed its payload shape produced a rising counter over an
+            # empty log, which reads exactly like a message that never arrived.
+            # Truncated: the payload is arbitrary and the log is persisted.
+            self._log("in", repr(event.data)[:200], None, "malformed")
             _LOGGER.debug("Hermes: unexpected event payload %s", event.data)
             self._notify_sensors()
             return
@@ -366,7 +402,7 @@ class HermesCoordinator:
         # last because they are the expensive ones: one awaits packet metadata,
         # one reads an entity, and both only matter for a message that was
         # going to run something.
-        refusal = await self._policy_refusal(event, command)
+        refusal = await self._policy_refusal(event, command, sender)
         if refusal is not None:
             self._record_error(refusal, sender, text)
             self._log("in", text, sender, "refused")
@@ -374,11 +410,11 @@ class HermesCoordinator:
             self._notify_sensors()
             return
 
-        self._log("in", text, sender, "matched")
+        self._log("in", text, sender, "matched", await self._user_name(sender))
         await self._execute(command, sender, text)
 
     async def _policy_refusal(
-        self, event: Event, command: dict[str, Any]
+        self, event: Event, command: dict[str, Any], sender: int | None = None
     ) -> str | None:
         """Why this command must not run now, or None to let it through.
 
@@ -394,8 +430,14 @@ class HermesCoordinator:
         # second for the packet event to catch up with the text event, and
         # paying that on every message to answer a question nobody asked would
         # put a delay in the path of a gateway with no policies at all.
+        # A linked node needs the metadata too: whether this message can carry
+        # an identity at all depends on how it was encrypted.
+        linked_user = self._user_for(sender)
         needs_meta = (
-            self.require_pkc or self.reject_mqtt or self.max_age_seconds > 0
+            self.require_pkc
+            or self.reject_mqtt
+            or self.max_age_seconds > 0
+            or linked_user is not None
         )
         meta = (
             await async_lookup(self.hass, event.data.get("message_id"))
@@ -422,6 +464,18 @@ class HermesCoordinator:
                 if age > max_age:
                     return f"too old, received {int(age)}s ago"
 
+        # A node tied to a person may do no more than that person could do
+        # from the app, but only where the sender is actually proven. On a
+        # shared channel the node number is a claim and the key is shared with
+        # everyone on it, so enforcing someone's permissions against that claim
+        # would dress a guess up as an identity. There the link stays what it
+        # honestly is: attribution. Direct and PKC encrypted is the only path
+        # where the sender is the node it says it is.
+        if linked_user is not None and meta is not None and meta.get("pki_encrypted"):
+            denied = await self._permission_refusal(linked_user, command)
+            if denied is not None:
+                return denied
+
         condition = str(command.get(CMD_CONDITION_ENTITY) or "").strip()
         if condition and not self._condition_met(condition):
             return f"{condition} is not on"
@@ -430,6 +484,38 @@ class HermesCoordinator:
         if cooldown and not self._cooldown_passed(command, float(cooldown)):
             return f"run less than {int(cooldown)}s ago"
 
+        return None
+
+    async def _permission_refusal(
+        self, user_id: str, command: dict[str, Any]
+    ) -> str | None:
+        """Refuse what the linked person could not do from the app themselves.
+
+        This only ever takes away. The node whitelist has already had its say,
+        and a command reaches here having passed it, so linking a node to an
+        administrator cannot grant it anything the whitelist did not.
+
+        Only entity targets are checked. A command aimed at a device or an area
+        is left to the whitelist, because Home Assistant's entity policy has
+        nothing to say about those and inventing an answer here would be a
+        guess wearing the clothes of a security check.
+        """
+        user = await self.hass.auth.async_get_user(user_id)
+        if user is None or not user.is_active:
+            return "the linked Home Assistant user is gone or disabled"
+
+        targets: list[str] = []
+        for source in (command.get(CMD_TARGET), command.get(CMD_SERVICE_DATA)):
+            entity_id = (source or {}).get("entity_id")
+            if isinstance(entity_id, str):
+                targets.append(entity_id)
+            elif isinstance(entity_id, (list, tuple)):
+                targets.extend(str(item) for item in entity_id)
+
+        for entity_id in targets:
+            if not user.permissions.check_entity(entity_id, POLICY_CONTROL):
+                who = user.name or "the linked user"
+                return f"{who} may not control {entity_id}"
         return None
 
     def _condition_met(self, entity_id: str) -> bool:
@@ -619,11 +705,18 @@ class HermesCoordinator:
             self._log("in", text, data.get("from"), reason)
 
     @callback
-    def _log(self, direction: str, text: str, node: int | None, outcome: str) -> None:
+    def _log(
+        self,
+        direction: str,
+        text: str,
+        node: int | None,
+        outcome: str,
+        user: str | None = None,
+    ) -> None:
         """Append to the shared message log, if the store is loaded."""
         store = self.hass.data.get(DATA_STORE)
         if store is not None:
-            store.async_log(direction, text, node, outcome)
+            store.async_log(direction, text, node, outcome, user)
 
     def _matches_mode(self, to: dict[str, Any]) -> bool:
         """Filter channel vs DM against the real `to` schema."""
@@ -634,6 +727,20 @@ class HermesCoordinator:
     def _match_command(self, text: str) -> dict[str, Any] | None:
         """Match against the configured commands, honouring the case setting."""
         return match_command(text, self.commands, self.case_sensitive)
+
+    def _user_for(self, sender: int | None) -> str | None:
+        """The Home Assistant user this node belongs to, if any."""
+        if sender is None:
+            return None
+        return self.node_users.get(int(sender))
+
+    async def _user_name(self, sender: int | None) -> str | None:
+        """Display name of the person behind a node, for logs and replies."""
+        user_id = self._user_for(sender)
+        if user_id is None:
+            return None
+        user = await self.hass.auth.async_get_user(user_id)
+        return user.name if user is not None else None
 
     def _is_authorized(self, sender: int, command: dict[str, Any]) -> bool:
         """Effective whitelist: command override if present, else the default."""
@@ -648,6 +755,13 @@ class HermesCoordinator:
     ) -> None:
         """Run the associated service and send the reply."""
         service = command.get(CMD_SERVICE)
+        # Attribution, not authorization. Home Assistant does not check
+        # permissions on a service call made from inside an integration, so
+        # this changes who the logbook and the recorder name, and nothing else.
+        # What the person is allowed to do was decided in _permission_refusal.
+        user_id = self._user_for(sender)
+        user_name = await self._user_name(sender)
+        context = Context(user_id=user_id) if user_id else None
         try:
             if service and "." in service:
                 domain, name = service.split(".", 1)
@@ -659,6 +773,7 @@ class HermesCoordinator:
                     service_data,
                     blocking=True,
                     target=target,
+                    context=context,
                 )
             store = self.hass.data.get(DATA_STORE)
             if store is not None:
@@ -672,7 +787,7 @@ class HermesCoordinator:
         await self._run_action_tokens(command, template, text)
 
         # Action tokens render to nothing, so only the human sentence is sent.
-        reply = self._render_reply(strip_actions(template))
+        reply = self._render_reply(strip_actions(template), user_name)
         if reply:
             # Fire-and-forget: the send delays must not block the event bus.
             self.entry.async_create_background_task(
@@ -730,7 +845,7 @@ class HermesCoordinator:
                     err,
                 )
 
-    def _render_reply(self, template_str: str) -> str:
+    def _render_reply(self, template_str: str, user: str | None = None) -> str:
         """Resolve {state:...}/{attr:...:...} placeholders by reading states.
 
         A placeholder may carry its own words for the values it can take, so a
@@ -740,6 +855,11 @@ class HermesCoordinator:
         """
         if not template_str:
             return ""
+
+        # Substituted before the state placeholders, and to an empty string
+        # when the node belongs to nobody, so a template written with {user}
+        # still reads as a sentence on an unlinked node.
+        template_str = template_str.replace("{user}", user or "")
 
         def _resolve(match: re.Match[str]) -> str:
             kind, entity_id, attr = match.group(1), match.group(2).strip(), match.group(3)

@@ -221,6 +221,28 @@ function renderReception(
             <span class="v">${entry.bus_events ?? 0}</span>
           </div>
           <div class="row">
+            <span class="k">${t("status.lastEvent")}</span>
+            <span class="v">
+              ${entry.last_event
+                ? new Date(entry.last_event).toLocaleString()
+                : t("status.nothingSeen")}
+            </span>
+          </div>
+          <!-- Outside the last_seen block on purpose. A message discarded
+               before it could be recorded leaves last_seen empty, and hiding
+               the tally there took away the one reading that says whether
+               anything is arriving at all. -->
+          ${Object.keys(counts).length
+            ? html`<div class="row">
+                <span class="k">${t("status.tally")}</span>
+                <span class="v">
+                  ${Object.entries(counts)
+                    .map(([reason, n]) => `${n} ${t(`status.reason.${reason}`)}`)
+                    .join(", ")}
+                </span>
+              </div>`
+            : ""}
+          <div class="row">
             <span class="k">${t("status.replayGuard")}</span>
             <span class="v">
               ${entry.replay_protected === false
@@ -257,17 +279,6 @@ function renderReception(
                 <div class="row">
                   <span class="k">${t("status.seenResult")}</span>
                   <span class="v">${t(`status.reason.${seen.reason}`)}</span>
-                </div>
-                <div class="row">
-                  <span class="k">${t("status.tally")}</span>
-                  <span class="v">
-                    ${Object.entries(counts)
-                      .map(
-                        ([reason, n]) =>
-                          `${n} ${t(`status.reason.${reason}`)}`
-                      )
-                      .join(", ")}
-                  </span>
                 </div>
               `
             : html`<div class="row">

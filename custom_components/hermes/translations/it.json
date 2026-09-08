@@ -98,7 +98,8 @@
     },
     "error": {
       "invalid_node_list": "Lista di node ID non valida. Usa interi separati da virgola.",
-      "empty_whitelist": "Seleziona almeno un nodo autorizzato."
+      "empty_whitelist": "Seleziona almeno un nodo autorizzato.",
+      "command_does_nothing": "Un comando deve eseguire un servizio, inviare una risposta, o entrambi."
     }
   },
   "selector": {

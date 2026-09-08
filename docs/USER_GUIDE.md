@@ -330,6 +330,42 @@ it.
 
 ---
 
+## Who a node belongs to
+
+In **Settings**, under the authorized nodes of a gateway, each node can be
+pinned to a Home Assistant person. It is optional, and a gateway where nobody is
+pinned behaves exactly as it did before.
+
+Three things change once a node has an owner.
+
+**The logbook says who.** A command runs in that person's name, so Home
+Assistant records "Alessandro turned off the lights" instead of a node number.
+The same name appears in the Hermes log next to the message.
+
+**The reply can use it.** `{user}` in a reply template is replaced by the
+person's name, and by nothing at all on a node that has no owner, so the
+sentence still reads.
+
+**Permissions apply, but only where the sender is proven.** On a direct message
+encrypted for this gateway alone, Hermes also checks that the person is allowed
+to control the entity the command targets, and refuses if they are not.
+
+That last one has a limit worth understanding, because it is the difference
+between a security control and a decoration. On a shared channel the node number
+is **a claim, not a proof**: the channel key is held by everyone on the channel,
+so anyone on it can send a message under any node number they like. Enforcing a
+person's permissions against a claim would let anyone pick whose permissions to
+be judged by. So on a channel the link stays what it honestly is — a label for
+the logbook — and the authorized list remains the thing that decides who may
+act. Only a direct message with PKC encryption carries a sender that is really
+the node it says it is.
+
+The link never grants anything either. A command still has to pass the
+authorized list first, and the person's permissions can only take away from
+there: pinning an administrator to a node does not let that node do more.
+
+---
+
 ## Security
 
 Hermes turns a text message into a Home Assistant action. That is the whole

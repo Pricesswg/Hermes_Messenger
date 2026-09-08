@@ -98,7 +98,8 @@
     },
     "error": {
       "invalid_node_list": "Liste d'IDs de nœud invalide. Utilisez des entiers séparés par des virgules.",
-      "empty_whitelist": "Sélectionnez au moins un nœud autorisé."
+      "empty_whitelist": "Sélectionnez au moins un nœud autorisé.",
+      "command_does_nothing": "Une commande doit executer un service, envoyer une reponse, ou les deux."
     }
   },
   "selector": {

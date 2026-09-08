@@ -98,7 +98,8 @@
     },
     "error": {
       "invalid_node_list": "Invalid node ID list. Use comma-separated integers.",
-      "empty_whitelist": "Select at least one authorized node."
+      "empty_whitelist": "Select at least one authorized node.",
+      "command_does_nothing": "A command must run a service, send a reply, or both."
     }
   },
   "selector": {

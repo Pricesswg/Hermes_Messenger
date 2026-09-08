@@ -116,6 +116,7 @@ class HermesStore:
         text: str,
         node: int | None = None,
         outcome: str = "",
+        user: str | None = None,
     ) -> None:
         """Append one entry to the log, newest first, and schedule a save.
 
@@ -131,6 +132,9 @@ class HermesStore:
                 "node": node,
                 "text": text,
                 "outcome": outcome,
+                # Name of the person the node belongs to, when it has one.
+                # Absent on older entries, so the card must not require it.
+                "user": user,
             },
         )
         del self.history[HISTORY_MAX_ENTRIES:]

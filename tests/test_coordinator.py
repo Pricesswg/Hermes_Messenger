@@ -40,6 +40,7 @@ from custom_components.hermes.const import (
     CONF_INITIAL_DELAY,
     CONF_MAX_AGE,
     CONF_MODE,
+    CONF_NODE_USERS,
     CONF_PART_DELAY,
     CONF_RATE_LIMIT,
     CONF_REJECT_MQTT,
@@ -743,3 +744,150 @@ async def test_a_named_channel_with_its_own_key_is_not_blocked(hass, lights, sen
     await deliver(hass, coordinator, message(to={"node": None, "channel": 2}))
 
     assert len(lights) == 1
+
+
+async def test_a_malformed_payload_is_written_to_the_log(hass, lights, sent):
+    """A rising counter over an empty log reads like nothing ever arrived.
+
+    This was the one branch that counted a message and recorded it nowhere, so
+    a base integration that changed the shape of its payload looked exactly
+    like a dead radio link: two opposite problems, one empty screen.
+    """
+    coordinator = await build(hass)
+    await deliver(hass, coordinator, {"data": "not a dict at all"})
+
+    assert coordinator.seen_counts.get("malformed") == 1
+    store = hass.data[DATA_STORE]
+    assert [entry["outcome"] for entry in store.history] == ["malformed"]
+    # Truncated, because the payload is arbitrary and the log is persisted.
+    assert len(store.history[0]["text"]) <= 200
+
+
+async def test_an_event_moves_last_event_even_when_it_is_discarded(hass, lights, sent):
+    """last_seen only moves past the gateway filter; this must move before it."""
+    coordinator = await build(hass)
+    assert coordinator.last_event is None
+
+    await deliver(hass, coordinator, message(gateway=GATEWAY + 1))
+
+    assert coordinator.last_event is not None
+    assert coordinator.seen_counts.get("other_gateway") == 1
+
+
+# --- Who the node belongs to -----------------------------------------------
+
+
+async def test_a_linked_node_names_the_person_on_the_service_call(
+    hass, lights, sent, hass_admin_user
+):
+    """The logbook should say who did it, not which number sent a packet."""
+    coordinator = await build(
+        hass, **{CONF_NODE_USERS: {str(FRIEND): hass_admin_user.id}}
+    )
+    await deliver(hass, coordinator, message())
+
+    assert len(lights) == 1
+    assert lights[0].context.user_id == hass_admin_user.id
+
+
+async def test_an_unlinked_node_still_acts_as_nobody(hass, lights, sent):
+    """The feature must be invisible until someone opts a node into it."""
+    coordinator = await build(hass)
+    await deliver(hass, coordinator, message())
+
+    assert lights[0].context.user_id is None
+
+
+async def test_a_shared_channel_keeps_the_link_as_attribution_only(
+    hass, lights, sent, hass_read_only_user
+):
+    """The node number is a claim there, and permissions must not rest on one.
+
+    A read only user would be refused on a proven path. Here the message was
+    not encrypted for this node alone, so anyone holding the shared key could
+    have sent it under that number: enforcing the person's permissions would
+    dress a guess up as an identity.
+    """
+    coordinator = await build(
+        hass, **{CONF_NODE_USERS: {str(FRIEND): hass_read_only_user.id}}
+    )
+    await announce(hass, 601, pkiEncrypted=False)
+    await deliver(hass, coordinator, message(), message_id=601)
+
+    assert len(lights) == 1
+
+
+async def test_a_pkc_message_is_held_to_the_persons_permissions(
+    hass, lights, sent, hass_read_only_user
+):
+    """Proven sender, so the person's own limits apply on top of the whitelist."""
+    coordinator = await build(
+        hass, **{CONF_NODE_USERS: {str(FRIEND): hass_read_only_user.id}}
+    )
+    await announce(hass, 602, pkiEncrypted=True)
+    await deliver(hass, coordinator, message(), message_id=602)
+
+    assert not lights
+    assert "may not control" in coordinator.last_error["reason"]
+
+
+async def test_permissions_never_widen_what_the_whitelist_allows(
+    hass, lights, sent, hass_admin_user
+):
+    """Linking an administrator to a node must not let a stranger through."""
+    coordinator = await build(
+        hass, **{CONF_NODE_USERS: {str(STRANGER): hass_admin_user.id}}
+    )
+    await announce(hass, 603, pkiEncrypted=True)
+    await deliver(hass, coordinator, message(**{"from": STRANGER}), message_id=603)
+
+    assert not lights
+
+
+async def test_the_reply_can_greet_the_person_by_name(
+    hass, lights, sent, hass_admin_user
+):
+    coordinator = await build(
+        hass,
+        **{
+            CONF_NODE_USERS: {str(FRIEND): hass_admin_user.id},
+            CONF_COMMANDS: [command(**{CMD_REPLY_TEMPLATE: "Done, {user}."})],
+        },
+    )
+    await deliver(hass, coordinator, message())
+
+    assert sent[0].data["text"] == f"Done, {hass_admin_user.name}."
+
+
+async def test_the_user_token_disappears_on_an_unlinked_node(hass, lights, sent):
+    """A template written with {user} must still read as a sentence."""
+    coordinator = await build(
+        hass, **{CONF_COMMANDS: [command(**{CMD_REPLY_TEMPLATE: "Done{user}."})]}
+    )
+    await deliver(hass, coordinator, message())
+
+    assert sent[0].data["text"] == "Done."
+
+
+async def test_a_command_can_exist_only_to_answer(hass, lights, sent):
+    """A status keyword has nothing to run: it exists to say how things are."""
+    coordinator = await build(
+        hass,
+        **{
+            CONF_COMMANDS: [
+                command(
+                    **{
+                        CMD_KEYWORD: "status",
+                        CMD_SERVICE: "",
+                        CMD_TARGET: None,
+                        CMD_REPLY_TEMPLATE: "All good.",
+                    }
+                )
+            ]
+        },
+    )
+    await deliver(hass, coordinator, message(message="status"))
+
+    assert not lights
+    assert sent[0].data["text"] == "All good."
+    assert coordinator.seen_counts.get("accepted") == 1

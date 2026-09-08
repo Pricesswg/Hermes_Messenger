@@ -22,6 +22,7 @@ import type {
   HermesEntry,
   HermesLogEntry,
   HermesPreset,
+  HermesUser,
   HermesSettings,
   HomeAssistant,
   NodeInfo,
@@ -41,6 +42,7 @@ import {
   fetchEntries,
   fetchHistory,
   fetchNodes,
+  fetchUsers,
   fetchPresets,
   fetchSettings,
   removeCommand,
@@ -109,6 +111,8 @@ export class HermesCard extends LitElement {
   @state() private _presets: HermesPreset[] = [];
   @state() private _editingPreset: HermesPreset | null = null;
   @state() private _history: HermesLogEntry[] = [];
+  /** People a node can be pinned to. Empty for a non admin, which is fine. */
+  @state() private _users: HermesUser[] = [];
   @state() private _logFilter = "";
   @state() private _testText = "";
   @state() private _sendingTest = false;
@@ -279,6 +283,14 @@ export class HermesCard extends LitElement {
       this._channels = await fetchChannels(this.hass);
     } catch (err) {
       console.warn("Hermes: could not read the radio channels", err);
+    }
+
+    try {
+      this._users = await fetchUsers(this.hass);
+    } catch (err) {
+      // Admin only. A non admin viewing the card simply gets no picker, which
+      // is the right outcome: they cannot change the mapping anyway.
+      console.debug("Hermes: user list unavailable", err);
     }
 
     try {
@@ -914,6 +926,7 @@ export class HermesCard extends LitElement {
             settings: this._settings,
             entries: this._entries,
             nodes: this._nodes,
+            users: this._users,
             channels: this._channels,
             firmware: this._firmware,
             nodesError: this._nodesError,

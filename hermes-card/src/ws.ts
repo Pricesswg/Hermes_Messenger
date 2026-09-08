@@ -7,6 +7,7 @@ import type {
   HermesChannel,
   HermesCommand,
   HermesLogEntry,
+  HermesUser,
   HermesPreset,
   HermesEntry,
   HermesSettings,
@@ -118,6 +119,11 @@ export function sendPreset(
 
 export function fetchHistory(hass: HomeAssistant): Promise<HermesLogEntry[]> {
   return hass.callWS<HermesLogEntry[]>({ type: "hermes/history/list" });
+}
+
+/** People a node can be pinned to. Admin only, so it may legitimately fail. */
+export function fetchUsers(hass: HomeAssistant): Promise<HermesUser[]> {
+  return hass.callWS<HermesUser[]>({ type: "hermes/users/list" });
 }
 
 export function clearHistory(hass: HomeAssistant): Promise<unknown> {

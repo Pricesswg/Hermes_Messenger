@@ -25,6 +25,7 @@ from homeassistant.config_entries import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, selector
 
+from .matching import command_does_something
 from .meshtastic_api import node_num_from_device
 from .const import (
     CMD_AUTH_OVERRIDE,
@@ -269,7 +270,10 @@ class HermesOptionsFlow(OptionsFlow):
                 vol.Required(CMD_MATCH_TYPE, default=MATCH_EXACT): _select(
                     MATCH_TYPES, "match_type"
                 ),
-                vol.Required(CMD_SERVICE): selector.TextSelector(),
+                # Optional: a command may exist only to answer, which is what
+                # a status keyword is. It must still do one of the two, and
+                # that is checked when the form comes back.
+                vol.Optional(CMD_SERVICE, default=""): selector.TextSelector(),
                 vol.Optional(CMD_TARGET): selector.TargetSelector(),
                 vol.Optional(CMD_REPLY_TEMPLATE, default=""): selector.TextSelector(
                     selector.TextSelectorConfig(multiline=True)
@@ -312,7 +316,7 @@ class HermesOptionsFlow(OptionsFlow):
             CMD_ID: command_id,
             CMD_KEYWORD: user_input[CMD_KEYWORD],
             CMD_MATCH_TYPE: user_input[CMD_MATCH_TYPE],
-            CMD_SERVICE: user_input[CMD_SERVICE],
+            CMD_SERVICE: user_input.get(CMD_SERVICE, ""),
             CMD_REPLY_TEMPLATE: user_input.get(CMD_REPLY_TEMPLATE, ""),
             CMD_REPLY_TO: user_input[CMD_REPLY_TO],
         }
@@ -341,12 +345,15 @@ class HermesOptionsFlow(OptionsFlow):
         """Add a new command."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            try:
-                command = self._build_command(user_input, uuid.uuid4().hex)
-            except vol.Invalid:
-                errors[FIELD_AUTH_EXTRA] = "invalid_node_list"
+            if not command_does_something(user_input):
+                errors["base"] = "command_does_nothing"
             else:
-                return await self._save_commands([*self._commands(), command])
+                try:
+                    command = self._build_command(user_input, uuid.uuid4().hex)
+                except vol.Invalid:
+                    errors[FIELD_AUTH_EXTRA] = "invalid_node_list"
+                else:
+                    return await self._save_commands([*self._commands(), command])
 
         return self.async_show_form(
             step_id="add_command",
@@ -400,15 +407,18 @@ class HermesOptionsFlow(OptionsFlow):
 
         errors: dict[str, str] = {}
         if user_input is not None:
-            try:
-                updated = self._build_command(user_input, self._edit_id)
-            except vol.Invalid:
-                errors[FIELD_AUTH_EXTRA] = "invalid_node_list"
+            if not command_does_something(user_input):
+                errors["base"] = "command_does_nothing"
             else:
-                new_list = [
-                    updated if c[CMD_ID] == self._edit_id else c for c in commands
-                ]
-                return await self._save_commands(new_list)
+                try:
+                    updated = self._build_command(user_input, self._edit_id)
+                except vol.Invalid:
+                    errors[FIELD_AUTH_EXTRA] = "invalid_node_list"
+                else:
+                    new_list = [
+                        updated if c[CMD_ID] == self._edit_id else c for c in commands
+                    ]
+                    return await self._save_commands(new_list)
 
         return self.async_show_form(
             step_id="edit_command",

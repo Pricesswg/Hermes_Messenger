@@ -615,6 +615,11 @@ function renderForm(
   const entry =
     ctx.entries.find((e) => e.entry_id === ctx.selectedEntry) ?? ctx.entries[0];
   const dmGateway = entry?.mode === "direct_message";
+  // Same rule the backend enforces: a command must run something, answer, or
+  // both. A keyword that matches and does neither is indistinguishable from a
+  // broken one on the radio, and it still costs the sender a rate limit slot.
+  const doesNothing =
+    !(draft.service ?? "").trim() && !(draft.reply_template ?? "").trim();
   const bind =
     (key: keyof HermesCommand) =>
     (e: Event): void =>
@@ -784,8 +789,16 @@ function renderForm(
           `
         : ""}
 
+      ${doesNothing
+        ? html`<div class="note warn">${t("messages.doesNothing")}</div>`
+        : ""}
+
       <div class="actions">
-        <button class="btn primary" @click=${ctx.onSave}>
+        <button
+          class="btn primary"
+          ?disabled=${doesNothing}
+          @click=${ctx.onSave}
+        >
           ${t("common.save")}
         </button>
         <button class="btn" @click=${ctx.onCancel}>${t("common.cancel")}</button>

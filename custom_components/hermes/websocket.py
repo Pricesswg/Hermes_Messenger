@@ -22,6 +22,7 @@ from homeassistant.util import dt as dt_util
 
 from .actions import ACTIONS_BY_TYPE, DOMAIN_TO_TYPE, GENERIC_ACTIONS
 from .ordering import canonical_group, reorder, sort_into_groups
+from .matching import command_does_something
 from .meshtastic_api import (
     async_get_channels,
     channel_default_psk,
@@ -40,6 +41,7 @@ from .const import (
     CONF_AUTHORIZED_NODES,
     CONF_CHANNEL_INDEX,
     CONF_CHANNEL_RISK_ACK,
+    CONF_NODE_USERS,
     CONF_COMMANDS,
     CONF_GATEWAY_NODE_ID,
     CONF_CASE_SENSITIVE,
@@ -91,6 +93,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_preset_save)
     websocket_api.async_register_command(hass, ws_preset_remove)
     websocket_api.async_register_command(hass, ws_preset_send)
+    websocket_api.async_register_command(hass, ws_users_list)
     websocket_api.async_register_command(hass, ws_history_list)
     websocket_api.async_register_command(hass, ws_history_clear)
     websocket_api.async_register_command(hass, ws_channels_list)
@@ -115,6 +118,8 @@ def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
         "channel_index": options.get(
             CONF_CHANNEL_INDEX, entry.data.get(CONF_CHANNEL_INDEX)
         ),
+        # Identity, not permission: which person each node belongs to.
+        "node_users": options.get(CONF_NODE_USERS, {}) or {},
         "authorized_nodes": options.get(
             CONF_AUTHORIZED_NODES, entry.data.get(CONF_AUTHORIZED_NODES, [])
         ),
@@ -131,6 +136,9 @@ def _entry_payload(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
         "loaded": entry.entry_id in hass.data.get(DOMAIN, {}),
         "state": str(getattr(entry, "state", "")),
         "last_seen": _last_seen(hass, entry.entry_id),
+        # Distinct from last_seen: this moves for every event, including the
+        # ones discarded before they could be recorded anywhere.
+        "last_event": _last_event(hass, entry.entry_id),
         # Counted by the shared listener, so it is independent of this entry.
         "bus_events": hass.data.get(DATA_BUS_EVENTS, 0),
         # Python code only changes on a full restart. Reporting the running
@@ -231,6 +239,13 @@ def _last_seen(hass: HomeAssistant, entry_id: str) -> dict[str, Any] | None:
     return payload
 
 
+def _last_event(hass: HomeAssistant, entry_id: str) -> str | None:
+    """Diagnostics: when an event last reached this entry, in any shape."""
+    coordinator = hass.data.get(DOMAIN, {}).get(entry_id)
+    moment = getattr(coordinator, "last_event", None)
+    return moment.isoformat() if hasattr(moment, "isoformat") else None
+
+
 def _get_entry(hass: HomeAssistant, entry_id: str) -> Any | None:
     for entry in hass.config_entries.async_entries(DOMAIN):
         if entry.entry_id == entry_id:
@@ -265,6 +280,24 @@ async def ws_settings_update(hass: HomeAssistant, connection, msg: dict) -> None
     connection.send_result(msg["id"], settings)
 
 
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required("type"): "hermes/users/list"})
+@websocket_api.async_response
+async def ws_users_list(hass: HomeAssistant, connection, msg: dict) -> None:
+    """People a node can be pinned to.
+
+    Admin only, and deliberately just the id and the name: the card needs
+    enough to draw a picker and nothing more. System generated accounts are
+    left out because a node cannot belong to the Supervisor.
+    """
+    users = [
+        {"id": user.id, "name": user.name or user.id}
+        for user in await hass.auth.async_get_users()
+        if user.is_active and not user.system_generated
+    ]
+    connection.send_result(msg["id"], sorted(users, key=lambda u: u["name"].lower()))
+
+
 @websocket_api.websocket_command({vol.Required("type"): "hermes/entries/list"})
 @callback
 def ws_entries_list(hass: HomeAssistant, connection, msg: dict) -> None:
@@ -291,6 +324,7 @@ def ws_entry_update(hass: HomeAssistant, connection, msg: dict) -> None:
 
     allowed = {
         CONF_AUTHORIZED_NODES,
+        CONF_NODE_USERS,
         CONF_CASE_SENSITIVE,
         CONF_CHANNEL_INDEX,
         CONF_GATEWAY_NODE_ID,
@@ -385,6 +419,17 @@ def ws_command_save(hass: HomeAssistant, connection, msg: dict) -> None:
         return
 
     command = dict(msg["command"])
+    # Same rule the options flow applies. A command that neither runs anything
+    # nor answers looks identical to a broken one from the radio, and it still
+    # spends a slot of the sender's rate limit.
+    if not command_does_something(command):
+        connection.send_error(
+            msg["id"],
+            "command_does_nothing",
+            "A command must run a service, send a reply, or both",
+        )
+        return
+
     if not command.get(CMD_ID):
         command[CMD_ID] = uuid.uuid4().hex
 

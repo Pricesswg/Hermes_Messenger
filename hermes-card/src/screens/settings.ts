@@ -4,6 +4,7 @@ import type {
   HermesChannel,
   HermesEntry,
   HermesSettings,
+  HermesUser,
   NodeInfo,
   RadioConfig,
 } from "../types";
@@ -12,6 +13,8 @@ export interface SettingsCtx {
   settings: HermesSettings | null;
   entries: HermesEntry[];
   nodes: NodeInfo[];
+  /** People a node can be pinned to. Empty when the viewer is not an admin. */
+  users: HermesUser[];
   channels: HermesChannel[];
   firmware: string | null;
   nodesError: string | null;
@@ -53,6 +56,75 @@ export interface SettingsCtx {
  */
 function gatewayNodes(nodes: NodeInfo[]): NodeInfo[] {
   return nodes.filter((node) => node.source !== "mesh");
+}
+
+/**
+ * Who each authorized node belongs to.
+ *
+ * Only the authorized nodes are offered: pinning a person to a node that may
+ * not act would suggest the link grants something, and it grants nothing. The
+ * hint says plainly where the identity is trusted and where it is not, because
+ * a node number on a shared channel is a claim and a picker that looks like an
+ * account settings page invites the opposite belief.
+ */
+function renderNodeUsers(
+  ctx: SettingsCtx,
+  entry: HermesEntry,
+  value: (key: string, fallback: unknown) => unknown,
+  t: (k: string) => string
+): TemplateResult {
+  if (!ctx.users.length) return html``;
+
+  const authorized =
+    (value("authorized_nodes", entry.authorized_nodes) as number[]) ?? [];
+  if (!authorized.length) return html``;
+
+  const mapping =
+    (value("node_users", entry.node_users) as Record<string, string>) ?? {};
+
+  const nameOf = (node: number): string =>
+    ctx.nodes.find((n) => n.node_num === node)?.name ?? String(node);
+
+  return html`
+    <div class="field">
+      <label>${t("settings.nodeUsers")}</label>
+      <div class="rows">
+        ${authorized.map(
+          (node) => html`
+            <div class="row">
+              <span class="k">${nameOf(node)}</span>
+              <span class="v">
+                <select
+                  @change=${(e: Event) => {
+                    const chosen = (e.target as HTMLSelectElement).value;
+                    const next = { ...mapping };
+                    if (chosen) next[String(node)] = chosen;
+                    else delete next[String(node)];
+                    ctx.onEntryInput(entry.entry_id, "node_users", next);
+                  }}
+                >
+                  <option value="" ?selected=${!mapping[String(node)]}>
+                    ${t("settings.nodeUserNone")}
+                  </option>
+                  ${ctx.users.map(
+                    (user) => html`
+                      <option
+                        value=${user.id}
+                        ?selected=${mapping[String(node)] === user.id}
+                      >
+                        ${user.name}
+                      </option>
+                    `
+                  )}
+                </select>
+              </span>
+            </div>
+          `
+        )}
+      </div>
+      <span class="hint">${t("settings.nodeUsersHint")}</span>
+    </div>
+  `;
 }
 
 function nodeChecklist(
@@ -372,6 +444,8 @@ function renderEntry(
           )}
           <span class="hint">${t("settings.authorizedHint")}</span>
         </div>
+
+        ${renderNodeUsers(ctx, entry, value, t)}
 
         <div class="field">
           <label class="check">

@@ -152,6 +152,12 @@ export interface HermesLogEntry {
   outcome: string;
 }
 
+/** One Home Assistant person a node can be pinned to. */
+export interface HermesUser {
+  id: string;
+  name: string;
+}
+
 /** Global settings, stored by the integration outside any config entry. */
 export interface HermesSettings {
   openweather_api_key: string;
@@ -210,7 +216,11 @@ export interface HermesEntry {
   /** False when the integration is not running, so nothing is listening. */
   loaded: boolean;
   state: string;
+  /** Node number (as a string key) to the Home Assistant user it belongs to. */
+  node_users?: Record<string, string>;
   last_seen: HermesLastSeen | null;
+  /** When an event last reached this entry, including discarded ones. */
+  last_event?: string | null;
   /** Count of text messages per outcome, since Home Assistant started. */
   seen_counts: Record<string, number>;
   /** Mesh events seen on the bus by the shared listener, across all gateways. */

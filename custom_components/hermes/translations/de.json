@@ -98,7 +98,8 @@
     },
     "error": {
       "invalid_node_list": "Ungültige Node-ID-Liste. Verwende durch Kommas getrennte Ganzzahlen.",
-      "empty_whitelist": "Wähle mindestens einen autorisierten Node aus."
+      "empty_whitelist": "Wähle mindestens einen autorisierten Node aus.",
+      "command_does_nothing": "Ein Befehl muss einen Dienst ausfuehren, eine Antwort senden, oder beides."
     }
   },
   "selector": {

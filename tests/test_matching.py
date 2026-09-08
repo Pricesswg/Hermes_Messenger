@@ -39,6 +39,7 @@ _spec.loader.exec_module(matching)
 match_command = matching.match_command
 matches_keyword = matching.matches_keyword
 normalize = matching.normalize
+command_does_something = matching.command_does_something
 
 EXACT = [{"keyword": "status", "match_type": "exact"}]
 STARTS = [{"keyword": "temp", "match_type": "startswith"}]
@@ -190,3 +191,24 @@ def test_malformed_target_is_rejected():
     assert accepts_message({}, CH, 1, 999) is False
     assert accepts_message("nonsense", CH, 1, 999) is False
     assert accepts_message({}, DM, None, 999) is False
+
+
+# --- A command has to do something -----------------------------------------
+
+
+def test_a_command_with_a_service_does_something():
+    assert command_does_something({"service": "light.turn_off"})
+
+
+def test_a_command_with_only_a_reply_does_something():
+    """A status keyword exists to answer, and answering is doing something."""
+    assert command_does_something({"reply_template": "All good."})
+
+
+def test_a_command_with_neither_does_nothing():
+    """It would match, spend a rate limit slot, and look broken on the radio."""
+    assert not command_does_something({"keyword": "ping"})
+
+
+def test_whitespace_is_not_something():
+    assert not command_does_something({"service": "   ", "reply_template": "\n"})
