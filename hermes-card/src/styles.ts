@@ -947,10 +947,13 @@ export const hermesLayout = css`
     margin-top: 3px;
   }
 
+  /* Above the log, not below it. On a card the message list is a scroll box
+   * inside a page that also scrolls, so a field at the bottom means scrolling
+   * twice to answer a message you can already see. */
   .chat-send {
     display: flex;
     gap: 8px;
-    margin-top: 12px;
+    margin-bottom: 10px;
   }
 
   .chat-send input {

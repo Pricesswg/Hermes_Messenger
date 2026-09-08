@@ -119,26 +119,6 @@ export function renderChat(
         `
       : ""}
 
-    <div class="chat-log">
-      ${messages.length
-        ? messages.map(
-            (message) => html`
-              <div class="bubble ${message.outgoing ? "out" : "in"}">
-                ${!message.outgoing
-                  ? html`<div class="who">
-                      ${message.name || message.node || t("devices.unknown")}
-                    </div>`
-                  : ""}
-                <div class="text">${message.text}</div>
-                <div class="when">
-                  ${message.ts ? new Date(message.ts).toLocaleString() : ""}
-                </div>
-              </div>
-            `
-          )
-        : html`<div class="hint">${t("chat.emptyThread")}</div>`}
-    </div>
-
     <div class="chat-send">
       <input
         .value=${ctx.draft}
@@ -157,6 +137,26 @@ export function renderChat(
       >
         ${ctx.sending ? t("common.loading") : t("chat.send")}
       </button>
+    </div>
+
+    <div class="chat-log">
+      ${messages.length
+        ? [...messages].reverse().map(
+            (message) => html`
+              <div class="bubble ${message.outgoing ? "out" : "in"}">
+                ${!message.outgoing
+                  ? html`<div class="who">
+                      ${message.name || message.node || t("devices.unknown")}
+                    </div>`
+                  : ""}
+                <div class="text">${message.text}</div>
+                <div class="when">
+                  ${message.ts ? new Date(message.ts).toLocaleString() : ""}
+                </div>
+              </div>
+            `
+          )
+        : html`<div class="hint">${t("chat.emptyThread")}</div>`}
     </div>
 
     ${messages.length

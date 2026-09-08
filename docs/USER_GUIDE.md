@@ -265,7 +265,14 @@ style header, never cutting a character in half.
 
 The **Chat** tab shows the traffic itself, grouped into conversations: every
 channel on the radio at the top, whether or not anyone has written on one yet,
-and direct messages below. Pick one and reply from the box at the bottom.
+and direct messages below.
+
+Pick one and the box to write in is **directly under the channel buttons**,
+with the messages below it, newest first. That is the opposite of a phone
+messenger and it is deliberate: the message list is a scroll box inside a page
+that also scrolls, so a field at the bottom means scrolling twice to answer
+something already on screen. The message you are most likely to be replying to
+is the newest one, and it now sits right under the field you reply in.
 
 It covers every channel the gateway hears, not only the one commands arrive on,
 which is deliberately a different question from the **Log** tab. Log answers what

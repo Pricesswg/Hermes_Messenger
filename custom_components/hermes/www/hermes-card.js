@@ -936,10 +936,13 @@ function e(e,t,n,i){var s,a=arguments.length,o=a<3?t:null===i?i=Object.getOwnPro
     margin-top: 3px;
   }
 
+  /* Above the log, not below it. On a card the message list is a scroll box
+   * inside a page that also scrolls, so a field at the bottom means scrolling
+   * twice to answer a message you can already see. */
   .chat-send {
     display: flex;
     gap: 8px;
-    margin-top: 12px;
+    margin-bottom: 10px;
   }
 
   .chat-send input {
@@ -1311,20 +1314,6 @@ function e(e,t,n,i){var s,a=arguments.length,o=a<3?t:null===i?i=Object.getOwnPro
           </div>
         `:""}
 
-    <div class="chat-log">
-      ${o.length?o.map(e=>W`
-              <div class="bubble ${e.outgoing?"out":"in"}">
-                ${e.outgoing?"":W`<div class="who">
-                      ${e.name||e.node||t("devices.unknown")}
-                    </div>`}
-                <div class="text">${e.text}</div>
-                <div class="when">
-                  ${e.ts?new Date(e.ts).toLocaleString():""}
-                </div>
-              </div>
-            `):W`<div class="hint">${t("chat.emptyThread")}</div>`}
-    </div>
-
     <div class="chat-send">
       <input
         .value=${e.draft}
@@ -1339,6 +1328,20 @@ function e(e,t,n,i){var s,a=arguments.length,o=a<3?t:null===i?i=Object.getOwnPro
       >
         ${e.sending?t("common.loading"):t("chat.send")}
       </button>
+    </div>
+
+    <div class="chat-log">
+      ${o.length?[...o].reverse().map(e=>W`
+              <div class="bubble ${e.outgoing?"out":"in"}">
+                ${e.outgoing?"":W`<div class="who">
+                      ${e.name||e.node||t("devices.unknown")}
+                    </div>`}
+                <div class="text">${e.text}</div>
+                <div class="when">
+                  ${e.ts?new Date(e.ts).toLocaleString():""}
+                </div>
+              </div>
+            `):W`<div class="hint">${t("chat.emptyThread")}</div>`}
     </div>
 
     ${o.length?W`
@@ -3149,7 +3152,7 @@ function e(e,t,n,i){var s,a=arguments.length,o=a<3?t:null===i?i=Object.getOwnPro
     </div>
 
     <div class="hint">${t("stats.window")}</div>
-  `}const Mt="1.10.0";function Ht(e,t,n,i,s){if(!Ce(e))return W`<div class="empty">${s("status.noIntegration")}</div>`;const a=Ne(e),o=Le(e,"commands_executed",t),r=Le(e,"last_command",t),l=Le(e,"last_error",t),c=e=>e&&"unknown"!==e&&"unavailable"!==e?e:s("status.none");return W`
+  `}const Mt="1.11.0";function Ht(e,t,n,i,s){if(!Ce(e))return W`<div class="empty">${s("status.noIntegration")}</div>`;const a=Ne(e),o=Le(e,"commands_executed",t),r=Le(e,"last_command",t),l=Le(e,"last_error",t),c=e=>e&&"unknown"!==e&&"unavailable"!==e?e:s("status.none");return W`
     <h2 class="screen-title">
       ${s("status.title")}
       ${n?W`<span class="hint">${s("status.updatedAt")} ${n}</span>`:""}
