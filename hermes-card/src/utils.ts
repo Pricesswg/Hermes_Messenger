@@ -368,3 +368,50 @@ export function displayValue(state: HassEntityState): string {
   const unit = state.attributes?.unit_of_measurement;
   return unit ? `${state.state} ${unit}` : state.state;
 }
+
+/**
+ * Points from device trackers that are not Meshtastic nodes.
+ *
+ * A Garmin inReach reaches Home Assistant through its MapShare feed, an
+ * OwnTracks phone through MQTT, a Teltonika through Traccar, a LoRaWAN tag
+ * through TTN. All four arrive as a `device_tracker`, which is why Hermes
+ * reads that and speaks none of those protocols itself: the integrations that
+ * already do are better at it and are somebody else's to maintain.
+ */
+export function trackerNodes(
+  hass: HomeAssistant,
+  entityIds: string[]
+): MapNode[] {
+  const nodes: MapNode[] = [];
+  for (const entityId of entityIds ?? []) {
+    const state = hass.states[entityId];
+    if (!state) continue;
+
+    const attributes = state.attributes ?? {};
+    const latitude = attributes.latitude;
+    const longitude = attributes.longitude;
+
+    nodes.push({
+      nodeNum: null,
+      name: attributes.friendly_name ?? entityId,
+      latitude: typeof latitude === "number" ? latitude : null,
+      longitude: typeof longitude === "number" ? longitude : null,
+      // Trackers report a battery in percent under either name, depending on
+      // which integration wrote them.
+      battery:
+        typeof attributes.battery_level === "number"
+          ? attributes.battery_level
+          : typeof attributes.battery === "number"
+            ? attributes.battery
+            : null,
+      lastSeen: state.state,
+      // "Reachable" for a tracker means Home Assistant has a state for it that
+      // is not one of the two that mean it has none.
+      connected: !["unavailable", "unknown"].includes(state.state),
+      selected: true,
+      authorized: false,
+      kind: "tracker",
+    });
+  }
+  return nodes;
+}

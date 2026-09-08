@@ -793,6 +793,13 @@ export const hermesLayout = css`
     background: #4aa3ff;
   }
 
+  /* Square, matching the pin: the two kinds of point are told apart by shape
+   * as well as by colour. */
+  .dot.tracker {
+    background: #9b5de5;
+    border-radius: 3px;
+  }
+
   .checklist {
     display: flex;
     flex-direction: column;

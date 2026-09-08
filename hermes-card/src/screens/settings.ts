@@ -227,6 +227,48 @@ export function renderSettings(
         </div>
 
         <div class="field">
+          <label>${t("settings.extraTrackers")}</label>
+          ${(
+            (globalValue("extra_trackers") as string[]) ?? []
+          ).map(
+            (entityId, index) => html`
+              <div class="row">
+                <span class="k"><code>${entityId}</code></span>
+                <span class="v">
+                  <button
+                    class="btn danger"
+                    @click=${() => {
+                      const list = [
+                        ...((globalValue("extra_trackers") as string[]) ?? []),
+                      ];
+                      list.splice(index, 1);
+                      ctx.onGlobalInput("extra_trackers", list);
+                    }}
+                  >
+                    ${t("common.delete")}
+                  </button>
+                </span>
+              </div>
+            `
+          )}
+          <hermes-entity-picker
+            .hass=${ctx.hass}
+            .value=${""}
+            placeholder="device_tracker.phone"
+            @value-changed=${(e: CustomEvent) => {
+              const chosen = e.detail.value;
+              if (!chosen) return;
+              const list = [
+                ...((globalValue("extra_trackers") as string[]) ?? []),
+              ];
+              if (!list.includes(chosen)) list.push(chosen);
+              ctx.onGlobalInput("extra_trackers", list);
+            }}
+          ></hermes-entity-picker>
+          <span class="hint">${t("settings.extraTrackersHint")}</span>
+        </div>
+
+        <div class="field">
           <label>${t("settings.weatherEntity")}</label>
           <hermes-entity-picker
             .hass=${ctx.hass}

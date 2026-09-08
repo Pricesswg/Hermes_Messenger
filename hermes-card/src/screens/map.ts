@@ -6,8 +6,9 @@ import type {
   HomeAssistant,
   MapNode,
   NodeInfo,
+  TrailRoute,
 } from "../types";
-import { distanceKm, mapNodes } from "../utils";
+import { distanceKm, mapNodes, trackerNodes } from "../utils";
 
 export interface MapCtx {
   hass: HomeAssistant;
@@ -27,6 +28,10 @@ export interface MapCtx {
   onHeightChange: (mode: string) => void;
   onSourceChange: (source: string) => void;
   onCustomUrlChange: (url: string) => void;
+  /** Marked routes near the reference point, once they have been asked for. */
+  trails: TrailRoute[] | null;
+  trailsLoading: boolean;
+  onFindTrails: (latitude: number, longitude: number) => void;
 }
 
 const HEIGHT_MODES = ["auto", "mobile", "tablet", "desktop"];
@@ -84,6 +89,79 @@ function renderWeather(
 }
 const MAP_SOURCES = ["esri", "carto", "topo", "custom"];
 
+/**
+ * The marked routes near the reference point.
+ *
+ * Asked for with a button rather than fetched with the map: the query goes to
+ * Overpass, which runs on donated capacity, and a panel that looked it up on
+ * every render would be the kind of client that gets everyone blocked.
+ */
+function renderTrails(
+  ctx: MapCtx,
+  center: [number, number] | null,
+  t: (k: string) => string
+): TemplateResult {
+  const routes = ctx.trails;
+
+  return html`
+    <div class="section" style="margin-top:16px">
+      <div class="section-title">
+        ${t("map.trailsNear")}
+        <button
+          class="btn"
+          style="margin-left:8px"
+          ?disabled=${!center || ctx.trailsLoading}
+          @click=${() => center && ctx.onFindTrails(center[0], center[1])}
+        >
+          ${ctx.trailsLoading ? t("common.loading") : t("map.trailsFind")}
+        </button>
+      </div>
+
+      ${!center
+        ? html`<div class="empty">${t("map.trailsNoPoint")}</div>`
+        : routes === null
+          ? html`<div class="hint">${t("map.trailsHint")}</div>`
+          : routes.length === 0
+            ? html`<div class="empty">${t("map.trailsNone")}</div>`
+            : html`
+                <div class="rows">
+                  ${routes.map(
+                    (route) => html`
+                      <div class="row">
+                        <span class="k">
+                          <b>${route.name || route.ref || route.id}</b>
+                          ${route.network
+                            ? html`<span class="used">
+                                ${t(`map.network.${route.network}`)}
+                              </span>`
+                            : ""}
+                          ${route.from || route.to
+                            ? html`<br /><span class="hint">
+                                  ${route.from} → ${route.to}
+                                </span>`
+                            : ""}
+                        </span>
+                        <span class="v">
+                          ${route.distance ? `${route.distance} km · ` : ""}
+                          <a
+                            href=${route.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            >OSM</a
+                          >
+                        </span>
+                      </div>
+                    `
+                  )}
+                </div>
+                <div class="hint" style="margin-top:6px">
+                  ${t("map.trailsSource")}
+                </div>
+              `}
+    </div>
+  `;
+}
+
 /** Centre of the radius circle: the first shown node that has a position. */
 function referencePoint(nodes: MapNode[]): [number, number] | null {
   const anchor =
@@ -99,13 +177,19 @@ export function renderMap(
   t: (k: string) => string
 ): TemplateResult {
   const selected = ctx.settings?.map_nodes ?? [];
-  const allNodes = mapNodes(
+  const allNodes: MapNode[] = mapNodes(
     ctx.hass,
     selected,
     ctx.showAll,
     ctx.settings?.reachable_minutes ?? 120,
     ctx.authorized,
     ctx.meshNodes
+  );
+
+  // Trackers that are not mesh nodes, appended rather than merged: they have
+  // no node number, so nothing downstream can confuse one for the other.
+  allNodes.push(
+    ...trackerNodes(ctx.hass, ctx.settings?.extra_trackers ?? [])
   );
 
   const center = referencePoint(allNodes);
@@ -240,6 +324,9 @@ export function renderMap(
       <span class="dot on"></span>${t("map.connected")}
       <span class="dot off"></span>${t("map.notConnected")}
       <span class="dot relay"></span>${t("map.relay")}
+      ${(ctx.settings?.extra_trackers ?? []).length
+        ? html`<span class="dot tracker"></span>${t("map.tracker")}`
+        : ""}
     </div>
 
     ${!selected.length && !ctx.showAll
@@ -265,6 +352,8 @@ export function renderMap(
               .customUrl=${ctx.settings?.map_custom_url ?? ""}
             ></hermes-map>
           `}
+
+    ${renderTrails(ctx, center, t)}
 
     ${nodes.length
       ? html`

@@ -25,6 +25,7 @@ from .ordering import canonical_group, reorder, sort_into_groups
 from .hike_archive import hike_gpx
 from .matching import command_does_something
 from .panel import async_apply_panel
+from .trails import async_nearby_routes
 from .meshtastic_api import (
     async_get_channels,
     channel_default_psk,
@@ -96,6 +97,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_preset_remove)
     websocket_api.async_register_command(hass, ws_preset_send)
     websocket_api.async_register_command(hass, ws_users_list)
+    websocket_api.async_register_command(hass, ws_trails_near)
     websocket_api.async_register_command(hass, ws_hikes_list)
     websocket_api.async_register_command(hass, ws_hike_get)
     websocket_api.async_register_command(hass, ws_hike_gpx)
@@ -673,6 +675,37 @@ async def ws_preset_send(hass: HomeAssistant, connection, msg: dict) -> None:
 
 
 # --- Message log -----------------------------------------------------------
+
+
+# Per run, not persisted: an hour of validity outlives nothing worth writing to
+# disk, and a cache that survives a restart would answer from before an edit.
+_TRAILS_CACHE: dict[str, Any] = {}
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hermes/trails/near",
+        vol.Required("latitude"): vol.Coerce(float),
+        vol.Required("longitude"): vol.Coerce(float),
+        vol.Optional("radius_m", default=3000): vol.Coerce(int),
+    }
+)
+@websocket_api.async_response
+async def ws_trails_near(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Marked hiking routes passing near a point.
+
+    Only ever in response to someone pressing the button: Overpass runs on
+    donated capacity, and a card that queried it on every render would be the
+    kind of client that gets the whole integration blocked.
+    """
+    routes = await async_nearby_routes(
+        hass,
+        msg["latitude"],
+        msg["longitude"],
+        msg.get("radius_m", 3000),
+        cache=_TRAILS_CACHE,
+    )
+    connection.send_result(msg["id"], routes)
 
 
 @websocket_api.websocket_command({vol.Required("type"): "hermes/hikes/list"})

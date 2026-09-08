@@ -9,6 +9,7 @@ import type {
   HermesHike,
   HermesLogEntry,
   HermesUser,
+  TrailRoute,
   HermesPreset,
   HermesEntry,
   HermesSettings,
@@ -120,6 +121,21 @@ export function sendPreset(
 
 export function fetchHistory(hass: HomeAssistant): Promise<HermesLogEntry[]> {
   return hass.callWS<HermesLogEntry[]>({ type: "hermes/history/list" });
+}
+
+/** Marked hiking routes near a point. Asked for, never polled. */
+export function fetchNearbyTrails(
+  hass: HomeAssistant,
+  latitude: number,
+  longitude: number,
+  radiusM = 3000
+): Promise<TrailRoute[]> {
+  return hass.callWS<TrailRoute[]>({
+    type: "hermes/trails/near",
+    latitude,
+    longitude,
+    radius_m: radiusM,
+  });
 }
 
 /** Archived walks, without their tracks. */

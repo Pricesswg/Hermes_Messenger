@@ -190,6 +190,18 @@ export class HermesMap extends LitElement {
         background: #4aa3ff;
         box-shadow: 0 0 0 3px rgba(74, 163, 255, 0.30);
       }
+      /* Anything that is not a Meshtastic node: a phone, an MQTT tracker, a
+       * satellite communicator's feed. A square, not a circle, so the two
+       * kinds are told apart without relying on colour alone. */
+      .pin div.tracker {
+        background: #9b5de5;
+        border-radius: 4px;
+        box-shadow: 0 0 0 3px rgba(155, 93, 229, 0.3);
+      }
+      .pin div.tracker.off {
+        background: var(--text-muted);
+        box-shadow: 0 0 0 3px rgba(128, 128, 128, 0.25);
+      }
       /* A halo was not enough: over a busy map the text still landed on tiles
        * and other labels. An opaque chip on its own stacking level reads in
        * every case, and a long name is cut rather than covering a neighbour. */
@@ -592,11 +604,19 @@ export class HermesMap extends LitElement {
       const px = sizes[this.pinSize] ?? sizes.medium;
       // Blue marks a node that cannot send commands. Among the ones that can,
       // green and yellow say whether it was heard recently.
-      const kind = !node.authorized
-        ? "relay"
-        : node.connected
-          ? "on"
-          : "off";
+      // A tracker that is not a mesh node gets its own colour. Reusing the
+      // relay blue would say "carries traffic but may not send commands",
+      // which about a phone is simply untrue.
+      const kind =
+        node.kind === "tracker"
+          ? node.connected
+            ? "tracker"
+            : "tracker off"
+          : !node.authorized
+            ? "relay"
+            : node.connected
+              ? "on"
+              : "off";
       const tag = this.labels
         ? `<span class="tag">${node.name}</span>`
         : "";

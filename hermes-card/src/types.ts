@@ -186,6 +186,20 @@ export interface HermesHike {
   truncated?: boolean;
 }
 
+/** A marked hiking route passing near a point, from OpenStreetMap. */
+export interface TrailRoute {
+  id: number;
+  name: string;
+  ref: string;
+  /** lwn, rwn, nwn or iwn: local, regional, national, international. */
+  network: string;
+  from: string;
+  to: string;
+  distance: string;
+  symbol: string;
+  url: string;
+}
+
 /** One Home Assistant person a node can be pinned to. */
 export interface HermesUser {
   id: string;
@@ -211,6 +225,8 @@ export interface HermesSettings {
   map_custom_url: string;
   /** Log rows, and messages per conversation, that Hermes keeps. */
   log_max_entries: number;
+  /** Other device_tracker entities to draw on the map. */
+  extra_trackers: string[];
   /** Show the card as a page in the Home Assistant sidebar. */
   sidebar_panel: boolean;
   /** Home Assistant weather entity read on the Map tab. */
@@ -342,6 +358,13 @@ export interface MapNode {
   selected: boolean;
   /** True when the node may send commands, so a relay stands out from a peer. */
   authorized: boolean;
+  /**
+   * Where this point came from. "mesh" is a Meshtastic node; "tracker" is any
+   * other device_tracker the user added. They get their own pin colour rather
+   * than borrowing one: a phone is not an unauthorized relay, and saying so
+   * with the relay colour would be a lie told in a legend.
+   */
+  kind?: "mesh" | "tracker";
 }
 
 /** A Meshtastic node as seen through the Home Assistant device registry. */

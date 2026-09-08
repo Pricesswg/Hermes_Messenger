@@ -121,6 +121,25 @@ the marked routes so a pin has a path next to it, and **Rain radar**, which
 says whether the weather is arriving on the person or going round them. Neither
 needs a key. A weather entity set in Settings adds the conditions above the map.
 
+## Trackers that are not Meshtastic nodes
+
+Everything here is written against a `device_tracker`, not against Meshtastic.
+Point `device_tracker.hiker_node` at any tracker Home Assistant has and the
+package works unchanged: an OwnTracks phone over MQTT, a Teltonika through
+Traccar, a LoRaWAN tag through The Things Network, a Garmin inReach through the
+MapShare feed its own custom integration polls.
+
+Garmin is worth a note because it comes up often: inReach devices do **not**
+speak MQTT. They go over Iridium into Garmin's own cloud, and the way into Home
+Assistant is the MapShare KML feed, polled by a custom integration, or Garmin's
+REST feed if you hold a professional account. Either way it lands as a
+`device_tracker`, which is all this package asks for.
+
+The one thing that will not be equivalent is the two stage dead man switch: the
+question goes out over the mesh with `hermes.send_direct`, so a tracker that is
+not a node has no way to answer `ok`. For those, drop the check and let the
+standing still alarm reach home directly.
+
 ## What it cannot do
 
 Position updates arrive between tens of seconds and several minutes apart: EU868

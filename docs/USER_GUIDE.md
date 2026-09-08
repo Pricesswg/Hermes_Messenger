@@ -350,6 +350,34 @@ scale; there is no sharper one to fetch.
 They stay greyed out until you put a key in Settings, and the button says so
 when you hover it.
 
+### Marked routes near here
+
+Under the map, **Look them up** asks OpenStreetMap which marked hiking routes
+pass near the reference point, and lists them widest network first: an
+international path before a local loop, because the long distance one carries
+the name the other person will recognise. Each row shows where the route runs
+from and to, and links to it on OpenStreetMap.
+
+It runs only when you press the button. The query goes to Overpass, a public
+service on donated capacity, so Hermes asks once, caches the answer for an
+hour, and identifies itself when it does. Nothing polls it.
+
+If Overpass is slow or down the panel says it found nothing rather than
+breaking the map, which means an empty list is not proof there are no paths.
+
+### Other trackers on the map
+
+Settings takes a list of **other trackers**: any `device_tracker` Home
+Assistant already has, drawn beside the mesh nodes as purple squares so the two
+kinds are never confused.
+
+This is how anything that is not a Meshtastic node gets onto the map. A phone,
+an OwnTracks or Teltonika tracker arriving over MQTT, a LoRaWAN tag through The
+Things Network, a Garmin inReach through its MapShare feed: each has an
+integration that already knows how to talk to it, and all of them end up as a
+`device_tracker`. Hermes reads that, and therefore has to speak none of those
+protocols itself.
+
 ### The weather where they are
 
 Setting a **weather entity** in Settings puts a line above the map with what

@@ -116,6 +116,11 @@ SETTING_SIDEBAR = "sidebar_panel"
 # integration does the forecasting; Hermes only shows what it says, next
 # to the nodes it applies to.
 SETTING_WEATHER_ENTITY = "weather_entity"
+# Trackers that are not Meshtastic nodes, drawn on the map beside them:
+# a phone, an MQTT tracker, a Garmin MapShare feed, anything Home
+# Assistant already exposes as a device_tracker. Hermes reads entities
+# rather than speaking any of those protocols itself.
+SETTING_EXTRA_TRACKERS = "extra_trackers"
 # Defaults of that setting, and the bounds the card and the store hold it to.
 HISTORY_MAX_ENTRIES = 200
 CHAT_MAX_PER_THREAD = 200
@@ -136,6 +141,7 @@ DEFAULT_SETTINGS = {
     SETTING_LOG_MAX: HISTORY_MAX_ENTRIES,
     SETTING_SIDEBAR: False,
     SETTING_WEATHER_ENTITY: "",
+    SETTING_EXTRA_TRACKERS: [],
 }
 
 # Quick send presets, the equivalent of the canned messages in the Meshtastic

@@ -26,6 +26,7 @@ import type {
   HermesHike,
   HermesLogEntry,
   HermesPreset,
+  TrailRoute,
   HermesUser,
   HermesSettings,
   HomeAssistant,
@@ -48,6 +49,7 @@ import {
   fetchHike,
   fetchHikeGpx,
   fetchHikes,
+  fetchNearbyTrails,
   fetchNodes,
   fetchUsers,
   deleteHike,
@@ -126,6 +128,9 @@ export class HermesCard extends LitElement {
   @state() private _hikes: HermesHike[] = [];
   @state() private _hike: HermesHike | null = null;
   @state() private _hikesError: string | null = null;
+  /** null until the routes have been asked for at least once. */
+  @state() private _trails: TrailRoute[] | null = null;
+  @state() private _trailsLoading = false;
   @state() private _logFilter = "";
   @state() private _testText = "";
   @state() private _sendingTest = false;
@@ -671,6 +676,25 @@ export class HermesCard extends LitElement {
     this._settings = await updateSettings(this.hass, { map_height: mode });
   };
 
+  private _onFindTrails = async (
+    latitude: number,
+    longitude: number
+  ): Promise<void> => {
+    if (!this.hass || this._trailsLoading) return;
+    this._trailsLoading = true;
+    try {
+      this._trails = await fetchNearbyTrails(this.hass, latitude, longitude);
+    } catch (err) {
+      // The backend already answers with an empty list when Overpass is down,
+      // so reaching here means the call itself failed. An empty list says
+      // "nothing found", which would be the wrong thing to show.
+      console.warn("Hermes: could not look up nearby trails", err);
+      this._trails = [];
+    } finally {
+      this._trailsLoading = false;
+    }
+  };
+
   private _onHikesRefresh = async (): Promise<void> => {
     if (!this.hass) return;
     try {
@@ -929,6 +953,9 @@ export class HermesCard extends LitElement {
             onHeightChange: this._onHeightChange,
             onSourceChange: this._onSourceChange,
             onCustomUrlChange: this._onCustomUrlChange,
+            trails: this._trails,
+            trailsLoading: this._trailsLoading,
+            onFindTrails: this._onFindTrails,
           },
           t
         );
