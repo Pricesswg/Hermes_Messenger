@@ -8,6 +8,8 @@ export interface LogCtx {
   entries_meta: { title: string; counts: Record<string, number> }[];
   /** "", "in" or "out". */
   filter: string;
+  /** How many rows are kept before the oldest are dropped. */
+  retention: number;
   updatedAt: string;
   onFilter: (value: string) => void;
   onClear: () => void;
@@ -46,6 +48,13 @@ export function renderLog(
         </div>
       `
     )}
+
+    <div class="hint" style="margin:6px 0 4px">
+      ${t("log.kept")} ${ctx.entries.length} / ${ctx.retention}
+    </div>
+    ${ctx.entries.length >= ctx.retention
+      ? html`<div class="note warn">${t("log.atCap")}</div>`
+      : ""}
 
     <div class="map-controls">
       ${["", "in", "out"].map(

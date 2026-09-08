@@ -341,6 +341,13 @@ class HermesCoordinator:
         sender = data.get("from")
         text = data.get("message") or ""
         if sender is None or not text:
+            # The last branch that dropped an accepted message in silence. An
+            # empty body or a missing sender is a real thing on the mesh, and
+            # leaving no trace of it makes the log disagree with what the base
+            # integration shows for no visible reason.
+            self._count("empty")
+            self._log("in", text, sender, "empty")
+            self._notify_sensors()
             return
 
         # Match BEFORE authorization: no side effect happens before the check,

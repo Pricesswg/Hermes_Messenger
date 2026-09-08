@@ -891,3 +891,47 @@ async def test_a_command_can_exist_only_to_answer(hass, lights, sent):
     assert not lights
     assert sent[0].data["text"] == "All good."
     assert coordinator.seen_counts.get("accepted") == 1
+
+
+async def test_a_message_with_no_text_still_leaves_a_row(hass, lights, sent):
+    """The last branch that dropped an accepted message without a trace."""
+    coordinator = await build(hass)
+    await deliver(hass, coordinator, message(message=""))
+
+    store = hass.data[DATA_STORE]
+    assert [entry["outcome"] for entry in store.history] == ["empty"]
+    assert coordinator.seen_counts.get("empty") == 1
+
+
+async def test_the_log_keeps_what_the_setting_says(hass, lights, sent):
+    """A busy public channel evicts the oldest rows, and that is the whole bug.
+
+    Rows leaving in silence is indistinguishable from messages that were never
+    received, which is exactly how it looked next to the base integration's own
+    view of the same traffic.
+    """
+    await build(hass)
+    store = hass.data[DATA_STORE]
+    store.settings["log_max_entries"] = 50
+
+    for index in range(60):
+        store.async_log("in", f"message {index}", FRIEND, "no_match")
+
+    assert len(store.history) == 50
+    # Newest first, so the survivors are the last ones in.
+    assert store.history[0]["text"] == "message 59"
+
+
+async def test_an_absurd_retention_is_clamped_not_obeyed(hass, lights, sent):
+    """The store is a JSON file: an unbounded log would be a way to fill a disk."""
+    await build(hass)
+    store = hass.data[DATA_STORE]
+
+    store.settings["log_max_entries"] = 10_000_000
+    assert store.retention == 5000
+
+    store.settings["log_max_entries"] = 1
+    assert store.retention == 50
+
+    store.settings["log_max_entries"] = "not a number"
+    assert store.retention == 200

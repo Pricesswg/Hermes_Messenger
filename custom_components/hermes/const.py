@@ -105,6 +105,15 @@ SETTING_MAP_LABELS = "map_labels"
 SETTING_MAP_SOURCE = "map_source"
 # XYZ template used when the source is "custom". Validated in the card.
 SETTING_MAP_CUSTOM_URL = "map_custom_url"
+# How many log rows and how many messages per conversation Hermes keeps. The
+# default suits a quiet private channel; a busy public one fills it in hours,
+# and the oldest rows leave in silence, which reads as messages never received.
+SETTING_LOG_MAX = "log_max_entries"
+# Defaults of that setting, and the bounds the card and the store hold it to.
+HISTORY_MAX_ENTRIES = 200
+CHAT_MAX_PER_THREAD = 200
+LOG_MAX_FLOOR = 50
+LOG_MAX_CEILING = 5000
 
 DEFAULT_SETTINGS = {
     SETTING_OPENWEATHER_KEY: "",
@@ -117,6 +126,7 @@ DEFAULT_SETTINGS = {
     SETTING_MAP_LABELS: False,
     SETTING_MAP_SOURCE: "esri",
     SETTING_MAP_CUSTOM_URL: "",
+    SETTING_LOG_MAX: HISTORY_MAX_ENTRIES,
 }
 
 # Quick send presets, the equivalent of the canned messages in the Meshtastic
@@ -134,9 +144,7 @@ STORE_COUNTERS = "counters"
 # Hermes decide", this one is the traffic itself, which is a different question
 # and a different lifetime.
 STORE_CHATS = "chats"
-CHAT_MAX_PER_THREAD = 200
 CHAT_MAX_THREADS = 40
-HISTORY_MAX_ENTRIES = 200
 # Debounce writes: a busy channel would otherwise hit the disk per message.
 HISTORY_SAVE_DELAY = 15
 

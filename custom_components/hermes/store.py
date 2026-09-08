@@ -15,10 +15,12 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    CHAT_MAX_PER_THREAD,
     CHAT_MAX_THREADS,
     DEFAULT_SETTINGS,
     HISTORY_MAX_ENTRIES,
+    LOG_MAX_CEILING,
+    LOG_MAX_FLOOR,
+    SETTING_LOG_MAX,
     HISTORY_SAVE_DELAY,
     STORAGE_KEY,
     STORAGE_VERSION,
@@ -108,6 +110,21 @@ class HermesStore:
         self.presets = [p for p in self.presets if p.get("id") != preset_id]
         await self._async_save()
 
+    @property
+    def retention(self) -> int:
+        """How many log rows, and messages per conversation, to keep.
+
+        A setting rather than a constant because the right number depends on
+        the channel. On a quiet private channel the default holds days; on a
+        busy public one it holds hours, and rows leaving in silence is
+        indistinguishable from messages that were never received.
+        """
+        try:
+            wanted = int(self.settings.get(SETTING_LOG_MAX, HISTORY_MAX_ENTRIES))
+        except (TypeError, ValueError):
+            return HISTORY_MAX_ENTRIES
+        return max(LOG_MAX_FLOOR, min(LOG_MAX_CEILING, wanted))
+
     # --- Message log -------------------------------------------------------
 
     def async_log(
@@ -137,7 +154,7 @@ class HermesStore:
                 "user": user,
             },
         )
-        del self.history[HISTORY_MAX_ENTRIES:]
+        del self.history[self.retention :]
         self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
 
     # --- Per entry counters ------------------------------------------------
@@ -199,7 +216,7 @@ class HermesStore:
                 "outgoing": outgoing,
             }
         )
-        del messages[:-CHAT_MAX_PER_THREAD]
+        del messages[: -self.retention]
 
         if len(self.chats) > CHAT_MAX_THREADS:
             quietest = min(

@@ -223,6 +223,23 @@ export function renderSettings(
         </div>
 
         <div class="field">
+          <label>${t("settings.logMax")}</label>
+          <input
+            type="number"
+            min="50"
+            max="5000"
+            step="50"
+            .value=${String(globalValue("log_max_entries") ?? 200)}
+            @input=${(e: Event) =>
+              ctx.onGlobalInput(
+                "log_max_entries",
+                Number((e.target as HTMLInputElement).value)
+              )}
+          />
+          <span class="hint">${t("settings.logMaxHint")}</span>
+        </div>
+
+        <div class="field">
           <label>${t("settings.reachable")}</label>
           <input
             type="number"

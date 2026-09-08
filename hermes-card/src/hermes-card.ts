@@ -800,6 +800,7 @@ export class HermesCard extends LitElement {
         return renderLog(
           {
             entries: this._history,
+            retention: this._settings?.log_max_entries ?? 200,
             entries_meta: this._entries.map((e) => ({
               title: e.title,
               counts: e.seen_counts ?? {},

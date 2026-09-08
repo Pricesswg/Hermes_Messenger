@@ -175,6 +175,8 @@ export interface HermesSettings {
   map_source: string;
   /** XYZ template used when map_source is "custom". */
   map_custom_url: string;
+  /** Log rows, and messages per conversation, that Hermes keeps. */
+  log_max_entries: number;
 }
 
 /** One configured command, as stored in the config entry options. */

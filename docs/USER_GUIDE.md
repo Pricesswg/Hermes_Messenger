@@ -330,6 +330,25 @@ it.
 
 ---
 
+## When the log disagrees with the Meshtastic integration
+
+Hermes keeps its log and its conversations in Home Assistant storage, capped:
+**Messages kept** in Settings decides how many rows, and how many messages per
+conversation, survive before the oldest are dropped.
+
+The default of 200 is comfortable on a quiet private channel and small on a
+busy public one, where it can hold only a few hours. That is worth knowing
+because of how it looks from the outside: the Meshtastic integration keeps its
+own history in the Home Assistant recorder, which holds days, so the same
+traffic seen through the two ends up different and the older messages appear to
+have been missed rather than dropped.
+
+The Log tab now says how many rows it is holding out of the limit, and warns
+when it is full. If it sits exactly at the limit, nothing was missed: raise the
+number and the window widens.
+
+---
+
 ## Who a node belongs to
 
 In **Settings**, under the authorized nodes of a gateway, each node can be
