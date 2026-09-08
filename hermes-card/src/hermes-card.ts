@@ -11,6 +11,7 @@ import { renderMap } from "./screens/map";
 import { renderMessages } from "./screens/messages";
 import { renderSecurity } from "./screens/security";
 import { renderSettings } from "./screens/settings";
+import { renderHikes } from "./screens/hikes";
 import { renderStatistics } from "./screens/statistics";
 import { renderStatus, renderStatusSummary } from "./screens/status";
 import type {
@@ -21,6 +22,7 @@ import type {
   HermesChannel,
   HermesCommand,
   HermesEntry,
+  HermesHike,
   HermesLogEntry,
   HermesPreset,
   HermesUser,
@@ -42,8 +44,12 @@ import {
   fetchRadioInfo,
   fetchEntries,
   fetchHistory,
+  fetchHike,
+  fetchHikeGpx,
+  fetchHikes,
   fetchNodes,
   fetchUsers,
+  deleteHike,
   fetchPresets,
   fetchSettings,
   removeCommand,
@@ -63,6 +69,7 @@ const TABS: TabId[] = [
   "chat",
   "log",
   "statistics",
+  "hikes",
   "devices",
   "map",
   "messages",
@@ -115,6 +122,9 @@ export class HermesCard extends LitElement {
   @state() private _history: HermesLogEntry[] = [];
   /** People a node can be pinned to. Empty for a non admin, which is fine. */
   @state() private _users: HermesUser[] = [];
+  @state() private _hikes: HermesHike[] = [];
+  @state() private _hike: HermesHike | null = null;
+  @state() private _hikesError: string | null = null;
   @state() private _logFilter = "";
   @state() private _testText = "";
   @state() private _sendingTest = false;
@@ -660,6 +670,56 @@ export class HermesCard extends LitElement {
     this._settings = await updateSettings(this.hass, { map_height: mode });
   };
 
+  private _onHikesRefresh = async (): Promise<void> => {
+    if (!this.hass) return;
+    try {
+      this._hikes = await fetchHikes(this.hass);
+      this._hikesError = null;
+    } catch (err) {
+      this._hikesError = String((err as any)?.message ?? err);
+    }
+  };
+
+  private _onHikeOpen = async (hikeId: string): Promise<void> => {
+    if (!this.hass) return;
+    try {
+      this._hike = await fetchHike(this.hass, hikeId);
+      this._hikesError = null;
+    } catch (err) {
+      this._hikesError = String((err as any)?.message ?? err);
+    }
+  };
+
+  private _onHikeExport = async (hikeId: string): Promise<void> => {
+    if (!this.hass) return;
+    try {
+      const { name, gpx } = await fetchHikeGpx(this.hass, hikeId);
+      // A blob and a click: the browser saves it, nothing is uploaded, and the
+      // document never has to survive a round trip through a URL.
+      const url = URL.createObjectURL(
+        new Blob([gpx], { type: "application/gpx+xml" })
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${name.replace(/[^\w.-]+/g, "_")}.gpx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      this._hikesError = String((err as any)?.message ?? err);
+    }
+  };
+
+  private _onHikeDelete = async (hikeId: string): Promise<void> => {
+    if (!this.hass) return;
+    try {
+      await deleteHike(this.hass, hikeId);
+      this._hike = null;
+      await this._onHikesRefresh();
+    } catch (err) {
+      this._hikesError = String((err as any)?.message ?? err);
+    }
+  };
+
   private _onSourceChange = async (source: string): Promise<void> => {
     if (!this.hass) return;
     this._settings = await updateSettings(this.hass, { map_source: source });
@@ -764,6 +824,7 @@ export class HermesCard extends LitElement {
   // --- Rendering ---------------------------------------------------------
 
   private _select(tab: TabId): void {
+    if (tab === "hikes") void this._onHikesRefresh();
     this._tab = tab;
     // Every tab shows backend data by now, so entering one always refreshes.
     // Status and Log used to be excluded, which meant the two monitoring tabs
@@ -796,6 +857,23 @@ export class HermesCard extends LitElement {
             onDraft: this._onChatDraft,
             onSend: this._onChatSend,
             onClear: this._onChatClear,
+          },
+          t
+        );
+      case "hikes":
+        return renderHikes(
+          {
+            hikes: this._hikes,
+            open: this._hike,
+            loading: false,
+            error: this._hikesError,
+            onOpen: this._onHikeOpen,
+            onClose: () => {
+              this._hike = null;
+            },
+            onExport: this._onHikeExport,
+            onDelete: this._onHikeDelete,
+            onRefresh: this._onHikesRefresh,
           },
           t
         );

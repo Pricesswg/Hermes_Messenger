@@ -42,3 +42,34 @@ send_direct:
       selector:
         text:
           multiline: true
+
+archive_hike:
+  fields:
+    entity_id:
+      required: true
+      example: device_tracker.hiker_node
+      selector:
+        entity:
+          domain: device_tracker
+    started:
+      required: true
+      selector:
+        datetime:
+    name:
+      required: false
+      example: Rifugio Pontese
+      selector:
+        text:
+
+record_hike_event:
+  fields:
+    title:
+      required: true
+      example: Node out of contact
+      selector:
+        text:
+    message:
+      required: false
+      selector:
+        text:
+          multiline: true

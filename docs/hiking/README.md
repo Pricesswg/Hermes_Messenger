@@ -6,7 +6,7 @@ walker is by definition the person who might have no phone signal, so no alarm
 here is ever sent to them.
 
 Everything lives in [`hermes_hiking.yaml`](hermes_hiking.yaml): helpers, three
-derived sensors, two binary sensors and nine automations. Hermes does not
+derived sensors, two binary sensors and ten automations. Hermes does not
 appear in it except twice, where it carries a question to the node and where
 the answer comes back. The watching itself is Home Assistant's job, done with
 entities and automations rather than integration code, so you can read every
@@ -88,6 +88,31 @@ and never actually arrived.
 and different words. The mesh dropping while the walker is perfectly fine is
 common, and being told "no movement" when the truth is "no signal" points help
 at the wrong question.
+
+## After the walk
+
+Switching hike mode off archives it. The package calls `hermes.archive_hike`,
+which reads the track back out of the Home Assistant recorder and hands it to
+Hermes, where it is kept with its summary and with any alarms that fired.
+
+That step is what decides whether the walk still exists in September. **The
+recorder purges after ten days**, so a walk that was never archived is a walk
+that is gone, whatever the Hikes tab is asked afterwards.
+
+The **Hikes** tab in the card lists what has been archived. Opening one shows
+the distance, how long it took and how much of that was moving, the stops, the
+climb, how far out it went, and the alarms that fired during it with the values
+that were true at the time. **Export GPX** saves the track for any map tool.
+
+Some of those numbers are computed with a noise floor rather than from the raw
+fixes, and that is deliberate. A receiver sitting under trees for an hour wanders
+by tens of metres between fixes; counting every wobble would report a walk that
+covered a kilometre while standing still, and an altitude that climbed a
+mountain. In the summary, movement under 30 m and height changes under 8 m
+are treated as the same place (the standing-still alarm uses its own, wider,
+50 m, because deciding someone has stopped deserves more room than measuring
+how far they walked). A walk with no altitude reported says zero climb rather than
+inventing one.
 
 ## What it cannot do
 

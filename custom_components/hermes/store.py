@@ -26,6 +26,9 @@ from .const import (
     STORAGE_VERSION,
     STORE_CHATS,
     STORE_COUNTERS,
+    HIKES_MAX,
+    HIKE_MAX_POINTS,
+    STORE_HIKES,
     STORE_HISTORY,
     STORE_PRESETS,
 )
@@ -40,6 +43,11 @@ class HermesStore:
         self.settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
         self.presets: list[dict[str, Any]] = []
         self.history: list[dict[str, Any]] = []
+        self.hikes: list[dict[str, Any]] = []
+        # Alarms raised since the current walk began, attached to it when it is
+        # archived. Deliberately not persisted: an alarm that outlives a restart
+        # and then gets filed under the next walk would be a lie about that walk.
+        self.hike_events: list[dict[str, Any]] = []
         self.counters: dict[str, dict[str, Any]] = {}
         # thread key -> messages, newest last so a view reads top to bottom.
         self.chats: dict[str, list[dict[str, Any]]] = {}
@@ -55,6 +63,7 @@ class HermesStore:
         self.settings = {**DEFAULT_SETTINGS, **stored_settings}
         self.presets = list(data.get(STORE_PRESETS) or [])
         self.history = list(data.get(STORE_HISTORY) or [])
+        self.hikes = list(data.get(STORE_HIKES) or [])
         self.counters = dict(data.get(STORE_COUNTERS) or {})
         self.chats = {
             key: list(value)
@@ -66,6 +75,7 @@ class HermesStore:
             **self.settings,
             STORE_PRESETS: self.presets,
             STORE_HISTORY: self.history,
+            STORE_HIKES: self.hikes,
             STORE_COUNTERS: self.counters,
             STORE_CHATS: self.chats,
         }
@@ -165,6 +175,40 @@ class HermesStore:
         )
         del self.history[self.retention :]
         self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
+
+    # --- Archived walks ----------------------------------------------------
+
+    def async_add_hike(self, record: dict[str, Any]) -> dict[str, Any]:
+        """File one walk, newest first, and clear the alarm buffer.
+
+        The track is capped rather than refused when it is too long: half a walk
+        with its summary is worth more than an error, and the summary was
+        computed on the whole of it before the cut.
+        """
+        entry = dict(record)
+        entry["id"] = uuid.uuid4().hex
+        track = entry.get("track") or []
+        if len(track) > HIKE_MAX_POINTS:
+            entry["track"] = track[-HIKE_MAX_POINTS:]
+            entry["truncated"] = True
+
+        self.hikes.insert(0, entry)
+        del self.hikes[HIKES_MAX:]
+        self.hike_events = []
+        self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
+        return entry
+
+    async def async_delete_hike(self, hike_id: str) -> None:
+        """Forget one walk."""
+        self.hikes = [h for h in self.hikes if h.get("id") != hike_id]
+        await self._async_save()
+
+    def async_note_hike_event(self, event: dict[str, Any]) -> None:
+        """Remember one alarm, to be filed with the walk it happened during."""
+        self.hike_events.append(
+            {"ts": dt_util.utcnow().isoformat(), **event}
+        )
+        del self.hike_events[:-HIKES_MAX]
 
     # --- Per entry counters ------------------------------------------------
 

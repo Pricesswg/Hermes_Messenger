@@ -171,6 +171,38 @@
           "description": "Texto a enviar. Se divide si supera el límite de bytes."
         }
       }
+    },
+    "archive_hike": {
+      "name": "Archivar una excursion",
+      "description": "Relee una excursion del recorder de Home Assistant y la conserva: la traza, un resumen y las alarmas que saltaron. Llamalo al apagar el modo excursion. El recorder purga a los diez dias, asi que una excursion sin archivar es una excursion que desaparecera.",
+      "fields": {
+        "entity_id": {
+          "name": "Rastreador",
+          "description": "El device tracker del nodo que se llevo."
+        },
+        "started": {
+          "name": "Comenzo a las",
+          "description": "Cuando empezo. Se lee todo lo registrado desde entonces hasta ahora."
+        },
+        "name": {
+          "name": "Nombre",
+          "description": "Un nombre para la excursion. Si se deja vacio se usa la fecha."
+        }
+      }
+    },
+    "record_hike_event": {
+      "name": "Registrar una alarma de la excursion",
+      "description": "Anota que una alarma salto durante la excursion en curso, para poder explicarla luego junto a los valores que eran ciertos entonces. Se guarda en memoria y se archiva con la excursion.",
+      "fields": {
+        "title": {
+          "name": "Titulo",
+          "description": "Linea breve de lo que paso."
+        },
+        "message": {
+          "name": "Mensaje",
+          "description": "Los valores que la dispararon."
+        }
+      }
     }
   }
 }

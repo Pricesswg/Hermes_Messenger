@@ -949,3 +949,49 @@ async def test_lowering_the_limit_trims_at_once(hass, lights, sent):
 
     assert len(store.history) == 60
     assert len(store.chats["channel:0"]) == 60
+
+
+# --- Archived walks ---------------------------------------------------------
+
+
+async def test_archiving_a_walk_files_it_and_clears_the_alarm_buffer(hass):
+    """Alarms belong to the walk they happened during, and to no other."""
+    store = HermesStore(hass)
+    await store.async_load()
+
+    store.async_note_hike_event({"title": "Node out of contact", "message": "20 min"})
+    record = store.async_add_hike(
+        {"name": "Pontese", "track": [], "summary": {"points": 0},
+         "events": list(store.hike_events)}
+    )
+
+    assert record["id"]
+    assert len(store.hikes) == 1
+    assert store.hikes[0]["events"][0]["title"] == "Node out of contact"
+    # The next walk must not inherit them.
+    assert store.hike_events == []
+
+
+async def test_a_very_long_track_is_cut_rather_than_refused(hass):
+    """Half a walk with its summary beats an error and no walk at all."""
+    store = HermesStore(hass)
+    await store.async_load()
+
+    track = [{"ts": f"t{i}", "lat": 45.0, "lon": 7.0} for i in range(2500)]
+    record = store.async_add_hike({"name": "Long", "track": track, "summary": {}})
+
+    assert record["truncated"] is True
+    assert len(record["track"]) == 2000
+    # The tail is kept: the end of a walk is the part someone goes looking for.
+    assert record["track"][-1]["ts"] == "t2499"
+
+
+async def test_deleting_a_walk_leaves_the_others(hass):
+    store = HermesStore(hass)
+    await store.async_load()
+    first = store.async_add_hike({"name": "One", "track": [], "summary": {}})
+    second = store.async_add_hike({"name": "Two", "track": [], "summary": {}})
+
+    await store.async_delete_hike(first["id"])
+
+    assert [h["id"] for h in store.hikes] == [second["id"]]

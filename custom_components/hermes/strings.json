@@ -171,6 +171,38 @@
           "description": "Text to send. It is split if it exceeds the byte limit."
         }
       }
+    },
+    "archive_hike": {
+      "name": "Archive a hike",
+      "description": "Read a walk back out of the Home Assistant recorder and keep it: the track, a summary and any alarms that fired. Call it when hike mode is switched off. The recorder purges after ten days, so a walk that is not archived is a walk that will be gone.",
+      "fields": {
+        "entity_id": {
+          "name": "Tracker",
+          "description": "The device tracker of the node that was carried."
+        },
+        "started": {
+          "name": "Started at",
+          "description": "When the walk began. Everything recorded between then and now is read."
+        },
+        "name": {
+          "name": "Name",
+          "description": "A name for the walk. The date is used when this is left empty."
+        }
+      }
+    },
+    "record_hike_event": {
+      "name": "Record a hike alarm",
+      "description": "Note that an alarm fired during the current walk, so it can be explained later next to the numbers that were true at the time. Kept in memory and filed with the walk when it is archived.",
+      "fields": {
+        "title": {
+          "name": "Title",
+          "description": "Short headline of what happened."
+        },
+        "message": {
+          "name": "Message",
+          "description": "The values that triggered it."
+        }
+      }
     }
   }
 }

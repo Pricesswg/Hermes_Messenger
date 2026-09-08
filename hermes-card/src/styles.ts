@@ -600,6 +600,22 @@ export const hermesLayout = css`
 
   /* The custom tile template needs a full line: a URL with placeholders is
    * unreadable squeezed between the other map controls. */
+  /* A row that opens something. Given a real focus ring because it is
+   * reachable by keyboard: a div with a click handler and no focus style is a
+   * control that only exists for people using a mouse. */
+  .row.clickable {
+    cursor: pointer;
+  }
+
+  .row.clickable:hover {
+    background: var(--bg-sunken);
+  }
+
+  .row.clickable:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
   /* Statistics. The grid collapses to one column on a phone, where two pies
    * side by side would each be too small to read a slice from. */
   .stat-grid {

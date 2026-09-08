@@ -21,6 +21,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_integration
+from homeassistant.util import dt as dt_util
 
 from . import packet_meta, websocket as hermes_websocket
 from .const import (
@@ -37,18 +38,25 @@ from .const import (
 )
 from .coordinator import HermesCoordinator
 from .meshtastic_api import async_get_channels
+from .hike_archive import async_archive_hike
 from .store import HermesStore
 
 _LOGGER = logging.getLogger(__name__)
 
 SERVICE_BROADCAST = "broadcast"
 SERVICE_SEND_DIRECT = "send_direct"
+SERVICE_ARCHIVE_HIKE = "archive_hike"
+SERVICE_RECORD_HIKE_EVENT = "record_hike_event"
 
 ATTR_CONFIG_ENTRY_ID = "config_entry_id"
 ATTR_MESSAGE = "message"
 ATTR_NODE_ID = "node_id"
 
 ATTR_CHANNEL = "channel"
+ATTR_ENTITY_ID = "entity_id"
+ATTR_STARTED = "started"
+ATTR_NAME = "name"
+ATTR_TITLE = "title"
 
 _BROADCAST_SCHEMA = vol.Schema(
     {
@@ -64,6 +72,24 @@ _SEND_DIRECT_SCHEMA = vol.Schema(
         vol.Required(ATTR_CONFIG_ENTRY_ID): cv.string,
         vol.Required(ATTR_NODE_ID): vol.Coerce(int),
         vol.Required(ATTR_MESSAGE): cv.string,
+    }
+)
+
+# Neither of the two below takes a config entry: a walk belongs to the person
+# and their node, not to a gateway, and asking for a gateway id would be asking
+# for a value that has nothing to do with the answer.
+_ARCHIVE_HIKE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(ATTR_STARTED): cv.datetime,
+        vol.Optional(ATTR_NAME, default=""): cv.string,
+    }
+)
+
+_RECORD_HIKE_EVENT_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_TITLE): cv.string,
+        vol.Optional(ATTR_MESSAGE, default=""): cv.string,
     }
 )
 
@@ -322,6 +348,45 @@ def _async_register_services(hass: HomeAssistant) -> None:
     hass.services.async_register(
         DOMAIN, SERVICE_BROADCAST, _handle_broadcast, schema=_BROADCAST_SCHEMA
     )
+    async def _handle_archive_hike(call: ServiceCall) -> None:
+        store = hass.data.get(DATA_STORE)
+        if store is None:
+            raise ServiceValidationError("the Hermes store is not loaded")
+        record = await async_archive_hike(
+            hass,
+            store,
+            call.data[ATTR_ENTITY_ID],
+            dt_util.as_utc(call.data[ATTR_STARTED]),
+            name=call.data.get(ATTR_NAME, ""),
+            events=list(store.hike_events),
+        )
+        _LOGGER.info(
+            "Hermes: archived a walk of %s points, %s km",
+            record["summary"]["points"],
+            record["summary"]["distance_km"],
+        )
+
+    @callback
+    def _handle_record_hike_event(call: ServiceCall) -> None:
+        store = hass.data.get(DATA_STORE)
+        if store is None:
+            return
+        store.async_note_hike_event(
+            {
+                "title": call.data[ATTR_TITLE],
+                "message": call.data.get(ATTR_MESSAGE, ""),
+            }
+        )
+
     hass.services.async_register(
         DOMAIN, SERVICE_SEND_DIRECT, _handle_send_direct, schema=_SEND_DIRECT_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_ARCHIVE_HIKE, _handle_archive_hike, schema=_ARCHIVE_HIKE_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_RECORD_HIKE_EVENT,
+        _handle_record_hike_event,
+        schema=_RECORD_HIKE_EVENT_SCHEMA,
     )

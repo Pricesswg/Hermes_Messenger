@@ -171,6 +171,38 @@
           "description": "Texte à envoyer. Il est découpé s'il dépasse la limite d'octets."
         }
       }
+    },
+    "archive_hike": {
+      "name": "Archiver une randonnee",
+      "description": "Relit une randonnee depuis le recorder de Home Assistant et la conserve : la trace, un resume et les alarmes declenchees. A appeler en coupant le mode randonnee. Le recorder purge au bout de dix jours, donc une randonnee non archivee est une randonnee qui disparaitra.",
+      "fields": {
+        "entity_id": {
+          "name": "Traceur",
+          "description": "Le device tracker du noeud emporte."
+        },
+        "started": {
+          "name": "Commencee a",
+          "description": "Quand elle a commence. Tout ce qui a ete enregistre depuis est lu."
+        },
+        "name": {
+          "name": "Nom",
+          "description": "Un nom pour la randonnee. La date est utilisee si vide."
+        }
+      }
+    },
+    "record_hike_event": {
+      "name": "Enregistrer une alarme de randonnee",
+      "description": "Note qu'une alarme s'est declenchee pendant la randonnee en cours, pour pouvoir l'expliquer plus tard a cote des valeurs vraies a ce moment. Gardee en memoire et archivee avec la randonnee.",
+      "fields": {
+        "title": {
+          "name": "Titre",
+          "description": "Ligne courte sur ce qui s'est passe."
+        },
+        "message": {
+          "name": "Message",
+          "description": "Les valeurs qui l'ont declenchee."
+        }
+      }
     }
   }
 }

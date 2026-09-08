@@ -6,6 +6,7 @@ import type {
   RadioInfo,
   HermesChannel,
   HermesCommand,
+  HermesHike,
   HermesLogEntry,
   HermesUser,
   HermesPreset,
@@ -119,6 +120,28 @@ export function sendPreset(
 
 export function fetchHistory(hass: HomeAssistant): Promise<HermesLogEntry[]> {
   return hass.callWS<HermesLogEntry[]>({ type: "hermes/history/list" });
+}
+
+/** Archived walks, without their tracks. */
+export function fetchHikes(hass: HomeAssistant): Promise<HermesHike[]> {
+  return hass.callWS<HermesHike[]>({ type: "hermes/hikes/list" });
+}
+
+/** One walk, track included. */
+export function fetchHike(hass: HomeAssistant, hikeId: string): Promise<HermesHike> {
+  return hass.callWS<HermesHike>({ type: "hermes/hikes/get", hike_id: hikeId });
+}
+
+/** The walk as GPX. Built by the backend, which owns the cleaning rules. */
+export function fetchHikeGpx(
+  hass: HomeAssistant,
+  hikeId: string
+): Promise<{ name: string; gpx: string }> {
+  return hass.callWS({ type: "hermes/hikes/gpx", hike_id: hikeId });
+}
+
+export function deleteHike(hass: HomeAssistant, hikeId: string): Promise<unknown> {
+  return hass.callWS({ type: "hermes/hikes/delete", hike_id: hikeId });
 }
 
 /** People a node can be pinned to. Admin only, so it may legitimately fail. */

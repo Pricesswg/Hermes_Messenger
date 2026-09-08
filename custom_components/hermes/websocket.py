@@ -22,6 +22,7 @@ from homeassistant.util import dt as dt_util
 
 from .actions import ACTIONS_BY_TYPE, DOMAIN_TO_TYPE, GENERIC_ACTIONS
 from .ordering import canonical_group, reorder, sort_into_groups
+from .hike_archive import hike_gpx
 from .matching import command_does_something
 from .meshtastic_api import (
     async_get_channels,
@@ -94,6 +95,10 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_preset_remove)
     websocket_api.async_register_command(hass, ws_preset_send)
     websocket_api.async_register_command(hass, ws_users_list)
+    websocket_api.async_register_command(hass, ws_hikes_list)
+    websocket_api.async_register_command(hass, ws_hike_get)
+    websocket_api.async_register_command(hass, ws_hike_gpx)
+    websocket_api.async_register_command(hass, ws_hike_delete)
     websocket_api.async_register_command(hass, ws_history_list)
     websocket_api.async_register_command(hass, ws_history_clear)
     websocket_api.async_register_command(hass, ws_channels_list)
@@ -664,6 +669,81 @@ async def ws_preset_send(hass: HomeAssistant, connection, msg: dict) -> None:
 
 
 # --- Message log -----------------------------------------------------------
+
+
+@websocket_api.websocket_command({vol.Required("type"): "hermes/hikes/list"})
+@callback
+def ws_hikes_list(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Archived walks, without their tracks.
+
+    The track of a long walk is a couple of thousand points, and a list of ten
+    of them would be megabytes over the socket to draw a list of names. The
+    detail call fetches the points of the one walk actually opened.
+    """
+    store = hass.data.get(DATA_STORE)
+    hikes = [
+        {key: value for key, value in hike.items() if key != "track"}
+        for hike in (store.hikes if store else [])
+    ]
+    connection.send_result(msg["id"], hikes)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hermes/hikes/get",
+        vol.Required("hike_id"): str,
+    }
+)
+@callback
+def ws_hike_get(hass: HomeAssistant, connection, msg: dict) -> None:
+    """One archived walk, track included."""
+    store = hass.data.get(DATA_STORE)
+    for hike in store.hikes if store else []:
+        if hike.get("id") == msg["hike_id"]:
+            connection.send_result(msg["id"], hike)
+            return
+    connection.send_error(msg["id"], "not_found", "No such hike")
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hermes/hikes/gpx",
+        vol.Required("hike_id"): str,
+    }
+)
+@callback
+def ws_hike_gpx(hass: HomeAssistant, connection, msg: dict) -> None:
+    """The walk as a GPX document, built here rather than in the browser.
+
+    The card would have to reimplement the cleaning rules to build it itself,
+    and two implementations of "which fixes are real" is one too many.
+    """
+    store = hass.data.get(DATA_STORE)
+    for hike in store.hikes if store else []:
+        if hike.get("id") == msg["hike_id"]:
+            connection.send_result(
+                msg["id"], {"name": hike.get("name") or "hike", "gpx": hike_gpx(hike)}
+            )
+            return
+    connection.send_error(msg["id"], "not_found", "No such hike")
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hermes/hikes/delete",
+        vol.Required("hike_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_hike_delete(hass: HomeAssistant, connection, msg: dict) -> None:
+    """Forget one walk."""
+    store = hass.data.get(DATA_STORE)
+    if store is None:
+        connection.send_error(msg["id"], "not_ready", "Hermes store not loaded")
+        return
+    await store.async_delete_hike(msg["hike_id"])
+    connection.send_result(msg["id"], True)
 
 
 @websocket_api.websocket_command({vol.Required("type"): "hermes/history/list"})

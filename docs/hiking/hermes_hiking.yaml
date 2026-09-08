@@ -58,6 +58,13 @@ input_datetime:
     name: Expected back by
     has_date: true
     has_time: true
+  # Written when the mode is armed. Turning the mode off is what reads it, and
+  # the boolean's own last_changed cannot answer the question: at that moment
+  # it says when the walk ended, not when it began.
+  hike_started_at:
+    name: Hike started at
+    has_date: true
+    has_time: true
 
 input_text:
   # Written when the mode is armed, as "lat,lon". The start is wherever you
@@ -233,7 +240,13 @@ script:
       message:
         description: What happened, with the values that triggered it
     sequence:
-      - service: notify.home
+      # Kept by Hermes as well as sent, so the walk can be opened months later
+      # and the alarm read next to the numbers that were true when it fired.
+      - action: hermes.record_hike_event
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+      - action: notify.home
         data:
           title: "{{ title }}"
           message: >
@@ -279,6 +292,37 @@ automation:
       - action: input_boolean.turn_off
         target:
           entity_id: input_boolean.hike_check_pending
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.hike_started_at
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+
+  # --- Archiving -----------------------------------------------------------
+  # Home Assistant purges its own history after ten days, so this is the step
+  # that decides whether the walk still exists in September. It reads the track
+  # back out of the recorder and hands it to Hermes, which keeps the summary,
+  # the points and the alarms that fired together in one place.
+  - id: hermes_hike_archive
+    alias: "Hike: archive the walk when the mode is switched off"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.hike_mode
+        to: "off"
+    conditions:
+      - condition: template
+        value_template: >
+          {{ states('input_datetime.hike_started_at') not in
+             ['unknown', 'unavailable', ''] }}
+    actions:
+      - action: hermes.archive_hike
+        data:
+          entity_id: device_tracker.hiker_node
+          started: "{{ states('input_datetime.hike_started_at') }}"
+          name: >
+            {{ as_timestamp(states('input_datetime.hike_started_at'))
+               | timestamp_custom('%d %b %Y') }}
 
   # Nothing here disarms by itself. Coming home is what ends a walk, and an
   # automation that decided that on its own would switch the watching off in

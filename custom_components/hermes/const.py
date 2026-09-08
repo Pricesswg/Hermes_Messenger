@@ -145,6 +145,14 @@ STORE_COUNTERS = "counters"
 # and a different lifetime.
 STORE_CHATS = "chats"
 CHAT_MAX_THREADS = 40
+# Archived walks: track, summary and the alarms that fired during them. Kept
+# because the recorder purges after ten days and "how was my hike in June" is a
+# question asked in September.
+STORE_HIKES = "hikes"
+HIKES_MAX = 50
+# Points of a single walk. At one fix a minute this is a day and a half, which
+# is past the point where the walk is a walk.
+HIKE_MAX_POINTS = 2000
 # Debounce writes: a busy channel would otherwise hit the disk per message.
 HISTORY_SAVE_DELAY = 15
 

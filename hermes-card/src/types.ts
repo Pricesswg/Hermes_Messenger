@@ -64,6 +64,7 @@ export type TabId =
   | "chat"
   | "log"
   | "statistics"
+  | "hikes"
   | "devices"
   | "map"
   | "messages"
@@ -151,6 +152,38 @@ export interface HermesLogEntry {
   node: number | null;
   text: string;
   outcome: string;
+}
+
+/** What an archived walk adds up to. Zeroes can mean "not reported". */
+export interface HermesHikeSummary {
+  points?: number;
+  distance_km?: number;
+  duration_min?: number;
+  moving_min?: number;
+  stops?: number;
+  stopped_min?: number;
+  climb_m?: number;
+  max_from_start_km?: number;
+}
+
+/** One alarm raised during a walk, kept with the walk it belongs to. */
+export interface HermesHikeEvent {
+  ts: string;
+  title: string;
+  message: string;
+}
+
+/** An archived walk. `track` is absent in the list and present in the detail. */
+export interface HermesHike {
+  id: string;
+  name: string;
+  entity_id?: string;
+  started: string;
+  ended: string;
+  summary: HermesHikeSummary;
+  events?: HermesHikeEvent[];
+  track?: { ts: string; lat: number; lon: number; alt?: number | null }[];
+  truncated?: boolean;
 }
 
 /** One Home Assistant person a node can be pinned to. */

@@ -171,6 +171,38 @@
           "description": "Zu sendender Text. Er wird geteilt, wenn er das Byte-Limit überschreitet."
         }
       }
+    },
+    "archive_hike": {
+      "name": "Eine Wanderung archivieren",
+      "description": "Liest eine Wanderung aus dem Recorder von Home Assistant zurueck und behaelt sie: die Spur, eine Zusammenfassung und die ausgeloesten Alarme. Beim Ausschalten des Wandermodus aufrufen. Der Recorder loescht nach zehn Tagen, eine nicht archivierte Wanderung ist also eine Wanderung, die verschwinden wird.",
+      "fields": {
+        "entity_id": {
+          "name": "Tracker",
+          "description": "Der Device-Tracker des mitgenommenen Knotens."
+        },
+        "started": {
+          "name": "Begonnen um",
+          "description": "Wann sie begann. Alles seitdem Aufgezeichnete wird gelesen."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Ein Name fuer die Wanderung. Leer bedeutet das Datum."
+        }
+      }
+    },
+    "record_hike_event": {
+      "name": "Einen Wanderalarm festhalten",
+      "description": "Haelt fest, dass waehrend der laufenden Wanderung ein Alarm ausgeloest wurde, damit er spaeter neben den damals gueltigen Werten erklaert werden kann. Im Speicher gehalten und mit der Wanderung archiviert.",
+      "fields": {
+        "title": {
+          "name": "Titel",
+          "description": "Kurze Zeile zum Vorfall."
+        },
+        "message": {
+          "name": "Nachricht",
+          "description": "Die ausloesenden Werte."
+        }
+      }
     }
   }
 }

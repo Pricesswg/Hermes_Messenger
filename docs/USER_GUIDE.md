@@ -365,6 +365,23 @@ all right" to the node, and the `ok` back.
 
 ---
 
+## Hikes
+
+**Hikes** lists the walks that have been archived, and opening one shows what it
+added up to: distance, how long it took and how much of that was moving, the
+stops, the climb, how far out it went. Below that are the alarms that fired
+during it, each with the values that were true at the time, which is the
+difference between "something went off in June" and knowing what it was.
+
+**Export GPX** saves the track as a file any map tool reads.
+
+A walk gets here by being archived when hike mode is switched off, which the
+package in [`docs/hiking/`](hiking/README.md) does for you. Nothing archives
+itself: Home Assistant purges its own history after ten days, so a walk that
+was never archived is one nobody can ask about afterwards.
+
+---
+
 ## Statistics
 
 **Statistics** answers what the mesh has been doing, from what Hermes still

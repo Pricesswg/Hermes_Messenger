@@ -171,6 +171,38 @@
           "description": "Testo da inviare. Viene diviso se supera il limite di byte."
         }
       }
+    },
+    "archive_hike": {
+      "name": "Archivia un'escursione",
+      "description": "Rilegge un'escursione dal recorder di Home Assistant e la conserva: la traccia, un riepilogo e gli allarmi scattati. Va chiamato quando si spegne la modalita escursione. Il recorder cancella dopo dieci giorni, quindi un'escursione non archiviata e un'escursione che sparira.",
+      "fields": {
+        "entity_id": {
+          "name": "Tracker",
+          "description": "Il device tracker del nodo portato con se."
+        },
+        "started": {
+          "name": "Iniziata alle",
+          "description": "Quando e cominciata. Viene letto tutto il registrato da allora a ora."
+        },
+        "name": {
+          "name": "Nome",
+          "description": "Un nome per l'escursione. Se vuoto viene usata la data."
+        }
+      }
+    },
+    "record_hike_event": {
+      "name": "Registra un allarme dell'escursione",
+      "description": "Annota che un allarme e scattato durante l'escursione in corso, cosi da poterlo spiegare piu tardi accanto ai valori che erano veri in quel momento. Tenuto in memoria e archiviato insieme all'escursione.",
+      "fields": {
+        "title": {
+          "name": "Titolo",
+          "description": "Riga breve su cosa e successo."
+        },
+        "message": {
+          "name": "Messaggio",
+          "description": "I valori che lo hanno fatto scattare."
+        }
+      }
     }
   }
 }
