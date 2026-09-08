@@ -935,3 +935,17 @@ async def test_an_absurd_retention_is_clamped_not_obeyed(hass, lights, sent):
 
     store.settings["log_max_entries"] = "not a number"
     assert store.retention == 200
+
+
+async def test_lowering_the_limit_trims_at_once(hass, lights, sent):
+    """A setting that only takes effect on the next message looks broken."""
+    await build(hass)
+    store = hass.data[DATA_STORE]
+    for index in range(120):
+        store.async_log("in", f"message {index}", FRIEND, "no_match")
+        store.async_add_chat("channel:0", f"message {index}", FRIEND, False)
+
+    await store.async_update({"log_max_entries": 60})
+
+    assert len(store.history) == 60
+    assert len(store.chats["channel:0"]) == 60

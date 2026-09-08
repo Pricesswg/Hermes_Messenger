@@ -83,11 +83,35 @@ export const hermesTokens = css`
    * text and become unreadable. Use a translucent accent that darkens instead,
    * and a light ink, so highlighted rows and chips stay legible either way.
    * Every rule that paints --accent-soft must also set --accent-ink as colour. */
+  /* Categorical chart slots, assigned in this fixed order and never cycled.
+   * Validated for colour vision deficiency against both surfaces rather than
+   * chosen by eye: worst adjacent pair dE 9.1 light and 8.4 dark. Three of the
+   * light steps sit under 3:1 against the surface, which is why every chart
+   * here carries a legend with the values: identity never rests on hue alone. */
+  :host {
+    --viz-1: #2a78d6;
+    --viz-2: #eb6834;
+    --viz-3: #1baf7a;
+    --viz-4: #eda100;
+    --viz-5: #e87ba4;
+    --viz-6: #008300;
+    --viz-other: oklch(0.72 0.01 85);
+  }
+
   @media (prefers-color-scheme: dark) {
     :host {
       --accent-soft: rgba(255, 214, 10, 0.18);
       --accent-ink: oklch(0.9 0.12 92);
       --overlay-base: #1c1c1e;
+
+      /* The same six hues stepped for the dark surface, not an inversion. */
+      --viz-1: #3987e5;
+      --viz-2: #d95926;
+      --viz-3: #199e70;
+      --viz-4: #c98500;
+      --viz-5: #d55181;
+      --viz-6: #008300;
+      --viz-other: oklch(0.55 0.01 85);
     }
   }
 `;
@@ -576,6 +600,136 @@ export const hermesLayout = css`
 
   /* The custom tile template needs a full line: a URL with placeholders is
    * unreadable squeezed between the other map controls. */
+  /* Statistics. The grid collapses to one column on a phone, where two pies
+   * side by side would each be too small to read a slice from. */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .stat-card {
+    background: var(--bg-sunken);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md, 10px);
+    padding: 12px 14px;
+  }
+
+  .stat-card h3 {
+    margin: 0 0 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-soft);
+  }
+
+  .stat-figure {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .stat-legend {
+    flex: 1 1 130px;
+    min-width: 130px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  /* The swatch carries identity, the text stays in ink: a label wearing its
+   * series colour is unreadable at these sizes and says nothing extra. */
+  .stat-legend .swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex: none;
+  }
+
+  .stat-legend .line {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.72rem;
+    color: var(--text-soft);
+  }
+
+  .stat-legend .line .label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .stat-legend .line .value {
+    font-family: var(--font-mono);
+    color: var(--text);
+  }
+
+  .stat-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .stat-tile {
+    background: var(--bg-sunken);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md, 10px);
+    padding: 10px 12px;
+  }
+
+  .stat-tile .n {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text);
+  }
+
+  .stat-tile .k {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+
+  /* A ratio against a limit is a meter, not a two slice pie. */
+  .meter {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--border);
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .meter span {
+    display: block;
+    height: 100%;
+    background: var(--accent-strong);
+  }
+
+  .hours {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 90px;
+  }
+
+  .hours .bar {
+    flex: 1;
+    background: var(--viz-1);
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+  }
+
+  .hours-axis {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
   .map-custom {
     display: flex;
     flex-direction: column;

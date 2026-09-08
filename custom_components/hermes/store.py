@@ -84,6 +84,15 @@ class HermesStore:
         for key, value in patch.items():
             if key in DEFAULT_SETTINGS:
                 self.settings[key] = value
+
+        # Lowering the limit has to bite now. Waiting for the next message to
+        # trim would leave the card showing more rows than the setting it just
+        # saved, which reads as a setting that did not take.
+        keep = self.retention
+        del self.history[keep:]
+        for messages in self.chats.values():
+            del messages[:-keep]
+
         await self._async_save()
         return self.settings
 

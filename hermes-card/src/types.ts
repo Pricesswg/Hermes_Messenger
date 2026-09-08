@@ -63,6 +63,7 @@ export type TabId =
   | "status"
   | "chat"
   | "log"
+  | "statistics"
   | "devices"
   | "map"
   | "messages"

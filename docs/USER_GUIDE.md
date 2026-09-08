@@ -349,6 +349,29 @@ number and the window widens.
 
 ---
 
+## Statistics
+
+**Statistics** answers what the mesh has been doing, from what Hermes still
+holds: the log within its limit, and the reception tallies since Home Assistant
+last started. Raising **Messages kept** widens the window it can see.
+
+The tiles across the top are the headline counts, with the last one showing how
+full the log is. Below them, four rings break the traffic down by what became of
+each message, by outcome in the log, by who talks the most, and by the busiest
+conversations. Past the sixth slice everything folds into a neutral **Other**,
+because a ring with a dozen colours stops being readable.
+
+Each ring carries a legend with the counts, which is not decoration: three of
+the slice colours sit close to the background at normal contrast, so the numbers
+beside them are what makes the chart readable rather than the hue alone. The
+hues themselves are checked for colour vision deficiency rather than picked by
+eye.
+
+The last panel is a bar per hour of the day, since the shape of a day is a
+question about time and not a share of a whole.
+
+---
+
 ## Who a node belongs to
 
 In **Settings**, under the authorized nodes of a gateway, each node can be

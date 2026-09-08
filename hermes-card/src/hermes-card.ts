@@ -11,6 +11,7 @@ import { renderMap } from "./screens/map";
 import { renderMessages } from "./screens/messages";
 import { renderSecurity } from "./screens/security";
 import { renderSettings } from "./screens/settings";
+import { renderStatistics } from "./screens/statistics";
 import { renderStatus, renderStatusSummary } from "./screens/status";
 import type {
   CardView,
@@ -61,6 +62,7 @@ const TABS: TabId[] = [
   "status",
   "chat",
   "log",
+  "statistics",
   "devices",
   "map",
   "messages",
@@ -203,6 +205,7 @@ export class HermesCard extends LitElement {
       !force &&
       this._tab !== "status" &&
       this._tab !== "log" &&
+      this._tab !== "statistics" &&
       this._tab !== "chat"
     ) {
       return;
@@ -793,6 +796,18 @@ export class HermesCard extends LitElement {
             onDraft: this._onChatDraft,
             onSend: this._onChatSend,
             onClear: this._onChatClear,
+          },
+          t
+        );
+      case "statistics":
+        return renderStatistics(
+          {
+            entries: this._entries,
+            history: this._history,
+            chats: this._chats,
+            retention: this._settings?.log_max_entries ?? 200,
+            updatedAt: this._updatedAt,
+            onRefresh: () => void this._poll(true),
           },
           t
         );
