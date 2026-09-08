@@ -78,6 +78,16 @@ async def async_read_track(
             MAX_WINDOW_HOURS,
         )
 
+    # after_dependencies, not dependencies: Hermes works perfectly well on an
+    # instance with the recorder switched off, right up to the moment someone
+    # asks it to read history back. Saying so beats an exception from an import
+    # that was fine until it was used.
+    if "recorder" not in hass.config.components:
+        _LOGGER.warning(
+            "Hermes: cannot archive a walk, the recorder is not set up"
+        )
+        return []
+
     def _read() -> dict[str, list[State]]:
         return history.state_changes_during_period(
             hass,

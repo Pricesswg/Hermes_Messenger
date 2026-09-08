@@ -2959,7 +2959,7 @@ function e(e,t,n,i){var s,a=arguments.length,o=a<3?t:null===i?i=Object.getOwnPro
     </div>
 
     <div class="hint">${t("stats.window")}</div>
-  `}const Lt="1.8.0";function Mt(e,t,n,i,s){if(!Le(e))return G`<div class="empty">${s("status.noIntegration")}</div>`;const a=Ne(e),o=Ee(e,"commands_executed",t),r=Ee(e,"last_command",t),l=Ee(e,"last_error",t),c=e=>e&&"unknown"!==e&&"unavailable"!==e?e:s("status.none");return G`
+  `}const Lt="1.8.1";function Mt(e,t,n,i,s){if(!Le(e))return G`<div class="empty">${s("status.noIntegration")}</div>`;const a=Ne(e),o=Ee(e,"commands_executed",t),r=Ee(e,"last_command",t),l=Ee(e,"last_error",t),c=e=>e&&"unknown"!==e&&"unavailable"!==e?e:s("status.none");return G`
     <h2 class="screen-title">
       ${s("status.title")}
       ${n?G`<span class="hint">${s("status.updatedAt")} ${n}</span>`:""}
