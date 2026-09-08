@@ -1,15 +1,19 @@
 import { html, type TemplateResult } from "lit";
 
+import "../hermes-entity-picker";
+
 import type {
   HermesChannel,
   HermesEntry,
   HermesSettings,
   HermesUser,
+  HomeAssistant,
   NodeInfo,
   RadioConfig,
 } from "../types";
 
 export interface SettingsCtx {
+  hass: HomeAssistant;
   settings: HermesSettings | null;
   entries: HermesEntry[];
   nodes: NodeInfo[];
@@ -220,6 +224,34 @@ export function renderSettings(
             ctx.nodesError
           )}
           <span class="hint">${t("settings.mapNodesHint")}</span>
+        </div>
+
+        <div class="field">
+          <label>${t("settings.weatherEntity")}</label>
+          <hermes-entity-picker
+            .hass=${ctx.hass}
+            .value=${String(globalValue("weather_entity") ?? "")}
+            placeholder="weather.home"
+            @value-changed=${(e: CustomEvent) =>
+              ctx.onGlobalInput("weather_entity", e.detail.value)}
+          ></hermes-entity-picker>
+          <span class="hint">${t("settings.weatherEntityHint")}</span>
+        </div>
+
+        <div class="field">
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${Boolean(globalValue("sidebar_panel"))}
+              @change=${(e: Event) =>
+                ctx.onGlobalInput(
+                  "sidebar_panel",
+                  (e.target as HTMLInputElement).checked
+                )}
+            />
+            <span>${t("settings.sidebar")}</span>
+          </label>
+          <span class="hint">${t("settings.sidebarHint")}</span>
         </div>
 
         <div class="field">

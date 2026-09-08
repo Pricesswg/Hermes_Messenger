@@ -211,6 +211,10 @@ export interface HermesSettings {
   map_custom_url: string;
   /** Log rows, and messages per conversation, that Hermes keeps. */
   log_max_entries: number;
+  /** Show the card as a page in the Home Assistant sidebar. */
+  sidebar_panel: boolean;
+  /** Home Assistant weather entity read on the Map tab. */
+  weather_entity: string;
 }
 
 /** One configured command, as stored in the config entry options. */

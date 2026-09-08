@@ -87,6 +87,36 @@ export function customTileTemplate(url: string): string | null {
   return src;
 }
 
+/**
+ * Marked hiking routes, drawn over whatever base is selected.
+ *
+ * Waymarked Trails renders the route relations of OpenStreetMap: the paths
+ * that carry a waymark on a tree, with the colour of their network. On a map
+ * of node positions in the mountains this is the layer that turns "somewhere
+ * up there" into "on the GTA between Piamprato and Ronco". Transparent tiles,
+ * no key, CC-BY-SA like the data underneath.
+ */
+const TRAILS_URL = "https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png";
+const TRAILS_ATTRIBUTION =
+  '&copy; <a href="https://waymarkedtrails.org/">Waymarked Trails</a> (CC-BY-SA)';
+
+/**
+ * Precipitation radar. Free and without a key, which is the reason it is here
+ * rather than behind the OpenWeather key: the one weather layer that matters
+ * while someone is out is the one that says whether it is raining on them, and
+ * it should not depend on having signed up for anything.
+ */
+const RAINVIEWER_INDEX = "https://api.rainviewer.com/public/weather-maps.json";
+/** How often the frame list is refreshed. RainViewer publishes every 10 min. */
+const RADAR_REFRESH_MS = 10 * 60 * 1000;
+const RADAR_STEP_MS = 700;
+
+/** One radar frame: its timestamp and the tile layer already on the map. */
+interface RadarFrame {
+  time: number;
+  layer: L.TileLayer;
+}
+
 /** Optional OpenWeather overlays, unlocked when the user configures a key. */
 export const OWM_LAYERS = [
   "temp_new",
@@ -195,6 +225,21 @@ export class HermesMap extends LitElement {
         filter: invert(1) hue-rotate(180deg) brightness(0.82) contrast(0.92)
           saturate(0.7);
       }
+      .radar-bar input[type="range"] {
+        flex: 1;
+        min-width: 120px;
+        max-width: 260px;
+      }
+      .frame-time {
+        font-family: var(--font-mono, monospace);
+        font-size: 0.72rem;
+        color: var(--text-soft);
+        min-width: 74px;
+      }
+      .lchip[disabled] {
+        opacity: 0.45;
+        cursor: default;
+      }
       .base-note {
         margin-top: 8px;
         padding: 6px 9px;
@@ -226,10 +271,24 @@ export class HermesMap extends LitElement {
   @state() private _owmLayer = "";
   /** Source that failed and was swapped out, "" while none has. */
   @state() private _baseFallback = "";
+  @state() private _trailsOn = false;
+  @state() private _radarOn = false;
+  @state() private _radarError = false;
+  @state() private _frameIdx = 0;
+  @state() private _playing = false;
+  @state() private _frameCount = 0;
+  @state() private _frameTime = 0;
 
   private _map?: L.Map;
   private _base?: L.TileLayer;
   private _owm?: L.TileLayer;
+  private _trails?: L.TileLayer;
+  // Every frame stays on the map at zero opacity, so scrubbing and playing are
+  // instant instead of refetching tiles at each step.
+  private _frames: RadarFrame[] = [];
+  private _pastCount = 0;
+  private _playTimer?: number;
+  private _radarTimer?: number;
   private _markers: L.Marker[] = [];
   private _circle?: L.Circle;
   private _resizeObserver?: ResizeObserver;
@@ -257,6 +316,12 @@ export class HermesMap extends LitElement {
 
     // Leaflet needs a nudge whenever the card is resized or first revealed,
     // otherwise it renders a partially grey canvas.
+    void this._loadRadar();
+    this._radarTimer = window.setInterval(
+      () => void this._loadRadar(),
+      RADAR_REFRESH_MS
+    );
+
     this._resizeObserver = new ResizeObserver(() => this._map?.invalidateSize());
     this._resizeObserver.observe(container);
     window.setTimeout(() => this._map?.invalidateSize(), 60);
@@ -315,6 +380,13 @@ export class HermesMap extends LitElement {
     this._resizeObserver?.disconnect();
     this._themeQuery?.removeEventListener("change", this._onThemeChange);
     this._themeQuery = undefined;
+    this._pause();
+    if (this._radarTimer) {
+      window.clearInterval(this._radarTimer);
+      this._radarTimer = undefined;
+    }
+    for (const frame of this._frames) frame.layer.remove();
+    this._frames = [];
     this._map?.remove();
     this._map = undefined;
     this._base = undefined;
@@ -404,6 +476,103 @@ export class HermesMap extends LitElement {
     // the backdrop, whichever order the rebuild happened in.
     layer.bringToBack();
     this._base = layer;
+  }
+
+  private _toggleTrails = (): void => {
+    this._trailsOn = !this._trailsOn;
+    if (!this._map) return;
+    if (!this._trailsOn) {
+      this._trails?.remove();
+      this._trails = undefined;
+      return;
+    }
+    this._trails = L.tileLayer(TRAILS_URL, {
+      attribution: TRAILS_ATTRIBUTION,
+      maxZoom: MAX_ZOOM,
+      // Waymarked Trails renders to 18; past that Leaflet upscales rather than
+      // asking for a tile that comes back empty.
+      maxNativeZoom: 18,
+      opacity: 0.85,
+      zIndex: 4,
+    }).addTo(this._map);
+  };
+
+  /**
+   * Fetch the list of radar frames and put each one on the map at zero
+   * opacity. A hiccup keeps the frames already showing: slightly old radar is
+   * worth more than an empty map, and the next refresh is ten minutes away.
+   */
+  private async _loadRadar(): Promise<void> {
+    try {
+      const response = await fetch(RAINVIEWER_INDEX);
+      const data = await response.json();
+      const past = (data?.radar?.past || []).slice(-7);
+      const nowcast = data?.radar?.nowcast || [];
+      const raw = [...past, ...nowcast];
+      if (!raw.length || !this._map) {
+        this._radarError = !this._frames.length;
+        return;
+      }
+
+      const wasPlaying = this._playing;
+      this._pause();
+      for (const frame of this._frames) frame.layer.remove();
+      this._pastCount = past.length;
+      this._frames = raw.map((entry: any) => ({
+        time: entry.time,
+        layer: L.tileLayer(`${data.host}${entry.path}/256/{z}/{x}/{y}/2/1_1.png`, {
+          opacity: 0,
+          zIndex: 5,
+          maxZoom: MAX_ZOOM,
+          // The free tile API stops at zoom 7 and answers deeper requests with
+          // a "zoom level not supported" placeholder. Radar is km-scale data
+          // anyway, so cap it and let Leaflet upscale, as their own widget does.
+          maxNativeZoom: 7,
+        }).addTo(this._map!),
+      }));
+      this._frameCount = this._frames.length;
+      this._radarError = false;
+      // Land on the most recent observed frame; playing the loop is a choice.
+      this._showFrame(Math.max(0, this._pastCount - 1));
+      if (wasPlaying) this._togglePlay();
+    } catch {
+      this._radarError = !this._frames.length;
+    }
+  }
+
+  private _showFrame(index: number): void {
+    this._frameIdx = index;
+    this._frameTime = this._frames[index]?.time ?? 0;
+    this._frames.forEach((frame, position) =>
+      frame.layer.setOpacity(this._radarOn && position === index ? 0.7 : 0)
+    );
+  }
+
+  private _toggleRadar = (): void => {
+    this._radarOn = !this._radarOn;
+    if (!this._radarOn) this._pause();
+    this._showFrame(this._frameIdx);
+  };
+
+  private _togglePlay = (): void => {
+    if (this._playing) {
+      this._pause();
+      return;
+    }
+    if (!this._frames.length) return;
+    if (!this._radarOn) this._radarOn = true;
+    this._playing = true;
+    this._playTimer = window.setInterval(() => {
+      this._showFrame((this._frameIdx + 1) % this._frames.length);
+    }, RADAR_STEP_MS);
+  };
+
+  private _pause(): void {
+    this._playing = false;
+    if (this._playTimer) {
+      window.clearInterval(this._playTimer);
+      this._playTimer = undefined;
+    }
   }
 
   /** Draw one pin per selected node that actually has a position. */
@@ -498,23 +667,80 @@ export class HermesMap extends LitElement {
   protected render(): TemplateResult {
     const t = translator(this.hass);
     return html`
-      ${this.owmKey
+      <div class="toolbar">
+        <button
+          class="lchip"
+          data-on=${this._trailsOn ? "1" : "0"}
+          @click=${this._toggleTrails}
+        >
+          ${t("map.layer.trails")}
+        </button>
+        <button
+          class="lchip"
+          data-on=${this._radarOn ? "1" : "0"}
+          ?disabled=${!this._frameCount && !this._radarError}
+          @click=${this._toggleRadar}
+        >
+          ${t("map.layer.radar")}
+        </button>
+
+        ${OWM_LAYERS.map(
+          (layer) => html`
+            <button
+              class="lchip"
+              data-on=${this._owmLayer === layer ? "1" : "0"}
+              ?disabled=${!this.owmKey}
+              title=${!this.owmKey ? t("map.layer.needsKey") : ""}
+              @click=${() => this._toggleOwm(layer)}
+            >
+              ${t(`map.layer.${layer.replace("_new", "")}`)}
+            </button>
+          `
+        )}
+      </div>
+
+      ${this._radarOn
         ? html`
-            <div class="toolbar">
-              ${OWM_LAYERS.map(
-                (layer) => html`
-                  <button
-                    class="lchip"
-                    data-on=${this._owmLayer === layer ? "1" : "0"}
-                    @click=${() => this._toggleOwm(layer)}
-                  >
-                    ${layer.replace("_new", "")}
-                  </button>
-                `
-              )}
+            <div class="toolbar radar-bar">
+              ${this._radarError
+                ? html`<span class="hint">${t("map.radarError")}</span>`
+                : html`
+                    <button
+                      class="lchip"
+                      ?disabled=${!this._frameCount}
+                      @click=${this._togglePlay}
+                    >
+                      ${this._playing ? t("map.pause") : t("map.play")}
+                    </button>
+                    <span class="frame-time">
+                      ${this._frameIdx >= this._pastCount
+                        ? html`<b>${t("map.nowcast")}</b> `
+                        : ""}
+                      ${this._frameTime
+                        ? new Date(this._frameTime * 1000).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "—"}
+                    </span>
+                    <input
+                      type="range"
+                      min="0"
+                      max=${Math.max(0, this._frameCount - 1)}
+                      .value=${String(this._frameIdx)}
+                      ?disabled=${!this._frameCount}
+                      @input=${(e: Event) => {
+                        this._pause();
+                        this._showFrame(
+                          Number((e.target as HTMLInputElement).value)
+                        );
+                      }}
+                    />
+                  `}
             </div>
           `
         : ""}
+
       <div id="map"></div>
       ${this._baseFallback
         ? html`<div class="base-note">

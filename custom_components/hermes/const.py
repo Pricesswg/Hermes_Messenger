@@ -109,6 +109,13 @@ SETTING_MAP_CUSTOM_URL = "map_custom_url"
 # default suits a quiet private channel; a busy public one fills it in hours,
 # and the oldest rows leave in silence, which reads as messages never received.
 SETTING_LOG_MAX = "log_max_entries"
+# Show the card as a page in the Home Assistant sidebar. Off by default:
+# the sidebar belongs to the user, not to the integrations in it.
+SETTING_SIDEBAR = "sidebar_panel"
+# A Home Assistant weather entity to read on the Map tab. Its own
+# integration does the forecasting; Hermes only shows what it says, next
+# to the nodes it applies to.
+SETTING_WEATHER_ENTITY = "weather_entity"
 # Defaults of that setting, and the bounds the card and the store hold it to.
 HISTORY_MAX_ENTRIES = 200
 CHAT_MAX_PER_THREAD = 200
@@ -127,6 +134,8 @@ DEFAULT_SETTINGS = {
     SETTING_MAP_SOURCE: "esri",
     SETTING_MAP_CUSTOM_URL: "",
     SETTING_LOG_MAX: HISTORY_MAX_ENTRIES,
+    SETTING_SIDEBAR: False,
+    SETTING_WEATHER_ENTITY: "",
 }
 
 # Quick send presets, the equivalent of the canned messages in the Meshtastic

@@ -11,6 +11,7 @@ import { renderMap } from "./screens/map";
 import { renderMessages } from "./screens/messages";
 import { renderSecurity } from "./screens/security";
 import { renderSettings } from "./screens/settings";
+import "./hermes-panel";
 import { renderHikes } from "./screens/hikes";
 import { renderStatistics } from "./screens/statistics";
 import { renderStatus, renderStatusSummary } from "./screens/status";
@@ -1017,6 +1018,7 @@ export class HermesCard extends LitElement {
   private _renderSettings(t: (k: string) => string): TemplateResult {
     return renderSettings(
           {
+            hass: this.hass!,
             settings: this._settings,
             entries: this._entries,
             nodes: this._nodes,

@@ -30,6 +30,58 @@ export interface MapCtx {
 }
 
 const HEIGHT_MODES = ["auto", "mobile", "tablet", "desktop"];
+
+/**
+ * What a Home Assistant weather entity currently says.
+ *
+ * Read from the states rather than fetched: the entity belongs to whichever
+ * weather integration the user already trusts, and Hermes has no business
+ * forecasting anything. The radar on the map answers "is it raining on them
+ * now"; this answers "what is it doing today", which is the other half of the
+ * question anyone asks before setting off.
+ */
+function renderWeather(
+  ctx: MapCtx,
+  t: (k: string) => string
+): TemplateResult | "" {
+  const entityId = ctx.settings?.weather_entity ?? "";
+  if (!entityId) return "";
+
+  const state = ctx.hass.states[entityId];
+  if (!state) {
+    return html`<div class="note warn">
+      ${t("map.weatherMissing")} <code>${entityId}</code>
+    </div>`;
+  }
+
+  const attributes = state.attributes ?? {};
+  const parts: string[] = [];
+  if (attributes.temperature !== undefined && attributes.temperature !== null) {
+    parts.push(
+      `${attributes.temperature}${attributes.temperature_unit ?? "°"}`
+    );
+  }
+  if (attributes.wind_speed !== undefined && attributes.wind_speed !== null) {
+    parts.push(
+      `${t("map.wind")} ${attributes.wind_speed}${
+        attributes.wind_speed_unit ? ` ${attributes.wind_speed_unit}` : ""
+      }`
+    );
+  }
+  if (attributes.humidity !== undefined && attributes.humidity !== null) {
+    parts.push(`${attributes.humidity}% ${t("map.humidity")}`);
+  }
+
+  // The condition is the entity's own vocabulary (partlycloudy, rainy). It is
+  // shown as it comes: inventing words for a list that each integration can
+  // extend would be a translation table that silently goes stale.
+  return html`
+    <div class="note">
+      <b>${attributes.friendly_name ?? entityId}</b> ·
+      ${state.state}${parts.length ? ` · ${parts.join(" · ")}` : ""}
+    </div>
+  `;
+}
 const MAP_SOURCES = ["esri", "carto", "topo", "custom"];
 
 /** Centre of the radius circle: the first shown node that has a position. */
@@ -79,6 +131,8 @@ export function renderMap(
 
   return html`
     <h2 class="screen-title">${t("tab.map")}</h2>
+
+    ${renderWeather(ctx, t)}
 
     <div class="map-controls">
       <label class="check">

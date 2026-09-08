@@ -39,6 +39,7 @@ from .const import (
 from .coordinator import HermesCoordinator
 from .meshtastic_api import async_get_channels
 from .hike_archive import async_archive_hike
+from .panel import async_apply_panel
 from .store import HermesStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -149,6 +150,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         store = HermesStore(hass)
         await store.async_load()
         hass.data[DATA_STORE] = store
+
+    # After the store is loaded: the setting that decides this lives in it.
+    integration = await async_get_integration(hass, DOMAIN)
+    async_apply_panel(hass, integration.version or "0")
 
     _async_register_services(hass)
     # Both already done in async_setup. Repeated here, and both idempotent,

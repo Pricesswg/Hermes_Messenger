@@ -114,6 +114,13 @@ are treated as the same place (the standing-still alarm uses its own, wider,
 how far they walked). A walk with no altitude reported says zero climb rather than
 inventing one.
 
+## While you are out
+
+Two layers on the Map tab are worth turning on for this: **Trails**, which draws
+the marked routes so a pin has a path next to it, and **Rain radar**, which
+says whether the weather is arriving on the person or going round them. Neither
+needs a key. A weather entity set in Settings adds the conditions above the map.
+
 ## What it cannot do
 
 Position updates arrive between tens of seconds and several minutes apart: EU868

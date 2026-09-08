@@ -24,6 +24,7 @@ from .actions import ACTIONS_BY_TYPE, DOMAIN_TO_TYPE, GENERIC_ACTIONS
 from .ordering import canonical_group, reorder, sort_into_groups
 from .hike_archive import hike_gpx
 from .matching import command_does_something
+from .panel import async_apply_panel
 from .meshtastic_api import (
     async_get_channels,
     channel_default_psk,
@@ -282,6 +283,9 @@ async def ws_settings_update(hass: HomeAssistant, connection, msg: dict) -> None
         connection.send_error(msg["id"], "not_ready", "Hermes store not loaded")
         return
     settings = await store.async_update(msg["patch"])
+    # The sidebar entry is a setting like any other, so it has to follow the
+    # save rather than wait for a restart.
+    async_apply_panel(hass, _running_version(hass))
     connection.send_result(msg["id"], settings)
 
 

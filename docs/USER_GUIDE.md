@@ -324,6 +324,41 @@ when your theme is dark.
 If the source you picked stops answering, the map rebuilds itself on Esri and
 says so in a line under it, rather than leaving the pins on a blank canvas.
 
+### Layers on top
+
+Above the map are the layers that go over whichever base you chose.
+
+**Trails** draws the marked hiking routes of OpenStreetMap, with the colour and
+the waymark shield of each network. On a map of nodes in the mountains this is
+the layer that turns "somewhere up there" into "on the GTA between Piamprato
+and Ronco". No key, and the data is the same OSM that the walking apps use.
+
+**Rain radar** is RainViewer: the last hour or so of observed precipitation,
+and the forecast frames when they are published. Also no key, which is why it
+sits next to Trails rather than behind the OpenWeather one — the weather layer
+that matters while somebody is out is the one that says whether it is raining
+on them, and that should not depend on having signed up for anything. Turning
+it on adds a play button, the time of the frame you are looking at, and a
+slider to scrub through them. Frames past the observed ones are marked as
+forecast.
+
+The radar is drawn from tiles that stop at zoom 7, so zooming in scales the
+last real tile rather than fetching a sharper one. Radar data is kilometre
+scale; there is no sharper one to fetch.
+
+**Temperature, Wind, Clouds and Precipitation** are the OpenWeather overlays.
+They stay greyed out until you put a key in Settings, and the button says so
+when you hover it.
+
+### The weather where they are
+
+Setting a **weather entity** in Settings puts a line above the map with what
+that entity currently says: condition, temperature, wind, humidity. It is read
+from Home Assistant, so the forecasting is done by whichever weather
+integration you already trust and Hermes only shows the result. The radar
+answers "is it raining on them now"; this answers "what is it doing today",
+which is the other half of what anyone asks before setting off.
+
 Adding your own OpenWeather API key in Settings unlocks temperature, wind, cloud
 and precipitation overlays. The key is stored in Home Assistant and never leaves
 it.
@@ -362,6 +397,19 @@ It is deliberately not integration code. The watching is done with entities and
 automations, so every threshold is a slider you can turn and every alarm can be
 read to see why it fired. Hermes appears in it twice: it carries the "are you
 all right" to the node, and the `ok` back.
+
+---
+
+## Hermes in the sidebar
+
+Settings has a switch that adds a **Hermes page to the Home Assistant
+sidebar**, with the same tabs as the card. It is off by default and it stays
+off until you ask for it: the sidebar is yours, and an integration that puts
+itself there without being asked has decided something that was not its to
+decide.
+
+It is the same card, not a second implementation of it, so everything behaves
+identically. The change needs a page reload to show up.
 
 ---
 
