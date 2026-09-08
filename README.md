@@ -58,6 +58,7 @@ integration, so nothing opens a second connection to your node.
 | **Log** | What Hermes decided about each message, including the ones it ignored |
 | **Devices** | Every node with battery, signal, hops and last heard |
 | **Map** | Chosen nodes as points, optionally the whole mesh, with a radius filter and a choice of keyless base maps |
+| **Statistics** | What became of each message, who talks most, busiest conversations, activity by hour |
 | **Messages** | Building commands, and quick send presets |
 | **Home Assistant** | Which entities your commands use, and whether they still exist |
 | **Settings** | Everything configurable, including the radio itself |
@@ -123,6 +124,11 @@ it and a wrong region cuts it off from the mesh.
 The [user guide](docs/USER_GUIDE.md) walks through all of it, with worked
 examples and a troubleshooting section ordered so each step rules out the ones
 below it.
+
+For carrying a node into the mountains there is a ready-made package in
+[docs/hiking](docs/hiking/README.md): hike mode, distances from the start point
+and from home, and six alarms that reach someone **at home** rather than the
+walker, who is the one person who may have no signal.
 
 ## Services (for automations, including scheduled ones)
 

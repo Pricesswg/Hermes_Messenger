@@ -1,0 +1,469 @@
+# Hermes — hiking support
+#
+# A Home Assistant package: helpers, derived sensors and the alarms that watch
+# someone carrying a Meshtastic node into the mountains. Drop it in
+# config/packages/ and add `homeassistant: packages: !include_dir_named packages`
+# to configuration.yaml if you have not already.
+#
+# Hermes itself does not appear here on purpose. The integration turns messages
+# into actions and reads back what happened; the watching is Home Assistant's
+# job, done with entities and automations that Home Assistant already knows how
+# to do well. Hermes contributes two things from the outside: it carries the
+# question to the node and the answer back.
+#
+# ---------------------------------------------------------------------------
+# FIVE VALUES TO EDIT, then nothing else
+#
+#   1. device_tracker.hiker_node   the node's tracker, from the Meshtastic
+#                                  integration (select the node in ITS options
+#                                  or the tracker will not exist)
+#   2. sensor.hiker_node_battery   that node's battery sensor
+#   3. notify.home                 who gets told, at home, on a real phone
+#   4. HERMES_ENTRY_ID             the gateway's config entry id, from the URL
+#                                  of its page in Settings > Devices & services
+#   5. HIKER_NODE_ID               the node's Meshtastic number, the one the
+#                                  Devices tab of the Hermes card shows
+#
+# Search for each and replace. The first three appear only in the "Sources"
+# section and the notify script, the last two only in the check automation:
+# everything else is written against the sensors this package defines, so a
+# rename costs five edits and not fifty.
+# ---------------------------------------------------------------------------
+#
+# WHAT THIS DOES NOT ASSUME
+#
+# Position updates arrive between tens of seconds and several minutes apart:
+# EU868 has a 1% duty cycle and Meshtastic enforces its own airtime limits on
+# top. Nothing here reacts faster than a minute, and every threshold is a
+# helper you can turn without editing YAML.
+#
+# "Not moving" and "not reachable" are different conditions and they are two
+# separate alarms here, with different delays and different words. Conflating
+# them is what makes this kind of system cry wolf until it gets ignored, which
+# is worse than not having it.
+
+input_boolean:
+  hike_mode:
+    name: Hike mode
+    icon: mdi:hiking
+  # Raised when the node has been asked to confirm and has not answered yet.
+  # This is the first stage of the dead man switch: the buzzer goes off in a
+  # pocket before anyone at home is woken up.
+  hike_check_pending:
+    name: Hike check pending
+    icon: mdi:account-question
+
+input_datetime:
+  hike_return_by:
+    name: Expected back by
+    has_date: true
+    has_time: true
+
+input_text:
+  # Written when the mode is armed, as "lat,lon". The start is wherever you
+  # actually set off from, which is the car park more often than home.
+  hike_start_point:
+    name: Hike start point
+    max: 32
+
+input_number:
+  # Every threshold lives here rather than inside a trigger, so tuning one on
+  # the morning of a walk does not mean editing YAML and reloading.
+  hike_still_minutes:
+    name: Still for (minutes)
+    min: 5
+    max: 180
+    step: 5
+    initial: 30
+    unit_of_measurement: min
+  hike_answer_minutes:
+    name: Wait for an answer (minutes)
+    min: 2
+    max: 60
+    step: 1
+    initial: 10
+    unit_of_measurement: min
+  hike_silence_minutes:
+    name: Silent for (minutes)
+    min: 5
+    max: 180
+    step: 5
+    initial: 20
+    unit_of_measurement: min
+  hike_max_distance_km:
+    name: Maximum distance from start (km)
+    min: 1
+    max: 100
+    step: 1
+    initial: 15
+    unit_of_measurement: km
+  hike_low_battery:
+    name: Low battery (%)
+    min: 5
+    max: 60
+    step: 5
+    initial: 25
+    unit_of_measurement: "%"
+
+template:
+  # --- Sources -------------------------------------------------------------
+  # The only place the node's own entities are named.
+  - sensor:
+      - name: Hike distance from start
+        unique_id: hermes_hike_distance_from_start
+        unit_of_measurement: km
+        state_class: measurement
+        state: >
+          {% set tracker = states.device_tracker.hiker_node %}
+          {% set start = states('input_text.hike_start_point') %}
+          {% if tracker is none
+                or tracker.attributes.get('latitude') is none
+                or start is not string
+                or ',' not in start %}
+            unknown
+          {% else %}
+            {{ distance(
+                 tracker.attributes.latitude,
+                 tracker.attributes.longitude,
+                 start.split(',')[0] | float,
+                 start.split(',')[1] | float
+               ) | round(2) }}
+          {% endif %}
+
+      - name: Hike distance from home
+        unique_id: hermes_hike_distance_from_home
+        unit_of_measurement: km
+        state_class: measurement
+        state: >
+          {% set tracker = states.device_tracker.hiker_node %}
+          {% if tracker is none or tracker.attributes.get('latitude') is none %}
+            unknown
+          {% else %}
+            {{ distance(tracker.attributes.latitude,
+                        tracker.attributes.longitude) | round(2) }}
+          {% endif %}
+
+      # Minutes since the node was last heard from at all. The alarm below
+      # reads this rather than a trigger on the tracker, because a tracker that
+      # stops updating produces no event to trigger on: silence is the absence
+      # of one, and the only way to notice an absence is to look at a clock.
+      - name: Hike minutes since contact
+        unique_id: hermes_hike_minutes_since_contact
+        unit_of_measurement: min
+        state_class: measurement
+        state: >
+          {% set tracker = states.device_tracker.hiker_node %}
+          {% if tracker is none %}
+            unknown
+          {% else %}
+            {{ ((now() - tracker.last_updated).total_seconds() / 60) | round(0) }}
+          {% endif %}
+
+  # --- Movement ------------------------------------------------------------
+  # A timestamp that moves only when the position really changed. Fifty metres
+  # is above GPS jitter and below anything a walker does in half an hour, so a
+  # lunch stop reads as a stop and a stationary node does not drift its way out
+  # of the alarm it should be raising.
+  - trigger:
+      - platform: state
+        entity_id: sensor.hike_distance_from_start
+    condition:
+      - condition: template
+        value_template: >
+          {{ trigger.to_state.state not in ['unknown', 'unavailable', 'none'] }}
+    sensor:
+      - name: Hike last movement
+        unique_id: hermes_hike_last_movement
+        device_class: timestamp
+        state: >
+          {% set now_km = trigger.to_state.state | float(0) %}
+          {% set was_km = this.attributes.get('at_km', none) %}
+          {% if was_km is none or (now_km - (was_km | float(0))) | abs > 0.05 %}
+            {{ now().isoformat() }}
+          {% else %}
+            {{ this.state }}
+          {% endif %}
+        attributes:
+          at_km: >
+            {% set now_km = trigger.to_state.state | float(0) %}
+            {% set was_km = this.attributes.get('at_km', none) %}
+            {% if was_km is none or (now_km - (was_km | float(0))) | abs > 0.05 %}
+              {{ now_km }}
+            {% else %}
+              {{ was_km }}
+            {% endif %}
+
+  - binary_sensor:
+      # One place that answers "has this person been still too long", so the
+      # automation below stays about what to do rather than how to tell.
+      - name: Hike standing still
+        unique_id: hermes_hike_standing_still
+        state: >
+          {% set moved = states('sensor.hike_last_movement') %}
+          {% if is_state('input_boolean.hike_mode', 'off')
+                or moved in ['unknown', 'unavailable', 'none'] %}
+            false
+          {% else %}
+            {{ (now() - moved | as_datetime).total_seconds() / 60
+               > states('input_number.hike_still_minutes') | float(30) }}
+          {% endif %}
+
+      - name: Hike out of contact
+        unique_id: hermes_hike_out_of_contact
+        state: >
+          {% set silent = states('sensor.hike_minutes_since_contact') %}
+          {% if is_state('input_boolean.hike_mode', 'off')
+                or silent in ['unknown', 'unavailable'] %}
+            false
+          {% else %}
+            {{ silent | float(0)
+               > states('input_number.hike_silence_minutes') | float(20) }}
+          {% endif %}
+
+script:
+  # One place that decides how home is told, so changing the channel is one
+  # edit. Alarms go home and never to the walker: the whole premise is that
+  # they may be somewhere with no phone signal at all.
+  hike_alert_home:
+    alias: Hike alert home
+    mode: parallel
+    fields:
+      title:
+        description: Short headline
+      message:
+        description: What happened, with the values that triggered it
+    sequence:
+      - service: notify.home
+        data:
+          title: "{{ title }}"
+          message: >
+            {{ message }} ·
+            {{ states('sensor.hike_distance_from_start') }} km from the start,
+            {{ states('sensor.hike_minutes_since_contact') }} min since contact,
+            battery {{ states('sensor.hiker_node_battery') }}%
+
+automation:
+  # --- Arming and disarming ------------------------------------------------
+  - id: hermes_hike_arm
+    alias: "Hike: capture the start point when armed"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.hike_mode
+        to: "on"
+    actions:
+      - variables:
+          tracker: "{{ states.device_tracker.hiker_node }}"
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: >
+                  {{ tracker is not none
+                     and tracker.attributes.get('latitude') is not none }}
+            sequence:
+              - action: input_text.set_value
+                target:
+                  entity_id: input_text.hike_start_point
+                data:
+                  value: >
+                    {{ tracker.attributes.latitude }},{{ tracker.attributes.longitude }}
+        # No position yet is not a reason to refuse to arm: it is a reason to
+        # say so. Arming anyway would silently leave every distance unknown.
+        default:
+          - action: script.hike_alert_home
+            data:
+              title: Hike mode armed without a position
+              message: >
+                The node has not reported a position yet, so distance alarms
+                will stay quiet until it does.
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.hike_check_pending
+
+  # Nothing here disarms by itself. Coming home is what ends a walk, and an
+  # automation that decided that on its own would switch the watching off in
+  # the one case that matters: someone stopped near home and never arrived.
+  - id: hermes_hike_home_reminder
+    alias: "Hike: offer to disarm on arriving home"
+    mode: single
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.hike_distance_from_home
+        below: 0.2
+        for: "00:05:00"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.hike_mode
+        state: "on"
+    actions:
+      - action: script.hike_alert_home
+        data:
+          title: Back home
+          message: Hike mode is still on. Turn it off when the walk is over.
+
+  # --- The dead man switch, in two stages ----------------------------------
+  # Stage one never wakes anyone. The node buzzes in a pocket and asks, and a
+  # person who stopped on purpose answers and that is the end of it. Only
+  # silence escalates. A single stage alarm on "no movement" fires at every
+  # lunch stop, and an alarm that cries wolf is worse than none.
+  - id: hermes_hike_dead_man_ask
+    alias: "Hike: ask the walker whether they are all right"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.hike_standing_still
+        to: "on"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.hike_mode
+        state: "on"
+      - condition: state
+        entity_id: input_boolean.hike_check_pending
+        state: "off"
+      # Do not ask a node that cannot hear the question. Out of contact is the
+      # other alarm's business and it says something different.
+      - condition: state
+        entity_id: binary_sensor.hike_out_of_contact
+        state: "off"
+    actions:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.hike_check_pending
+      # Direct, never on a channel: this asks after someone's wellbeing, and
+      # a channel would put both the question and the silence in front of
+      # everyone in radio range.
+      - action: hermes.send_direct
+        data:
+          config_entry_id: HERMES_ENTRY_ID
+          node_id: HIKER_NODE_ID
+          message: >
+            Still for {{ states('input_number.hike_still_minutes') | int }} min.
+            All well? Answer OK.
+
+  - id: hermes_hike_dead_man_escalate
+    alias: "Hike: nobody answered, tell home"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.hike_check_pending
+        to: "on"
+        for:
+          minutes: >
+            {{ states('input_number.hike_answer_minutes') | int(10) }}
+    conditions:
+      - condition: state
+        entity_id: input_boolean.hike_mode
+        state: "on"
+    actions:
+      - action: script.hike_alert_home
+        data:
+          title: No movement and no answer
+          message: >
+            Still for over
+            {{ states('input_number.hike_still_minutes') | int }} min and no
+            reply to the check after
+            {{ states('input_number.hike_answer_minutes') | int }} min.
+
+  # Movement is its own answer: someone walking again is someone fine.
+  - id: hermes_hike_moving_again
+    alias: "Hike: moving again, drop the pending check"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.hike_standing_still
+        to: "off"
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.hike_check_pending
+
+  # --- Lost contact --------------------------------------------------------
+  # Separate from the one above, with its own delay and its own words, because
+  # a mesh that drops while the person is perfectly fine is common, and being
+  # told "no movement" when the truth is "no signal" sends help to the wrong
+  # question.
+  - id: hermes_hike_out_of_contact
+    alias: "Hike: the node went quiet"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.hike_out_of_contact
+        to: "on"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.hike_mode
+        state: "on"
+    actions:
+      - action: script.hike_alert_home
+        data:
+          title: Node out of contact
+          message: >
+            Nothing heard for over
+            {{ states('input_number.hike_silence_minutes') | int }} min. The
+            mesh may simply have dropped: this says nothing about the walker.
+
+  # --- Overdue -------------------------------------------------------------
+  - id: hermes_hike_overdue
+    alias: "Hike: overdue"
+    mode: single
+    triggers:
+      - trigger: time
+        at: input_datetime.hike_return_by
+    conditions:
+      - condition: state
+        entity_id: input_boolean.hike_mode
+        state: "on"
+      # Home already, with the mode simply left on, is not overdue.
+      - condition: template
+        value_template: >
+          {{ states('sensor.hike_distance_from_home') in ['unknown', 'unavailable']
+             or states('sensor.hike_distance_from_home') | float(99) > 0.2 }}
+    actions:
+      - action: script.hike_alert_home
+        data:
+          title: Past the expected return
+          message: >
+            Expected back by
+            {{ states('input_datetime.hike_return_by') }}, not home yet.
+
+  # --- Battery -------------------------------------------------------------
+  - id: hermes_hike_low_battery
+    alias: "Hike: node battery low"
+    mode: single
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.hiker_node_battery
+        below: input_number.hike_low_battery
+        for: "00:10:00"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.hike_mode
+        state: "on"
+    actions:
+      - action: script.hike_alert_home
+        data:
+          title: Node battery low
+          message: >
+            Below {{ states('input_number.hike_low_battery') | int }}%. When it
+            dies every other alarm here goes quiet with it.
+
+  # --- Too far -------------------------------------------------------------
+  - id: hermes_hike_too_far
+    alias: "Hike: further from the start than planned"
+    mode: single
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.hike_distance_from_start
+        above: input_number.hike_max_distance_km
+        for: "00:10:00"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.hike_mode
+        state: "on"
+    actions:
+      - action: script.hike_alert_home
+        data:
+          title: Further out than planned
+          message: >
+            Past {{ states('input_number.hike_max_distance_km') | int }} km from
+            the start point.

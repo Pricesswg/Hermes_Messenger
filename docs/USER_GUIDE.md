@@ -349,6 +349,22 @@ number and the window widens.
 
 ---
 
+## Hiking support
+
+A ready-made Home Assistant package lives in
+[`docs/hiking/`](hiking/README.md): hike mode, the derived distances, and six
+alarms that tell someone **at home** when a walker carrying a node stops
+moving, goes quiet, runs the battery down, wanders further than planned or is
+overdue. Alarms never go to the walker, who is by definition the person who may
+have no phone signal.
+
+It is deliberately not integration code. The watching is done with entities and
+automations, so every threshold is a slider you can turn and every alarm can be
+read to see why it fired. Hermes appears in it twice: it carries the "are you
+all right" to the node, and the `ok` back.
+
+---
+
 ## Statistics
 
 **Statistics** answers what the mesh has been doing, from what Hermes still
